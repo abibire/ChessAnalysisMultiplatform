@@ -6,18 +6,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 @Composable
-fun App() {
+fun App(context: Any? = null) {
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            ChessAnalysisApp()
+            ChessAnalysisApp(context)
         }
     }
 }
 
 @Composable
-fun ChessAnalysisApp() {
+fun ChessAnalysisApp(context: Any?) {
     val samplePgn = """
         [Event "Example Game"]
         [Site "Berlin"]
@@ -35,6 +36,21 @@ fun ChessAnalysisApp() {
 
     val positions = remember { generateFensFromPgn(samplePgn) }
     var currentIndex by remember { mutableIntStateOf(0) }
+    var isEvaluating by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val stockfishEngine = remember(context) {
+        if (context != null) createStockfishEngine(context) else null
+    }
+
+    LaunchedEffect(context) {
+        if (stockfishEngine != null && positions.isNotEmpty()) {
+            isEvaluating = true
+            for (position in positions) {
+                position.score = stockfishEngine.evaluatePosition(position.fenString, depth = 15)
+            }
+            isEvaluating = false
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -45,10 +61,14 @@ fun ChessAnalysisApp() {
         Spacer(modifier = Modifier.height(16.dp))
         Chessboard(fen = positions[currentIndex].fenString)
         Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Score: ${positions[currentIndex].score ?: "N/A"}",
-            style = MaterialTheme.typography.titleLarge
-        )
+        if (isEvaluating) {
+            CircularProgressIndicator()
+        } else {
+            Text(
+                text = "Score: ${positions[currentIndex].score ?: "N/A"}",
+                style = MaterialTheme.typography.titleLarge
+            )
+        }
         Spacer(modifier = Modifier.height(32.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Button(onClick = { if (currentIndex > 0) currentIndex-- }, enabled = currentIndex > 0) {
@@ -60,3 +80,5 @@ fun ChessAnalysisApp() {
         }
     }
 }
+
+expect fun createStockfishEngine(context: Any): StockfishEngine
