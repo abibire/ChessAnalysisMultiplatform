@@ -1,0 +1,7 @@
+TEAM_ID=
+
+PRODUCT_NAME=ChessAnalysis
+PRODUCT_BUNDLE_IDENTIFIER=com.andrewbibire.chessanalysis.ChessAnalysis$(TEAM_ID)
+
+CURRENT_PROJECT_VERSION=1
+MARKETING_VERSION=1.0
