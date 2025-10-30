@@ -1,5 +1,5 @@
 package com.andrewbibire.chessanalysis
 
 actual fun createStockfishEngine(context: Any?): StockfishEngine {
-    return StockfishEngine(context)
+    return StockfishEngine(null)
 }

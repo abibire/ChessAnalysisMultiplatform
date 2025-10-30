@@ -6,7 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 
 @Composable
 fun App(context: Any? = null) {
@@ -37,7 +36,6 @@ fun ChessAnalysisApp(context: Any?) {
     val positions = remember { generateFensFromPgn(samplePgn) }
     var currentIndex by remember { mutableIntStateOf(0) }
     var isEvaluating by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
     val stockfishEngine = remember(context) {
         if (context != null) createStockfishEngine(context) else null
     }
@@ -81,4 +79,4 @@ fun ChessAnalysisApp(context: Any?) {
     }
 }
 
-expect fun createStockfishEngine(context: Any): StockfishEngine
+expect fun createStockfishEngine(context: Any?): StockfishEngine

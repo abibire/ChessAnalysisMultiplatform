@@ -5,7 +5,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-actual class StockfishEngine(private val context: Context) {
+actual class StockfishEngine actual constructor(context: Any?) {
+    private val context: Context = context as Context
     private var process: Process? = null
     private var writer: java.io.BufferedWriter? = null
     private var reader: java.io.BufferedReader? = null
