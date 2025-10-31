@@ -25,13 +25,6 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
         }
-
-        iosTarget.compilations.getByName("main") {
-            val StockfishBridge by cinterops.creating {
-                defFile(project.file("src/nativeInterop/cinterop/StockfishBridge.def"))
-                packageName("com.andrewbibire.chessanalysis.native")
-            }
-        }
     }
 
     jvm()

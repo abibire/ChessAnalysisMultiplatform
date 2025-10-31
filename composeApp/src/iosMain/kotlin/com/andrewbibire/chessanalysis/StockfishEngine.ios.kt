@@ -1,22 +1,67 @@
 package com.andrewbibire.chessanalysis
 
-import com.andrewbibire.chessanalysis.native.*
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.toKString
+import kotlinx.cinterop.*
+import platform.posix.*
 
-@OptIn(ExperimentalForeignApi::class)
 actual class StockfishEngine actual constructor(context: Any?) {
 
     init {
-        stockfish_init()
+        println("KOTLIN: StockfishEngine iOS initializing")
+        callStockfishInit()
     }
 
     actual suspend fun evaluatePosition(fen: String, depth: Int): String {
-        val result = stockfish_evaluate(fen, depth)
-        return result?.toKString() ?: "N/A"
+        println("KOTLIN: evaluatePosition called for: $fen")
+        return callStockfishEvaluate(fen, depth)
     }
 
     actual fun close() {
-        stockfish_cleanup()
+        println("KOTLIN: close called")
+        callStockfishCleanup()
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    private fun callStockfishInit() {
+        // Load the function from the main bundle
+        val handle = dlopen(null, RTLD_LAZY)
+        val funcPtr = dlsym(handle, "stockfish_init")
+        if (funcPtr != null) {
+            val func = funcPtr.reinterpret<CFunction<() -> Unit>>()
+            func()
+        } else {
+            println("KOTLIN: ERROR - could not find stockfish_init")
+        }
+        dlclose(handle)
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    private fun callStockfishEvaluate(fen: String, depth: Int): String {
+        val handle = dlopen(null, RTLD_LAZY)
+        val funcPtr = dlsym(handle, "stockfish_evaluate")
+
+        return if (funcPtr != null) {
+            memScoped {
+                val fenCString = fen.cstr.ptr
+                val func = funcPtr.reinterpret<CFunction<(CPointer<ByteVarOf<Byte>>, Int) -> CPointer<ByteVarOf<Byte>>>>()
+                val result = func(fenCString, depth)
+                result.toKString()
+            }
+        } else {
+            println("KOTLIN: ERROR - could not find stockfish_evaluate")
+            "N/A (Function Not Found)"
+        }.also {
+            dlclose(handle)
+        }
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    private fun callStockfishCleanup() {
+        val handle = dlopen(null, RTLD_LAZY)
+        val funcPtr = dlsym(handle, "stockfish_cleanup")
+        if (funcPtr != null) {
+            val func = funcPtr.reinterpret<CFunction<() -> Unit>>()
+            func()
+        }
+        dlclose(handle)
     }
 }

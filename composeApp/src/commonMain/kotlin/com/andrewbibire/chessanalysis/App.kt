@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.withContext
 
 @Composable
 fun App(context: Any? = null) {
@@ -43,10 +44,22 @@ fun ChessAnalysisApp(context: Any?) {
     LaunchedEffect(context) {
         if (stockfishEngine != null && positions.isNotEmpty()) {
             isEvaluating = true
-            for (position in positions) {
-                position.score = stockfishEngine.evaluatePosition(position.fenString, depth = 15)
+
+            // Wait 2 seconds for the Swift engine to fully initialize
+            kotlinx.coroutines.delay(2000)
+            println("KOTLIN: Starting evaluations after delay")
+
+            // Run evaluations on background thread to avoid blocking UI
+            withContext(kotlinx.coroutines.Dispatchers.Default) {
+                for (position in positions) {
+                    println("KOTLIN: Evaluating position: ${position.fenString}")
+                    position.score = stockfishEngine.evaluatePosition(position.fenString, depth = 5)
+                    println("KOTLIN: Got score: ${position.score}")
+                }
             }
+
             isEvaluating = false
+            println("KOTLIN: All evaluations complete")
         }
     }
 
