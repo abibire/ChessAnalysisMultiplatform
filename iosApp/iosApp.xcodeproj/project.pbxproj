@@ -8,9 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		00F06FE02EB2F7BA00EB6597 /* ChessKitEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 00F06FDF2EB2F7BA00EB6597 /* ChessKitEngine */; };
+		00F06FE62EB2FA7400EB6597 /* StockfishBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00F06FE52EB2FA7100EB6597 /* StockfishBridge.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		00F06FE52EB2FA7100EB6597 /* StockfishBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StockfishBridge.swift; sourceTree = "<group>"; };
 		D33CB5C0D6D50D55DDB31590 /* ChessAnalysis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChessAnalysis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -55,6 +57,7 @@
 		548FF992710558ED1E09ABBF = {
 			isa = PBXGroup;
 			children = (
+				00F06FE52EB2FA7100EB6597 /* StockfishBridge.swift */,
 				9E459ECD4D6EE91F32A4E0AC /* Configuration */,
 				8E4FEA22D412D1E5BBE76C7E /* iosApp */,
 				D8B52512CDF388EC1EA1D9A3 /* Products */,
@@ -108,6 +111,7 @@
 				TargetAttributes = {
 					CE0434B7EE46EE5EE7BE45D2 = {
 						CreatedOnToolsVersion = 16.2;
+						LastSwiftMigration = 2600;
 					};
 				};
 			};
@@ -170,6 +174,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				00F06FE62EB2FA7400EB6597 /* StockfishBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -182,6 +187,7 @@
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
@@ -275,6 +281,7 @@
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
@@ -292,6 +299,7 @@
 					"@executable_path/Frameworks",
 				);
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
