@@ -1,68 +1,45 @@
 package com.andrewbibire.chessanalysis
 
-import kotlinx.cinterop.*
-import platform.posix.*
+import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.cstr
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.toKString
+
+@OptIn(ExperimentalForeignApi::class)
+private external fun stockfish_init()
+
+@OptIn(ExperimentalForeignApi::class)
+private external fun stockfish_evaluate(
+    fen: CPointer<ByteVar>,
+    depth: Int
+): CPointer<ByteVar>?
+
+@OptIn(ExperimentalForeignApi::class)
+private external fun stockfish_cleanup()
 
 @OptIn(ExperimentalForeignApi::class)
 actual class StockfishEngine actual constructor(context: Any?) {
 
-    private val handle: COpaquePointer? = dlopen(null, RTLD_LAZY)
-
-    private val initFunc: CPointer<CFunction<() -> Unit>>? =
-        dlsym(handle, "stockfish_init")?.reinterpret()
-
-    private val evalFunc: CPointer<CFunction<(CPointer<ByteVarOf<Byte>>, Int) -> CPointer<ByteVarOf<Byte>>>>? =
-        dlsym(handle, "stockfish_evaluate")?.reinterpret()
-
-    private val cleanupFunc: CPointer<CFunction<() -> Unit>>? =
-        dlsym(handle, "stockfish_cleanup")?.reinterpret()
-
     init {
-        println("KOTLIN: StockfishEngine iOS initializing")
-        callStockfishInit()
+        println("KOTLIN[iOS]: StockfishEngine init -> stockfish_init()")
+        stockfish_init()
     }
 
     actual suspend fun evaluatePosition(fen: String, depth: Int): String {
-        println("KOTLIN: evaluatePosition called for: $fen")
-        return callStockfishEvaluate(fen, depth)
+        println("KOTLIN[iOS]: evaluatePosition($fen, depth=$depth)")
+        memScoped {
+            val fenC = fen.cstr
+            val ptr = stockfish_evaluate(fenC.ptr, depth)
+            val result = ptr?.toKString() ?: "bestmove 0000 eval cp 0"
+            println("KOTLIN[iOS]: result <- $result")
+            return result
+        }
     }
 
     actual fun close() {
-        println("KOTLIN: close called")
-        callStockfishCleanup()
-        if (handle != null) {
-            dlclose(handle)
-        }
-    }
-
-    private fun callStockfishInit() {
-        val f = initFunc
-        if (f == null) {
-            println("KOTLIN: ERROR - could not find stockfish_init")
-            return
-        }
-        f.invoke()
-    }
-
-    private fun callStockfishEvaluate(fen: String, depth: Int): String {
-        val f = evalFunc
-        if (f == null) {
-            println("KOTLIN: ERROR - could not find stockfish_evaluate")
-            return "N/A (Function Not Found)"
-        }
-
-        return memScoped {
-            val fenCString = fen.cstr.ptr
-            val resultPtr = f.invoke(fenCString, depth)
-            resultPtr.toKString()
-        }
-    }
-
-    private fun callStockfishCleanup() {
-        val f = cleanupFunc
-        if (f == null) {
-            return
-        }
-        f.invoke()
+        println("KOTLIN[iOS]: close() -> stockfish_cleanup()")
+        stockfish_cleanup()
     }
 }
