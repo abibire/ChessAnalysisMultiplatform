@@ -8,11 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		00F06FE02EB2F7BA00EB6597 /* ChessKitEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 00F06FDF2EB2F7BA00EB6597 /* ChessKitEngine */; };
-		00F06FE62EB2FA7400EB6597 /* StockfishBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00F06FE52EB2FA7100EB6597 /* StockfishBridge.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		00F06FE52EB2FA7100EB6597 /* StockfishBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StockfishBridge.swift; sourceTree = "<group>"; };
+		0009C9F62EB6B01800F52ABA /* iosApp-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "iosApp-Bridging-Header.h"; sourceTree = "<group>"; };
 		D33CB5C0D6D50D55DDB31590 /* ChessAnalysis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChessAnalysis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -57,7 +56,7 @@
 		548FF992710558ED1E09ABBF = {
 			isa = PBXGroup;
 			children = (
-				00F06FE52EB2FA7100EB6597 /* StockfishBridge.swift */,
+				0009C9F62EB6B01800F52ABA /* iosApp-Bridging-Header.h */,
 				9E459ECD4D6EE91F32A4E0AC /* Configuration */,
 				8E4FEA22D412D1E5BBE76C7E /* iosApp */,
 				D8B52512CDF388EC1EA1D9A3 /* Products */,
@@ -174,7 +173,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				00F06FE62EB2FA7400EB6597 /* StockfishBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -206,6 +204,8 @@
 				);
 				OTHER_LDFLAGS = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_PRECOMPILE_BRIDGING_HEADER = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -273,6 +273,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_PRECOMPILE_BRIDGING_HEADER = NO;
 			};
 			name = Debug;
 		};
@@ -301,7 +302,9 @@
 				);
 				OTHER_LDFLAGS = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_PRECOMPILE_BRIDGING_HEADER = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -361,6 +364,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_PRECOMPILE_BRIDGING_HEADER = NO;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
