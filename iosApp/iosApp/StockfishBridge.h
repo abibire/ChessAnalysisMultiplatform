@@ -1,4 +1,5 @@
-#pragma once
+#ifndef StockfishBridge_h
+#define StockfishBridge_h
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,4 +11,6 @@ void stockfish_cleanup(void);
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif

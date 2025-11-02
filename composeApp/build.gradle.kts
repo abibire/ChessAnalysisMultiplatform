@@ -25,6 +25,16 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
         }
+
+        // Configure cinterop for Stockfish bridge
+        iosTarget.compilations.getByName("main") {
+            cinterops {
+                val stockfishBridge by creating {
+                    defFile(project.file("src/nativeInterop/cinterop/StockfishBridge.def"))
+                    packageName("stockfish")
+                }
+            }
+        }
     }
 
     jvm()

@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		00F06FE02EB2F7BA00EB6597 /* ChessKitEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 00F06FDF2EB2F7BA00EB6597 /* ChessKitEngine */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
 		0009C9F62EB6B01800F52ABA /* iosApp-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "iosApp-Bridging-Header.h"; sourceTree = "<group>"; };
 		D33CB5C0D6D50D55DDB31590 /* ChessAnalysis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChessAnalysis.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -46,7 +42,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				00F06FE02EB2F7BA00EB6597 /* ChessKitEngine in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,7 +87,6 @@
 			);
 			name = iosApp;
 			packageProductDependencies = (
-				00F06FDF2EB2F7BA00EB6597 /* ChessKitEngine */,
 			);
 			productName = iosApp;
 			productReference = D33CB5C0D6D50D55DDB31590 /* ChessAnalysis.app */;
@@ -124,7 +118,6 @@
 			mainGroup = 548FF992710558ED1E09ABBF;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				00F06FDE2EB2F7BA00EB6597 /* XCRemoteSwiftPackageReference "chesskit-engine" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8B52512CDF388EC1EA1D9A3 /* Products */;
@@ -192,6 +185,7 @@
 				DEVELOPMENT_TEAM = "${TEAM_ID}";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Stockfish.xcframework/ios-arm64-simulator/Headers";
 				INFOPLIST_FILE = iosApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -290,6 +284,7 @@
 				DEVELOPMENT_TEAM = "${TEAM_ID}";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Stockfish.xcframework/ios-arm64-simulator/Headers";
 				INFOPLIST_FILE = iosApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -391,25 +386,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		00F06FDE2EB2F7BA00EB6597 /* XCRemoteSwiftPackageReference "chesskit-engine" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/chesskit-app/chesskit-engine";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.7.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		00F06FDF2EB2F7BA00EB6597 /* ChessKitEngine */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 00F06FDE2EB2F7BA00EB6597 /* XCRemoteSwiftPackageReference "chesskit-engine" */;
-			productName = ChessKitEngine;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D55A1BFDFF56919619EA25D1 /* Project object */;
 }
