@@ -3,16 +3,19 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <iomanip>
 #include "engine.h"
 #include "bitboard.h"
 #include "position.h"
 #include "search.h"
+#include "types.h"
 
 using namespace Stockfish;
 
 static Engine* g_engine = nullptr;
 static std::string g_lastResult;
 static std::string g_bestmove;
+static std::string g_lastScoreString;  // Store score as string
 static bool g_initialized = false;
 
 void stockfish_init(void) {
@@ -32,12 +35,28 @@ void stockfish_init(void) {
             try {
                 g_engine->set_on_bestmove([](std::string_view best, std::string_view ponder) {
                     g_bestmove = std::string(best);
+                    NSLog(@"[Bridge] Best move received: %s", g_bestmove.c_str());
                 });
-            } catch (...) {}
+            } catch (...) {
+                NSLog(@"[Bridge] Error setting bestmove callback");
+            }
             
             try {
-                g_engine->set_on_update_full([](const Search::InfoFull& info) {});
-            } catch (...) {}
+                // Capture the evaluation score from search updates
+                g_engine->set_on_update_full([](const Search::InfoFull& info) {
+                    if (info.depth > 0) {
+                        // Score in InfoFull might be a VALUE type, try treating as integer
+                        // In Stockfish, internal values are typically already in centipawn-like scale
+                        int scoreValue = *reinterpret_cast<const int*>(&info.score);
+                        std::ostringstream oss;
+                        oss << scoreValue;
+                        g_lastScoreString = oss.str();
+                        NSLog(@"[Bridge] Score update: depth=%d score=%s", info.depth, g_lastScoreString.c_str());
+                    }
+                });
+            } catch (...) {
+                NSLog(@"[Bridge] Error setting update_full callback");
+            }
             
             try {
                 g_engine->set_on_update_no_moves([](const Search::InfoShort& info) {});
@@ -62,6 +81,7 @@ const char* stockfish_evaluate(const char* fen, int depth) {
         }
         
         g_bestmove.clear();
+        g_lastScoreString.clear();  // Reset score before search
         
         std::vector<std::string> moves;
         g_engine->set_position(fen, moves);
@@ -72,9 +92,26 @@ const char* stockfish_evaluate(const char* fen, int depth) {
         g_engine->go(limits);
         g_engine->wait_for_search_finished();
         
-        std::ostringstream oss;
-        oss << "bestmove " << (g_bestmove.empty() ? "0000" : g_bestmove) << " eval cp 0";
-        g_lastResult = oss.str();
+        // Parse the score string and convert to decimal
+        // Score string might be like "36" (centipawns) or "mate 5"
+        std::string result;
+        if (g_lastScoreString.empty()) {
+            result = "0.00";
+        } else if (g_lastScoreString.find("mate") != std::string::npos) {
+            result = g_lastScoreString;  // Return mate as is
+        } else {
+            try {
+                int cp = std::stoi(g_lastScoreString);
+                std::ostringstream oss;
+                oss.precision(2);
+                oss << std::fixed << (cp / 100.0);
+                result = oss.str();
+            } catch (...) {
+                result = "0.00";
+            }
+        }
+        
+        g_lastResult = result;
         
         NSLog(@"[Bridge] Result: %s", g_lastResult.c_str());
         return g_lastResult.c_str();

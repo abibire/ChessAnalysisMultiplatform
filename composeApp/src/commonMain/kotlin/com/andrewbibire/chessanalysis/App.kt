@@ -47,19 +47,20 @@ fun ChessAnalysisApp(context: Any?) {
 
             // Wait 2 seconds for the Swift engine to fully initialize
             kotlinx.coroutines.delay(2000)
-            println("KOTLIN: Starting evaluations after delay")
+         //   println("KOTLIN: Starting evaluations after delay")
 
             // Run evaluations on background thread to avoid blocking UI
             withContext(kotlinx.coroutines.Dispatchers.Default) {
                 for (position in positions) {
-                    println("KOTLIN: Evaluating position: ${position.fenString}")
+                   // println("KOTLIN: Evaluating position: ${position.fenString}")
                     position.score = stockfishEngine.evaluatePosition(position.fenString, depth = 5)
-                    println("KOTLIN: Got score: ${position.score}")
+                  //  println("FEN POS: ${position.fenString}")
+                    //println("KOTLIN: Got score: ${position.score}")
                 }
             }
 
             isEvaluating = false
-            println("KOTLIN: All evaluations complete")
+          //  println("KOTLIN: All evaluations complete")
         }
     }
 
@@ -75,6 +76,8 @@ fun ChessAnalysisApp(context: Any?) {
         if (isEvaluating) {
             CircularProgressIndicator()
         } else {
+            println("HELLO")
+            println(positions)
             Text(
                 text = "Score: ${positions[currentIndex].score ?: "N/A"}",
                 style = MaterialTheme.typography.titleLarge
