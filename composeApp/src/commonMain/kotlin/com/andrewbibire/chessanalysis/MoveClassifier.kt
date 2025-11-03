@@ -51,6 +51,10 @@ fun getExpectedPointsLoss(previous: Eval, current: Eval, moveColour: MoveColour)
 fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour): String {
     val previousSubjectiveValue = previous.value * if (moveColour == MoveColour.WHITE) 1.0 else -1.0
     val subjectiveValue = current.value * if (moveColour == MoveColour.WHITE) 1.0 else -1.0
+
+    if (previous.type == EvalType.Mate && previousSubjectiveValue == 1.0 && current.type == EvalType.Centipawn && current.value == 0.0) {
+        return "Best"
+    }
     if (previous.type == EvalType.Mate && current.type == EvalType.Mate) {
         if (previousSubjectiveValue > 0 && subjectiveValue < 0) {
             return if (subjectiveValue < -3) "Mistake" else "Blunder"
