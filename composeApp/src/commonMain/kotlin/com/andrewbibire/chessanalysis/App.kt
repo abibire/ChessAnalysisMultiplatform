@@ -66,62 +66,21 @@ fun ChessAnalysisApp(context: Any?) {
                 for ((index, position) in positions.withIndex()) {
                     val eval = stockfishEngine.evaluatePosition(position.fenString, depth = 14)
                     position.score = eval
-                    println("STOCKFISH: Move #$index -> FEN: ${position.fenString}")
-                    println("STOCKFISH: Eval: $eval")
                 }
             }
-            println("STOCKFISH: All evaluations complete")
-            println(
-                "STOCKFISH: All scores -> " +
-                        positions.mapIndexed { i, p -> "Move $i: ${p.score}" }.joinToString(", ")
-            )
-            isEvaluating = false
-        }
-    }
-
-    fun isWhiteToMove(fen: String): Boolean {
-        val parts = fen.split(" ")
-        return parts.getOrNull(1) == "w"
-    }
-
-    fun normalizeScoreForDisplay(raw: String?, fen: String, isLast: Boolean): String {
-        val gameResultOverride: String? = when (resultTag) {
-            "1-0" -> "White wins"
-            "0-1" -> "Black wins"
-            "1/2-1/2" -> "Draw"
-            else -> null
-        }
-
-        if (isLast && gameResultOverride != null) {
-            return gameResultOverride
-        }
-
-        if (raw == null) return "N/A"
-
-        val whiteToMove = isWhiteToMove(fen)
-        val lower = raw.lowercase()
-
-        return if (lower.startsWith("mate")) {
-            val digits = Regex("""-?\d+""").find(lower)?.value
-            if (digits != null) {
-                val movesToMate = digits.toIntOrNull()
-                if (movesToMate != null) {
-                    "Mate in ${abs(movesToMate)}"
+            for (i in 1 until positions.size) {
+                val prev = positions[i - 1]
+                val cur = positions[i]
+                val moveColour = if (isWhiteToMove(prev.fenString)) MoveColour.WHITE else MoveColour.BLACK
+                val prevEval = parseEvaluationWhiteCentric(prev.score, prev.fenString)
+                val curEval = parseEvaluationWhiteCentric(cur.score, cur.fenString)
+                if (prevEval != null && curEval != null) {
+                    cur.classification = classifyPointLoss(prevEval, curEval, moveColour)
                 } else {
-                    raw
+                    cur.classification = null
                 }
-            } else {
-                raw
             }
-        } else {
-            val score = raw.toDoubleOrNull()
-            if (score != null) {
-                val adjustedScore = if (whiteToMove) score else -score
-                val roundedScore = (adjustedScore * 10.0).roundToInt() / 10.0
-                roundedScore.toString()
-            } else {
-                raw
-            }
+            isEvaluating = false
         }
     }
 
@@ -146,12 +105,20 @@ fun ChessAnalysisApp(context: Any?) {
             val displayScore = normalizeScoreForDisplay(
                 positions[currentIndex].score,
                 positions[currentIndex].fenString,
-                isLast
+                isLast,
+                resultTag
             )
             Text(
                 text = "Score: $displayScore",
                 style = MaterialTheme.typography.titleLarge
             )
+            val cls = positions[currentIndex].classification
+            if (cls != null) {
+                Text(
+                    text = "Move quality: $cls",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
         }
         Spacer(modifier = Modifier.height(32.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -167,6 +134,43 @@ fun ChessAnalysisApp(context: Any?) {
             ) {
                 Text("Forward")
             }
+        }
+    }
+}
+
+fun normalizeScoreForDisplay(raw: String?, fen: String, isLast: Boolean, resultTag: String): String {
+    val gameResultOverride: String? = when (resultTag) {
+        "1-0" -> "White wins"
+        "0-1" -> "Black wins"
+        "1/2-1/2" -> "Draw"
+        else -> null
+    }
+    if (isLast && gameResultOverride != null) {
+        return gameResultOverride
+    }
+    if (raw == null) return "N/A"
+    val lower = raw.lowercase()
+    return if (lower.startsWith("mate")) {
+        val digits = Regex("""-?\d+""").find(lower)?.value
+        if (digits != null) {
+            val movesToMate = digits.toIntOrNull()
+            if (movesToMate != null) {
+                "Mate in ${abs(movesToMate)}"
+            } else {
+                raw
+            }
+        } else {
+            raw
+        }
+    } else {
+        val score = raw.toDoubleOrNull()
+        if (score != null) {
+            val whiteToMove = isWhiteToMove(fen)
+            val adjustedScore = if (whiteToMove) score else -score
+            val roundedScore = (adjustedScore * 10.0).roundToInt() / 10.0
+            roundedScore.toString()
+        } else {
+            raw
         }
     }
 }
