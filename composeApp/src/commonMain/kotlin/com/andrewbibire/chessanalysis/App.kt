@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.github.bhlangonijr.chesslib.Board
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -102,13 +103,19 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                     cur.openingName = lastOpeningName
                 }
 
-                val moveColour = if (isWhiteToMove(prev.fenString)) MoveColour.WHITE else MoveColour.BLACK
-                val prevEval = parseEvaluationWhiteCentric(prev.score, prev.fenString)
-                val curEval = parseEvaluationWhiteCentric(cur.score, cur.fenString)
-                cur.classification = if (prevEval != null && curEval != null) {
-                    classifyPointLoss(prevEval, curEval, moveColour)
+                val onlyMove = hasOnlyOneLegalMove(prev.fenString)
+                cur.forced = onlyMove
+                if (!onlyMove) {
+                    val moveColour = if (isWhiteToMove(prev.fenString)) MoveColour.WHITE else MoveColour.BLACK
+                    val prevEval = parseEvaluationWhiteCentric(prev.score, prev.fenString)
+                    val curEval = parseEvaluationWhiteCentric(cur.score, cur.fenString)
+                    cur.classification = if (prevEval != null && curEval != null) {
+                        classifyPointLoss(prevEval, curEval, moveColour)
+                    } else {
+                        null
+                    }
                 } else {
-                    null
+                    cur.classification = null
                 }
             }
             isEvaluating = false
@@ -134,6 +141,14 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                 isLast
             )
             Text(text = "Score: $displayScore", style = MaterialTheme.typography.titleLarge)
+            positions[currentIndex].forced?.let { f ->
+                if (f) {
+                    Text(
+                        text = "Forced",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
             positions[currentIndex].classification?.let { cls ->
                 Text(text = "Move quality: $cls", style = MaterialTheme.typography.titleMedium)
             }
@@ -182,6 +197,13 @@ fun normalizeScoreForDisplay(raw: String?, fen: String, isLast: Boolean): String
             roundedScore.toString()
         } else raw
     }
+}
+
+fun hasOnlyOneLegalMove(fen: String): Boolean {
+    val board = Board()
+    board.loadFromFen(fen)
+    val moves = board.legalMoves()
+    return moves.size == 1
 }
 
 expect fun createStockfishEngine(context: Any?): StockfishEngine
