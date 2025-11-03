@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Composable
 fun App(context: Any? = null) {
@@ -26,16 +27,22 @@ fun App(context: Any? = null) {
 @Composable
 fun ChessAnalysisApp(context: Any?) {
     val samplePgn = """
-        [Event "WCC-25"]
-[Site "Moscow"]
-[Date "1985.10.05"]
-[Round "15"]
-[White "Karpov, Anatoly"]
-[Black "Kasparov, Garry"]
-[Result "1/2-1/2"]
-[ECO "D44"]
+        [Site "Chess.com"]
+        [Date "2025.11.03"]
+        [Round "?"]
+        [White "SuperJJ04"]
+        [Black "MemeBlunders"]
+        [Result "1-0"]
+        [TimeControl "60"]
+        [WhiteElo "1123"]
+        [BlackElo "1118"]
+        [Termination "SuperJJ04 won by checkmate"]
+        [Link "https://www.chess.com/game/145050889662"]
 
-1. d4 Nf6 2. c4 e6 3. Nf3 d5 4. Nc3 c6 5. Bg5 dxc4 6. e4 b5 7. e5 h6 8. Bh4 g5 9. Nxg5 hxg5 10. Bxg5 Nbd7 11. g3 Qa5 12. exf6 Bb7 13. Bg2 O-O-O 14. O-O c5 15. d5 b4 16. a3 bxc3 17. bxc3 exd5 18. Qg4 Qc7 19. Rab1 Bd6 20. Rfd1 Kb8 21. Bxd5 Ne5 22. Qe2 Rhe8 23. Rxb7+ Qxb7 24. Bxb7 Kxb7 25. Rb1+ Kc7 26. Qe4 Rb8 27. Qd5 Rxb1+ 28. Kg2 Rb2 29. Kh3 Rb1 30. Kg2 Rb2 31. Kh3 Rb1 32. Kg2 1/2-1/2
+        1. e4 d5 2. exd5 Nf6 3. Qf3 Nxd5 4. Bc4 Nb6 5. Qxf7+ Kd7 6. Qe6+ Ke8 7. Qf7+ Kd7
+        8. Be6+ Kc6 9. Bd5+ Nxd5 10. d3 Qd6 11. Qf3 Be6 12. c4 Qd7 13. cxd5+ Bxd5 14.
+        Qg3 Qe6+ 15. Be3 g6 16. Nc3 Bh6 17. Nxd5 Qxd5 18. Bxh6 Qxd3 19. Qxd3 Rf8 20.
+        Rc1+ Kb6 21. Qb3+ Ka6 22. Rxc7 Nc6 23. Qxb7+ Ka5 24. Rxc6 Ka4 25. Ra6# 1-0
     """.trimIndent()
 
     val positions = remember { generateFensFromPgn(samplePgn) }
@@ -57,7 +64,7 @@ fun ChessAnalysisApp(context: Any?) {
             delay(2000)
             withContext(Dispatchers.Default) {
                 for ((index, position) in positions.withIndex()) {
-                    val eval = stockfishEngine.evaluatePosition(position.fenString, depth = 5)
+                    val eval = stockfishEngine.evaluatePosition(position.fenString, depth = 14)
                     position.score = eval
                     println("STOCKFISH: Move #$index -> FEN: ${position.fenString}")
                     println("STOCKFISH: Eval: $eval")
@@ -97,13 +104,38 @@ fun ChessAnalysisApp(context: Any?) {
                 if (n != null) {
                     "mate ${abs(n)}"
                 } else {
-                    raw
+                    val score = raw.toDoubleOrNull()
+                    if (score != null) {
+                        val roundedScore = (score * 10.0).roundToInt() / 10.0
+
+                        // Multiplatform-safe way to format to one decimal place
+                        val integerPart = roundedScore.toInt()
+                        // Get the first decimal digit
+                        // abs() handles negative numbers, and we round the result to
+                        // clean up floating point errors, then take the first digit
+                        val oneDecimalDigit = abs((roundedScore * 10).roundToInt() - (integerPart * 10))
+
+                        return "$integerPart.$oneDecimalDigit"
+                    } else {
+                        raw
+                    }
                 }
             } else {
                 raw
             }
         } else {
-            raw
+            val score = raw.toDoubleOrNull()
+            if (score != null) {
+                val roundedScore = (score * 10.0).roundToInt() / 10.0
+
+                // Multiplatform-safe way to format to one decimal place
+                val integerPart = roundedScore.toInt()
+                val oneDecimalDigit = abs((roundedScore * 10).roundToInt() - (integerPart * 10))
+
+                return "$integerPart.$oneDecimalDigit"
+            } else {
+                raw
+            }
         }
     }
 
