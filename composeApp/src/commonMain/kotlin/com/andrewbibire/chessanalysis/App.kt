@@ -173,8 +173,10 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
         }
         Spacer(modifier = Modifier.height(32.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Button(onClick = { currentIndex = 0 }, enabled = currentIndex > 0) { Text("Start") }
             Button(onClick = { if (currentIndex > 0) currentIndex-- }, enabled = currentIndex > 0) { Text("Back") }
             Button(onClick = { if (currentIndex < positions.size - 1) currentIndex++ }, enabled = currentIndex < positions.size - 1) { Text("Forward") }
+            Button(onClick = { currentIndex = positions.lastIndex }, enabled = currentIndex < positions.lastIndex) { Text("End") }
         }
     }
 }
