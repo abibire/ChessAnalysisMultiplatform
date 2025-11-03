@@ -4,9 +4,7 @@ import kotlin.math.exp
 import kotlin.math.max
 
 enum class EvalType { Centipawn, Mate }
-
 data class Eval(val type: EvalType, val value: Double)
-
 enum class MoveColour { WHITE, BLACK }
 
 fun isWhiteToMove(fen: String): Boolean {
@@ -17,14 +15,13 @@ fun isWhiteToMove(fen: String): Boolean {
 fun parseEvaluationWhiteCentric(raw: String?, fen: String): Eval? {
     if (raw == null) return null
     val whiteToMove = isWhiteToMove(fen)
-    val lower = raw.lowercase()
+    val lower = raw.trim().lowercase()
     return if (lower.startsWith("mate")) {
-        val digits = Regex("""-?\d+""").find(lower)?.value
-        val n = digits?.toIntOrNull() ?: 0
+        val n = Regex("""-?\d+""").find(lower)?.value?.toIntOrNull() ?: 0
         val v = if (whiteToMove) n.toDouble() else -n.toDouble()
         Eval(EvalType.Mate, v)
     } else {
-        val pawns = raw.toDoubleOrNull() ?: return null
+        val pawns = lower.toDoubleOrNull() ?: return null
         val cp = pawns * 100.0
         val v = if (whiteToMove) cp else -cp
         Eval(EvalType.Centipawn, v)
