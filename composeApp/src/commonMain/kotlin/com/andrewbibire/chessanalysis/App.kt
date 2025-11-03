@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
+import kotlin.math.abs
 
 @Composable
 fun App(context: Any? = null) {
@@ -25,37 +26,16 @@ fun App(context: Any? = null) {
 @Composable
 fun ChessAnalysisApp(context: Any?) {
     val samplePgn = """
-        [Site "Chess.com"]
-[Date "2025.11.03"]
-[Round "-"]
-[White "MemeBlunders"]
-[Black "alimofatteh"]
-[Result "1-0"]
-[CurrentPosition "r1b3kr/p2p1Q1p/1p1Pp1p1/1Bp5/4P2n/8/2PNK1P1/5R2 b - - 2 25"]
-[Timezone "UTC"]
-[ECO "B10"]
-[ECOUrl "https://www.chess.com/openings/Caro-Kann-Defense-2.Nf3"]
-[UTCDate "2025.11.03"]
-[UTCTime "01:11:08"]
-[WhiteElo "1118"]
-[BlackElo "1102"]
-[TimeControl "60"]
-[Termination "MemeBlunders won by checkmate"]
-[StartTime "01:11:08"]
-[EndDate "2025.11.03"]
-[EndTime "01:12:32"]
-[Link "https://www.chess.com/analysis/game/live/145049862930/analysis?move=45"]
-[WhiteUrl "https://images.chesscomfiles.com/uploads/v1/user/68083330.ca9db885.50x50o.e8061c0a14f0.jpeg"]
-[WhiteCountry "2"]
-[WhiteTitle ""]
-[BlackUrl "https://images.chesscomfiles.com/uploads/v1/user/187317603.77b24f15.50x50o.e91ccd42288c.png"]
-[BlackCountry "5"]
-[BlackTitle ""]
+        [Event "WCC-25"]
+[Site "Moscow"]
+[Date "1985.10.05"]
+[Round "15"]
+[White "Karpov, Anatoly"]
+[Black "Kasparov, Garry"]
+[Result "1/2-1/2"]
+[ECO "D44"]
 
-1. e4 c6 2. Nf3 Qb6 3. Nc3 g6 4. d4 Bg7 5. d5 c5 6. Bd2 Qxb2 7. Rc1 Bxc3 8. Bxc3
-Qxc3+ 9. Nd2 Qa3 10. Qf3 Qxa2 11. Bc4 Qb2 12. d6 Qxc1+ 13. Ke2 e6 14. Rxc1 Nc6
-15. Nb3 Ne5 16. Qc3 b6 17. Qxe5 f6 18. Qc3 Kf7 19. Bb5 Nh6 20. Nd2 Ng4 21. f3
-Nxh2 22. Rh1 Nxf3 23. Rf1 Nh4 24. Qxf6+ Kg8 25. Qf7# 1-0
+1. d4 Nf6 2. c4 e6 3. Nf3 d5 4. Nc3 c6 5. Bg5 dxc4 6. e4 b5 7. e5 h6 8. Bh4 g5 9. Nxg5 hxg5 10. Bxg5 Nbd7 11. g3 Qa5 12. exf6 Bb7 13. Bg2 O-O-O 14. O-O c5 15. d5 b4 16. a3 bxc3 17. bxc3 exd5 18. Qg4 Qc7 19. Rab1 Bd6 20. Rfd1 Kb8 21. Bxd5 Ne5 22. Qe2 Rhe8 23. Rxb7+ Qxb7 24. Bxb7 Kxb7 25. Rb1+ Kc7 26. Qe4 Rb8 27. Qd5 Rxb1+ 28. Kg2 Rb2 29. Kh3 Rb1 30. Kg2 Rb2 31. Kh3 Rb1 32. Kg2 1/2-1/2
     """.trimIndent()
 
     val positions = remember { generateFensFromPgn(samplePgn) }
@@ -84,10 +64,46 @@ Nxh2 22. Rh1 Nxf3 23. Rf1 Nh4 24. Qxf6+ Kg8 25. Qf7# 1-0
                 }
             }
             println("STOCKFISH: All evaluations complete")
-            println("STOCKFISH: All scores -> " +
-                    positions.mapIndexed { i, p -> "Move $i: ${p.score}" }.joinToString(", ")
+            println(
+                "STOCKFISH: All scores -> " +
+                        positions.mapIndexed { i, p -> "Move $i: ${p.score}" }.joinToString(", ")
             )
             isEvaluating = false
+        }
+    }
+
+    fun normalizeScoreForDisplay(raw: String?, isLast: Boolean): String {
+        val gameResultOverride: String? = when (resultTag) {
+            "1-0" -> "White wins"
+            "0-1" -> "Black wins"
+            "1/2-1/2" -> "Draw"
+            else -> null
+        }
+
+        if (isLast) {
+            if (gameResultOverride != null) {
+                return gameResultOverride
+            }
+        }
+
+        if (raw == null) return "N/A"
+
+        val lower = raw.lowercase()
+
+        return if (lower.startsWith("mate")) {
+            val digits = Regex("""-?\d+""").find(lower)?.value
+            if (digits != null) {
+                val n = digits.toIntOrNull()
+                if (n != null) {
+                    "mate ${abs(n)}"
+                } else {
+                    raw
+                }
+            } else {
+                raw
+            }
+        } else {
+            raw
         }
     }
 
@@ -108,18 +124,11 @@ Nxh2 22. Rh1 Nxf3 23. Rf1 Nh4 24. Qxf6+ Kg8 25. Qf7# 1-0
         if (isEvaluating) {
             CircularProgressIndicator()
         } else {
-            val rawScore = positions[currentIndex].score
             val isLast = currentIndex == positions.lastIndex
-            val displayScore = if (isLast && (rawScore == null || rawScore == "0.00" || rawScore == "0")) {
-                when (resultTag) {
-                    "1-0" -> "White wins"
-                    "0-1" -> "Black wins"
-                    "1/2-1/2" -> "Draw"
-                    else -> "Game over"
-                }
-            } else {
-                rawScore ?: "N/A"
-            }
+            val displayScore = normalizeScoreForDisplay(
+                positions[currentIndex].score,
+                isLast
+            )
             Text(
                 text = "Score: $displayScore",
                 style = MaterialTheme.typography.titleLarge

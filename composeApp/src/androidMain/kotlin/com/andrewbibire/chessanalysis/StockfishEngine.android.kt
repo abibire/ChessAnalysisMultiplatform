@@ -13,19 +13,26 @@ actual class StockfishEngine actual constructor(context: Any?) {
 
     actual suspend fun evaluatePosition(fen: String, depth: Int): String = withContext(Dispatchers.IO) {
         initializeIfNeeded()
+
         writer?.write("position fen $fen\n")
         writer?.write("go depth $depth\n")
         writer?.flush()
 
-        var score = "N/A"
+        var lastScore: String? = null
+
         while (true) {
             val line = reader?.readLine() ?: break
+
             if (line.startsWith("info depth") && line.contains("score")) {
-                score = parseScore(line, fen)
+                lastScore = parseScoreFromInfo(line)
             }
-            if (line.startsWith("bestmove")) break
+
+            if (line.startsWith("bestmove")) {
+                break
+            }
         }
-        score
+
+        lastScore ?: "0.00"
     }
 
     private fun initializeIfNeeded() {
@@ -34,8 +41,10 @@ actual class StockfishEngine actual constructor(context: Any?) {
             process = ProcessBuilder(stockfishFile.absolutePath).start()
             writer = process!!.outputStream.bufferedWriter()
             reader = process!!.inputStream.bufferedReader()
+
             writer?.write("uci\n")
             writer?.flush()
+
             while (true) {
                 val line = reader?.readLine() ?: break
                 if (line.contains("uciok")) break
@@ -43,18 +52,32 @@ actual class StockfishEngine actual constructor(context: Any?) {
         }
     }
 
-    private fun parseScore(line: String, fen: String): String {
+    private fun parseScoreFromInfo(line: String): String {
         return when {
-            line.contains("mate") -> {
-                val moves = line.split("score mate")[1].trim().split(" ")[0].toInt()
-                "Mate in $moves"
+            line.contains("score mate") -> {
+                val after = line.substringAfter("score mate").trim()
+                val movesToken = after.split(" ")[0]
+                val movesInt = movesToken.toIntOrNull()
+                if (movesInt != null) {
+                    "mate $movesInt"
+                } else {
+                    "mate 0"
+                }
             }
-            line.contains("cp") -> {
-                val cp = line.split("score cp")[1].trim().split(" ")[0].toDouble()
-                val score = cp / 100
-                if (fen.contains(" b ")) (-score).toString() else score.toString()
+            line.contains("score cp") -> {
+                val after = line.substringAfter("score cp").trim()
+                val cpToken = after.split(" ")[0]
+                val cpInt = cpToken.toIntOrNull()
+                if (cpInt != null) {
+                    val pawns = cpInt.toDouble() / 100.0
+                    String.format("%.2f", pawns)
+                } else {
+                    "0.00"
+                }
             }
-            else -> "N/A"
+            else -> {
+                "0.00"
+            }
         }
     }
 
