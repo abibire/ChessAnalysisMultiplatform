@@ -6,5 +6,7 @@ data class Position(
     var classification: String? = null,
     var forced: Boolean? = null,
     var isBook: Boolean = false,
-    var openingName: String? = null
+    var openingName: String? = null,
+    var bestMove: String? = null,
+    var playedMove: String? = null
 )

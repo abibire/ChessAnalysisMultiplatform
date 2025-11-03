@@ -11,7 +11,7 @@ actual class StockfishEngine actual constructor(context: Any?) {
     private var writer: java.io.BufferedWriter? = null
     private var reader: java.io.BufferedReader? = null
 
-    actual suspend fun evaluatePosition(fen: String, depth: Int): String = withContext(Dispatchers.IO) {
+    actual suspend fun evaluatePosition(fen: String, depth: Int): EngineResult = withContext(Dispatchers.IO) {
         initializeIfNeeded()
 
         writer?.write("position fen $fen\n")
@@ -19,6 +19,7 @@ actual class StockfishEngine actual constructor(context: Any?) {
         writer?.flush()
 
         var lastScore: String? = null
+        var bestMove: String? = null
 
         while (true) {
             val line = reader?.readLine() ?: break
@@ -28,11 +29,15 @@ actual class StockfishEngine actual constructor(context: Any?) {
             }
 
             if (line.startsWith("bestmove")) {
+                val parts = line.split(" ")
+                if (parts.size > 1) {
+                    bestMove = parts[1]
+                }
                 break
             }
         }
 
-        lastScore ?: "0.00"
+        EngineResult(lastScore ?: "0.00", bestMove)
     }
 
     private fun initializeIfNeeded() {
