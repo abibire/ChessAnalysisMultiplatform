@@ -9,13 +9,14 @@
 #include "position.h"
 #include "search.h"
 #include "types.h"
+#include "uci.h"
 
 using namespace Stockfish;
 
 static Engine* g_engine = nullptr;
 static std::string g_lastResult;
 static std::string g_bestmove;
-static std::string g_lastScoreString;  // Store score as string
+static std::string g_lastScoreString;
 static bool g_initialized = false;
 
 void stockfish_init(void) {
@@ -42,15 +43,10 @@ void stockfish_init(void) {
             }
             
             try {
-                // Capture the evaluation score from search updates
                 g_engine->set_on_update_full([](const Search::InfoFull& info) {
                     if (info.depth > 0) {
-                        // Score in InfoFull might be a VALUE type, try treating as integer
-                        // In Stockfish, internal values are typically already in centipawn-like scale
-                        int scoreValue = *reinterpret_cast<const int*>(&info.score);
-                        std::ostringstream oss;
-                        oss << scoreValue;
-                        g_lastScoreString = oss.str();
+                        std::string raw = UCIEngine::format_score(info.score);
+                        g_lastScoreString = raw;
                         NSLog(@"[Bridge] Score update: depth=%d score=%s", info.depth, g_lastScoreString.c_str());
                     }
                 });
@@ -81,7 +77,7 @@ const char* stockfish_evaluate(const char* fen, int depth) {
         }
         
         g_bestmove.clear();
-        g_lastScoreString.clear();  // Reset score before search
+        g_lastScoreString.clear();
         
         std::vector<std::string> moves;
         g_engine->set_position(fen, moves);
@@ -92,23 +88,23 @@ const char* stockfish_evaluate(const char* fen, int depth) {
         g_engine->go(limits);
         g_engine->wait_for_search_finished();
         
-        // Parse the score string and convert to decimal
-        // Score string might be like "36" (centipawns) or "mate 5"
         std::string result;
+        
         if (g_lastScoreString.empty()) {
             result = "0.00";
-        } else if (g_lastScoreString.find("mate") != std::string::npos) {
-            result = g_lastScoreString;  // Return mate as is
-        } else {
+        } else if (g_lastScoreString.rfind("mate", 0) == 0) {
+            result = g_lastScoreString;
+        } else if (g_lastScoreString.rfind("cp", 0) == 0) {
             try {
-                int cp = std::stoi(g_lastScoreString);
+                int cp = std::stoi(g_lastScoreString.substr(3));
                 std::ostringstream oss;
-                oss.precision(2);
-                oss << std::fixed << (cp / 100.0);
+                oss << std::fixed << std::setprecision(2) << (cp / 100.0);
                 result = oss.str();
             } catch (...) {
                 result = "0.00";
             }
+        } else {
+            result = g_lastScoreString;
         }
         
         g_lastResult = result;
