@@ -21,13 +21,10 @@ static bool g_initialized = false;
 
 void stockfish_init(void) {
     @autoreleasepool {
-        NSLog(@"[Bridge] Init called");
-        
         if (!g_initialized) {
             Bitboards::init();
             Position::init();
             g_initialized = true;
-            NSLog(@"[Bridge] Tables initialized");
         }
         
         if (!g_engine) {
@@ -36,10 +33,8 @@ void stockfish_init(void) {
             try {
                 g_engine->set_on_bestmove([](std::string_view best, std::string_view ponder) {
                     g_bestmove = std::string(best);
-                    NSLog(@"[Bridge] Best move received: %s", g_bestmove.c_str());
                 });
             } catch (...) {
-                NSLog(@"[Bridge] Error setting bestmove callback");
             }
             
             try {
@@ -47,11 +42,9 @@ void stockfish_init(void) {
                     if (info.depth > 0) {
                         std::string raw = UCIEngine::format_score(info.score);
                         g_lastScoreString = raw;
-                        NSLog(@"[Bridge] Score update: depth=%d score=%s", info.depth, g_lastScoreString.c_str());
                     }
                 });
             } catch (...) {
-                NSLog(@"[Bridge] Error setting update_full callback");
             }
             
             try {
@@ -61,16 +54,12 @@ void stockfish_init(void) {
             try {
                 g_engine->set_on_iter([](const Search::InfoIteration& info) {});
             } catch (...) {}
-            
-            NSLog(@"[Bridge] Engine created");
         }
     }
 }
 
 const char* stockfish_evaluate(const char* fen, int depth) {
     @autoreleasepool {
-        NSLog(@"[Bridge] Evaluate: %s depth=%d", fen, depth);
-        
         if (!g_engine) {
             g_lastResult = "error: no engine";
             return g_lastResult.c_str();
@@ -91,14 +80,19 @@ const char* stockfish_evaluate(const char* fen, int depth) {
         std::string result;
         
         if (g_lastScoreString.empty()) {
-            result = "0.00";
+            if (g_bestmove.empty()) {
+                result = "mate 0";
+            } else {
+                result = "0.00";
+            }
         } else if (g_lastScoreString.rfind("mate", 0) == 0) {
             result = g_lastScoreString;
         } else if (g_lastScoreString.rfind("cp", 0) == 0) {
             try {
                 int cp = std::stoi(g_lastScoreString.substr(3));
                 std::ostringstream oss;
-                oss << std::fixed << std::setprecision(2) << (cp / 100.0);
+                oss << std::fixed << std::setprecision(2)
+                    << (cp / 100.0);
                 result = oss.str();
             } catch (...) {
                 result = "0.00";
@@ -108,8 +102,6 @@ const char* stockfish_evaluate(const char* fen, int depth) {
         }
         
         g_lastResult = result;
-        
-        NSLog(@"[Bridge] Result: %s", g_lastResult.c_str());
         return g_lastResult.c_str();
     }
 }
