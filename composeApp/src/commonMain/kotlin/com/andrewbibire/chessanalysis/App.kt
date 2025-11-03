@@ -79,7 +79,12 @@ fun ChessAnalysisApp(context: Any?) {
         }
     }
 
-    fun normalizeScoreForDisplay(raw: String?, isLast: Boolean): String {
+    fun isWhiteToMove(fen: String): Boolean {
+        val parts = fen.split(" ")
+        return parts.getOrNull(1) == "w"
+    }
+
+    fun normalizeScoreForDisplay(raw: String?, fen: String, isLast: Boolean): String {
         val gameResultOverride: String? = when (resultTag) {
             "1-0" -> "White wins"
             "0-1" -> "Black wins"
@@ -87,38 +92,23 @@ fun ChessAnalysisApp(context: Any?) {
             else -> null
         }
 
-        if (isLast) {
-            if (gameResultOverride != null) {
-                return gameResultOverride
-            }
+        if (isLast && gameResultOverride != null) {
+            return gameResultOverride
         }
 
         if (raw == null) return "N/A"
 
+        val whiteToMove = isWhiteToMove(fen)
         val lower = raw.lowercase()
 
         return if (lower.startsWith("mate")) {
             val digits = Regex("""-?\d+""").find(lower)?.value
             if (digits != null) {
-                val n = digits.toIntOrNull()
-                if (n != null) {
-                    "mate ${abs(n)}"
+                val movesToMate = digits.toIntOrNull()
+                if (movesToMate != null) {
+                    "Mate in ${abs(movesToMate)}"
                 } else {
-                    val score = raw.toDoubleOrNull()
-                    if (score != null) {
-                        val roundedScore = (score * 10.0).roundToInt() / 10.0
-
-                        // Multiplatform-safe way to format to one decimal place
-                        val integerPart = roundedScore.toInt()
-                        // Get the first decimal digit
-                        // abs() handles negative numbers, and we round the result to
-                        // clean up floating point errors, then take the first digit
-                        val oneDecimalDigit = abs((roundedScore * 10).roundToInt() - (integerPart * 10))
-
-                        return "$integerPart.$oneDecimalDigit"
-                    } else {
-                        raw
-                    }
+                    raw
                 }
             } else {
                 raw
@@ -126,13 +116,9 @@ fun ChessAnalysisApp(context: Any?) {
         } else {
             val score = raw.toDoubleOrNull()
             if (score != null) {
-                val roundedScore = (score * 10.0).roundToInt() / 10.0
-
-                // Multiplatform-safe way to format to one decimal place
-                val integerPart = roundedScore.toInt()
-                val oneDecimalDigit = abs((roundedScore * 10).roundToInt() - (integerPart * 10))
-
-                return "$integerPart.$oneDecimalDigit"
+                val adjustedScore = if (whiteToMove) score else -score
+                val roundedScore = (adjustedScore * 10.0).roundToInt() / 10.0
+                roundedScore.toString()
             } else {
                 raw
             }
@@ -159,6 +145,7 @@ fun ChessAnalysisApp(context: Any?) {
             val isLast = currentIndex == positions.lastIndex
             val displayScore = normalizeScoreForDisplay(
                 positions[currentIndex].score,
+                positions[currentIndex].fenString,
                 isLast
             )
             Text(
