@@ -56,6 +56,7 @@ fun ChessAnalysisApp(context: Any?) {
                     position.score = eval
                 }
             }
+            var lastOpeningName: String? = null
             for (i in 1 until positions.size) {
                 val prev = positions[i - 1]
                 val cur = positions[i]
@@ -66,10 +67,11 @@ fun ChessAnalysisApp(context: Any?) {
                     cur.isBook = true
                     cur.openingName = openingName
                     cur.classification = "Book"
+                    lastOpeningName = openingName
                     continue
                 } else {
                     cur.isBook = false
-                    cur.openingName = null
+                    cur.openingName = lastOpeningName
                 }
 
                 val moveColour = if (isWhiteToMove(prev.fenString)) MoveColour.WHITE else MoveColour.BLACK
@@ -108,7 +110,7 @@ fun ChessAnalysisApp(context: Any?) {
                 Text(text = "Move quality: $cls", style = MaterialTheme.typography.titleMedium)
             }
             positions[currentIndex].openingName?.let { name ->
-                Text(text = "Book: $name", style = MaterialTheme.typography.titleMedium)
+                Text(text = "$name", style = MaterialTheme.typography.titleMedium)
             }
         }
         Spacer(modifier = Modifier.height(32.dp))
