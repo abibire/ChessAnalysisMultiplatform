@@ -347,11 +347,11 @@ fun EvaluationBar(score: String?, fen: String, modifier: Modifier = Modifier) {
     val whiteAdvantage = when {
         evaluation == null -> 0.5f
         evaluation.type == EvalType.Mate -> {
-            if (evaluation.value > 0) 1f else 0f
+            if (evaluation.value > 0) 0.99f else 0.01f
         }
         else -> {
             val normalized = (evaluation.value / 100.0).coerceIn(-10.0, 10.0)
-            ((normalized + 10.0) / 20.0).toFloat()
+            ((normalized + 10.0) / 20.0).toFloat().coerceIn(0.01f, 0.99f)
         }
     }
 
