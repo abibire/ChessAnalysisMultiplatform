@@ -20,7 +20,9 @@ fun App(context: Any? = null) {
         colorScheme = ChessAnalysisDarkColorScheme
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
             color = MaterialTheme.colorScheme.background
         ) {
             ChessAnalysisApp(context)
@@ -129,7 +131,9 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
     }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.statusBars),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         EvaluationBar(
@@ -154,7 +158,8 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(16.dp),
+                .padding(16.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
