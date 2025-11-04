@@ -101,6 +101,13 @@ const char* stockfish_evaluate(const char* fen, int depth) {
             scoreResult = g_lastScoreString;
         }
 
+        if (scoreResult.rfind("mate", 0) == 0) {
+            size_t space = scoreResult.find(' ');
+            if (space != std::string::npos && space + 1 < scoreResult.size() && scoreResult[space + 1] == '+') {
+                scoreResult.erase(space + 1, 1);
+            }
+        }
+
         g_lastResult = scoreResult + "|" + g_bestmove;
         return g_lastResult.c_str();
     }

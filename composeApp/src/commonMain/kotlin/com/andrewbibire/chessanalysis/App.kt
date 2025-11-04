@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.github.bhlangonijr.chesslib.Board
 import kotlinx.coroutines.withContext
@@ -326,7 +327,7 @@ fun normalizeScoreForDisplay(raw: String?, fen: String, isLast: Boolean): String
     if (raw == null) return "N/A"
     val lower = raw.lowercase()
     return if (lower.startsWith("mate")) {
-        val digits = Regex("""-?\d+""").find(lower)?.value
+        val digits = Regex("""[+-]?\d+""").find(lower)?.value
         if (digits != null) {
             val movesToMate = digits.toIntOrNull()
             if (movesToMate != null) "Mate in ${abs(movesToMate)}" else raw
@@ -357,18 +358,22 @@ fun EvaluationBar(
     isLastMove: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val whiteToMove = isWhiteToMove(fen)
     val evaluation = parseEvaluationWhiteCentric(score, fen)
 
+    val pgnAdvantage: Float? = when (gameResult) {
+        "1-0" -> 1f
+        "0-1" -> 0f
+        "1/2-1/2" -> 0.5f
+        else -> null
+    }
+
     val whiteAdvantage = when {
+        isLastMove && pgnAdvantage != null -> pgnAdvantage
         evaluation == null -> 0.5f
         evaluation.type == EvalType.Mate -> {
-            if (abs(evaluation.value) > 900) {
-                when (gameResult) {
-                    "1-0" -> 1f
-                    "0-1" -> 0f
-                    else -> 0.5f
-                }
+            val absValue = abs(evaluation.value)
+            if (absValue > 900) {
+                if (pgnAdvantage != null) pgnAdvantage else if (evaluation.value > 0) 1f else 0f
             } else {
                 if (evaluation.value > 0) 1f else 0f
             }
@@ -384,66 +389,49 @@ fun EvaluationBar(
         animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)
     )
 
-    val isMatePosition = evaluation?.type == EvalType.Mate
+    val fraction = animatedWhiteAdvantage.coerceIn(0f, 1f)
 
-    val displayWhiteAdvantage = if (isMatePosition) {
-        if (whiteAdvantage == 1f && animatedWhiteAdvantage > 0.98f) 0.999f
-        else if (whiteAdvantage == 0f && animatedWhiteAdvantage < 0.02f) 0.001f
-        else {
-            if (animatedWhiteAdvantage < 0.01f) 0.01f
-            else if (animatedWhiteAdvantage > 0.99f) 0.99f
-            else animatedWhiteAdvantage
-        }
-    } else {
-        if (animatedWhiteAdvantage < 0.01f) 0.01f
-        else if (animatedWhiteAdvantage > 0.99f) 0.99f
-        else animatedWhiteAdvantage
-    }
+    val leftTextColor = if (fraction <= 0f) Color.White else Color(0xFF3a3a3a)
+    val rightTextColor = if (fraction >= 1f) Color(0xFF3a3a3a) else Color.White
 
     val isGameOver = isLastMove || (evaluation?.type == EvalType.Mate && abs(evaluation.value) > 900)
 
     val (whiteScore, blackScore) = when {
         isGameOver -> {
             when (gameResult) {
-                "1-0" -> Pair("1", "0")
-                "0-1" -> Pair("0", "1")
-                "1/2-1/2" -> Pair("½", "½")
-                else -> Pair(null, null)
+                "1-0" -> "1" to "0"
+                "0-1" -> "0" to "1"
+                "1/2-1/2" -> "½" to "½"
+                else -> null to null
             }
         }
         evaluation?.type == EvalType.Mate && evaluation.value > 0 -> {
             val mateIn = abs(evaluation.value.toInt())
-            Pair("M$mateIn", null)
+            "M$mateIn" to null
         }
         evaluation?.type == EvalType.Mate && evaluation.value < 0 -> {
             val mateIn = abs(evaluation.value.toInt())
-            Pair(null, "M$mateIn")
+            null to "M$mateIn"
         }
         evaluation?.type == EvalType.Centipawn -> {
-            val score = abs(evaluation.value / 100.0)
-            val rounded = (score * 10).roundToInt() / 10.0
+            val scoreAbs = abs(evaluation.value / 100.0)
+            val rounded = (scoreAbs * 10).roundToInt() / 10.0
             val scoreStr = rounded.toString()
-            if (evaluation.value > 0) Pair(scoreStr, null) else Pair(null, scoreStr)
+            if (rounded == 0.0) "0" to "0"
+            else if (evaluation.value > 0) scoreStr to null
+            else null to scoreStr
         }
-        else -> Pair(null, null)
+        else -> null to null
     }
 
-    Box(modifier = modifier) {
-        Row(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .weight(displayWhiteAdvantage)
-                    .fillMaxHeight()
-                    .background(Color.White)
-            )
-            Box(
-                modifier = Modifier
-                    .weight(1f - displayWhiteAdvantage)
-                    .fillMaxHeight()
-                    .background(Color(0xFF3a3a3a))
-            )
-        }
-
+    Box(modifier = modifier.background(Color(0xFF3a3a3a))) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(fraction)
+                .background(Color.White)
+                .align(Alignment.CenterStart)
+        )
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -452,24 +440,22 @@ fun EvaluationBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (whiteScore != null) {
-                val textColor = if (gameResult == "0-1") Color.White else Color(0xFF3a3a3a)
                 Text(
                     text = whiteScore,
                     style = MaterialTheme.typography.labelSmall,
-                    color = textColor,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    color = leftTextColor,
+                    fontWeight = FontWeight.Bold
                 )
             } else {
                 Spacer(modifier = Modifier.width(1.dp))
             }
 
             if (blackScore != null) {
-                val textColor = if (gameResult == "1-0") Color(0xFF3a3a3a) else Color.White
                 Text(
                     text = blackScore,
                     style = MaterialTheme.typography.labelSmall,
-                    color = textColor,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    color = rightTextColor,
+                    fontWeight = FontWeight.Bold
                 )
             } else {
                 Spacer(modifier = Modifier.width(1.dp))

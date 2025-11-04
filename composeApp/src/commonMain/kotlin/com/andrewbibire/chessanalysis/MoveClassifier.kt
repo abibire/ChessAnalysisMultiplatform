@@ -17,7 +17,7 @@ fun parseEvaluationWhiteCentric(raw: String?, fen: String): Eval? {
     val whiteToMove = isWhiteToMove(fen)
     val lower = raw.trim().lowercase()
     return if (lower.startsWith("mate")) {
-        val n = Regex("""-?\d+""").find(lower)?.value?.toIntOrNull() ?: 0
+        val n = Regex("""[+-]?\d+""").find(lower)?.value?.toIntOrNull() ?: 0
         val v = if (n == 0) {
             if (whiteToMove) -999.0 else 999.0
         } else {
