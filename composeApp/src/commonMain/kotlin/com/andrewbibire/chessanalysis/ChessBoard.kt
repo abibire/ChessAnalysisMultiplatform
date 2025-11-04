@@ -28,14 +28,14 @@ fun Chessboard(fen: String, modifier: Modifier = Modifier) {
     val board = parseFenToBoard(fen)
     Column(modifier = modifier) {
         for (row in 0..7) {
-            Row {
+            Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 for (col in 0..7) {
                     val isLight = (row + col) % 2 == 0
                     val piece = board[row][col]
                     ChessSquare(
                         piece = piece,
                         isLight = isLight,
-                        modifier = Modifier.size(45.dp)
+                        modifier = Modifier.weight(1f).fillMaxHeight()
                     )
                 }
             }

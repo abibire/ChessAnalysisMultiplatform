@@ -1,7 +1,12 @@
 package com.andrewbibire.chessanalysis
 
 import androidx.compose.ui.window.ComposeUIViewController
+import platform.UIKit.UIViewController
+import platform.UIKit.UIStatusBarStyleLightContent
 
-fun MainViewController() = ComposeUIViewController {
-    App(context = Unit) // Pass Unit (non-null) so StockfishEngine gets created
+fun MainViewController(): UIViewController {
+    val controller = ComposeUIViewController {
+        App(context = Unit)
+    }
+    return controller
 }

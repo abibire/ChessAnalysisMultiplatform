@@ -1,5 +1,6 @@
 package com.andrewbibire.chessanalysis
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,8 +16,13 @@ import kotlin.math.roundToInt
 
 @Composable
 fun App(context: Any? = null) {
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    MaterialTheme(
+        colorScheme = ChessAnalysisDarkColorScheme
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars),
+            color = MaterialTheme.colorScheme.background
+        ) {
             ChessAnalysisApp(context)
         }
     }
@@ -123,60 +129,180 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Move: $currentIndex", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(16.dp))
-        Chessboard(fen = positions[currentIndex].fenString)
-        Spacer(modifier = Modifier.height(16.dp))
-        if (isEvaluating) {
-            CircularProgressIndicator()
-        } else {
-            val isLast = currentIndex == positions.lastIndex
-            val displayScore = normalizeScoreForDisplay(
-                positions[currentIndex].score,
-                positions[currentIndex].fenString,
-                isLast
+        EvaluationBar(
+            score = if (isEvaluating) null else positions[currentIndex].score,
+            fen = positions[currentIndex].fenString,
+            modifier = Modifier.fillMaxWidth().height(24.dp)
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            Chessboard(
+                fen = positions[currentIndex].fenString,
+                modifier = Modifier.fillMaxSize()
             )
-            Text(text = "Score: $displayScore", style = MaterialTheme.typography.titleLarge)
-            positions[currentIndex].forced?.let { f ->
-                if (f) {
-                    Text(
-                        text = "Forced",
-                        style = MaterialTheme.typography.titleMedium
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Move: $currentIndex",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (isEvaluating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        color = BoardDark
                     )
-                }
-            }
-            positions[currentIndex].classification?.let { cls ->
-                Text(text = "Move quality: $cls", style = MaterialTheme.typography.titleMedium)
-            }
-            positions[currentIndex].openingName?.let { name ->
-                Text(text = "$name", style = MaterialTheme.typography.titleMedium)
-            }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Analyzing...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    val isLast = currentIndex == positions.lastIndex
+                    val displayScore = normalizeScoreForDisplay(
+                        positions[currentIndex].score,
+                        positions[currentIndex].fenString,
+                        isLast
+                    )
+                    Text(
+                        text = "Evaluation: $displayScore",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
 
-            if (currentIndex > 0) {
-                val prevPosition = positions[currentIndex - 1]
-                val currentPosition = positions[currentIndex]
-                val classification = currentPosition.classification
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                if (classification != "Book" && classification != "Best" && classification != "Forced") {
-                    prevPosition.bestMove?.let { best ->
+                    positions[currentIndex].forced?.let { f ->
+                        if (f) {
+                            Text(
+                                text = "Forced",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    positions[currentIndex].classification?.let { cls ->
                         Text(
-                            text = "Best: $best",
-                            style = MaterialTheme.typography.bodyLarge
+                            text = "Move quality: $cls",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+                    }
+                    positions[currentIndex].openingName?.let { name ->
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (currentIndex > 0) {
+                        val prevPosition = positions[currentIndex - 1]
+                        val currentPosition = positions[currentIndex]
+                        val classification = currentPosition.classification
+
+                        if (classification != "Book" && classification != "Best" && classification != "Forced") {
+                            prevPosition.bestMove?.let { best ->
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Best: $best",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
-        }
-        Spacer(modifier = Modifier.height(32.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Button(onClick = { currentIndex = 0 }, enabled = currentIndex > 0) { Text("Start") }
-            Button(onClick = { if (currentIndex > 0) currentIndex-- }, enabled = currentIndex > 0) { Text("Back") }
-            Button(onClick = { if (currentIndex < positions.size - 1) currentIndex++ }, enabled = currentIndex < positions.size - 1) { Text("Forward") }
-            Button(onClick = { currentIndex = positions.lastIndex }, enabled = currentIndex < positions.lastIndex) { Text("End") }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+            ) {
+                Button(
+                    onClick = { currentIndex = 0 },
+                    enabled = currentIndex > 0,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BoardDark,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = "Start",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+                Button(
+                    onClick = { if (currentIndex > 0) currentIndex-- },
+                    enabled = currentIndex > 0,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BoardDark,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = "Back",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+                Button(
+                    onClick = { if (currentIndex < positions.size - 1) currentIndex++ },
+                    enabled = currentIndex < positions.size - 1,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BoardDark,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = "Next",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+                Button(
+                    onClick = { currentIndex = positions.lastIndex },
+                    enabled = currentIndex < positions.lastIndex,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BoardDark,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = "End",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
         }
     }
 }
@@ -206,6 +332,38 @@ fun hasOnlyOneLegalMove(fen: String): Boolean {
     board.loadFromFen(fen)
     val moves = board.legalMoves()
     return moves.size == 1
+}
+
+@Composable
+fun EvaluationBar(score: String?, fen: String, modifier: Modifier = Modifier) {
+    val whiteToMove = isWhiteToMove(fen)
+    val evaluation = parseEvaluationWhiteCentric(score, fen)
+
+    val whiteAdvantage = when {
+        evaluation == null -> 0.5f
+        evaluation.type == EvalType.Mate -> {
+            if (evaluation.value > 0) 1f else 0f
+        }
+        else -> {
+            val normalized = (evaluation.value / 100.0).coerceIn(-10.0, 10.0)
+            ((normalized + 10.0) / 20.0).toFloat()
+        }
+    }
+
+    Row(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .weight(whiteAdvantage)
+                .fillMaxHeight()
+                .background(EvalGreen)
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f - whiteAdvantage)
+                .fillMaxHeight()
+                .background(DarkSurfaceVariant)
+        )
+    }
 }
 
 expect fun createStockfishEngine(context: Any?): StockfishEngine
