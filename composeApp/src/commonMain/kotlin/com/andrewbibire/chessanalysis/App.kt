@@ -16,9 +16,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -77,8 +77,7 @@ Rxc2 28. Rxc2 Qe8 $6 29. Kf2 $6 Qd8 $6 30. g4 $6 Qb8 $6 31. Nh4 $4 Rc8 $9 32. f5
 Rxc2 $1 33. Qxc2 Qb6 $9 34. fxe6 $4 Qxd4+ $9 35. Ke2 Nxe5 $4 36. exf7+ $9 Kxf7 $4 37.
 Qf5+ $9 Kg8 $4 38. Qe6+ Kf8 39. Bxe5 Qe4+ $2 40. Nxe4 Nf6 41. Nxf6 $9 Bxf6 $6 42. Bxf6
 $9 gxf6 43. Qxf6+ Ke8 44. Qxh6 Kd7 45. Qd2 Kc6 $6 46. Kd3 Kc5 $6 47. Qg5 a4 48. bxa4
-b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55.
-Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
+b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
     """.trimIndent()
 
     val gameResult = remember {
@@ -140,8 +139,12 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                 .aspectRatio(1f),
             contentAlignment = Alignment.Center
         ) {
+            val arrow = if (positions[currentIndex].classification != "Best" && currentIndex > 0)
+                positions[currentIndex - 1].bestMove?.takeIf { it.length >= 4 }?.substring(0, 4)
+            else null
             Chessboard(
                 fen = positions[currentIndex].fenString,
+                arrowUci = arrow,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -160,7 +163,7 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Move: $currentIndex",
+                    text = "Move: ${currentIndex}",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -202,11 +205,11 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                         }
                     }
 
-                    positions[currentIndex].classification?.let { cls ->
+                    positions[currentIndex].classification?.let { c ->
                         Text(
-                            text = "Classification: $cls",
+                            text = "Classification: $c",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = when (cls) {
+                            color = when (c) {
                                 "Best" -> EvalGreen
                                 "Excellent" -> EvalGreen
                                 "Okay" -> EvalYellow
@@ -269,7 +272,7 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                     )
                 }
                 EvaluationButton(
-                    onClick = { isPlaying = !isPlaying },
+                    onClick = { if (currentIndex < positions.lastIndex) isPlaying = !isPlaying },
                     enabled = currentIndex < positions.lastIndex,
                     modifier = Modifier.weight(1f)
                 ) {
@@ -341,9 +344,7 @@ fun EvaluationButton(
             pressedElevation = 0.dp,
             disabledElevation = 0.dp
         )
-    ) {
-        content()
-    }
+    ) { content() }
 }
 
 fun normalizeScoreForDisplay(raw: String?, fen: String, isLast: Boolean): String {
@@ -387,7 +388,7 @@ fun EvaluationBar(
         isLastMove && pgnAdvantage != null -> pgnAdvantage
         evaluation == null -> 0.5f
         evaluation.type == EvalType.Mate -> {
-            val absValue = abs(evaluation.value)
+            val absValue = kotlin.math.abs(evaluation.value)
             if (absValue > 900) {
                 if (pgnAdvantage != null) pgnAdvantage else if (evaluation.value > 0) 1f else 0f
             } else {
@@ -410,7 +411,7 @@ fun EvaluationBar(
     val leftTextColor = if (fraction <= 0f) Color.White else Color(0xFF3a3a3a)
     val rightTextColor = if (fraction >= 1f) Color(0xFF3a3a3a) else Color.White
 
-    val isGameOver = isLastMove || (evaluation?.type == EvalType.Mate && abs(evaluation.value) > 900)
+    val isGameOver = isLastMove || (evaluation?.type == EvalType.Mate && kotlin.math.abs(evaluation.value) > 900)
 
     val (whiteScore, blackScore) = when {
         isGameOver -> {
@@ -422,15 +423,15 @@ fun EvaluationBar(
             }
         }
         evaluation?.type == EvalType.Mate && evaluation.value > 0 -> {
-            val mateIn = abs(evaluation.value.toInt())
+            val mateIn = kotlin.math.abs(evaluation.value.toInt())
             "M$mateIn" to null
         }
         evaluation?.type == EvalType.Mate && evaluation.value < 0 -> {
-            val mateIn = abs(evaluation.value.toInt())
+            val mateIn = kotlin.math.abs(evaluation.value.toInt())
             null to "M$mateIn"
         }
         evaluation?.type == EvalType.Centipawn -> {
-            val scoreAbs = abs(evaluation.value / 100.0)
+            val scoreAbs = kotlin.math.abs(evaluation.value / 100.0)
             val rounded = (scoreAbs * 10).roundToInt() / 10.0
             val scoreStr = rounded.toString()
             if (rounded == 0.0) "0" to "0"
