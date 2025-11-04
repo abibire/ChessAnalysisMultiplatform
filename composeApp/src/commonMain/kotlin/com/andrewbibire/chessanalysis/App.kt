@@ -5,10 +5,14 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -73,7 +77,7 @@ Rb8 $6 22. b3 a5 23. Nf3 Kg8 24. Nbd2 Qc8 $6 25. Rc1 Qd8 $6 26. Rc2 Rc8 27. Rfc1
 Rxc2 28. Rxc2 Qe8 $6 29. Kf2 $6 Qd8 $6 30. g4 $6 Qb8 $6 31. Nh4 $4 Rc8 $9 32. f5 $4
 Rxc2 $1 33. Qxc2 Qb6 $9 34. fxe6 $4 Qxd4+ $9 35. Ke2 Nxe5 $4 36. exf7+ $9 Kxf7 $4 37.
 Qf5+ $9 Kg8 $4 38. Qe6+ Kf8 39. Bxe5 Qe4+ $2 40. Nxe4 Nf6 41. Nxf6 $9 Bxf6 $6 42. Bxf6
-$9 gxf6 43. Qxf6+ Ke8 44. Qxh6 Kd7 45. Qd2 Kc6 46. Kd3 Kc5 $6 47. Qg5 a4 48. bxa4
+$9 gxf6 43. Qxf6+ Ke8 44. Qxh6 Kd7 45. Qd2 Kc6 $6 46. Kd3 Kc5 $6 47. Qg5 a4 48. bxa4
 b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55.
 Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
     """.trimIndent()
@@ -85,6 +89,7 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
     val positions = remember { generateFensFromPgn(pgn) }
     var currentIndex by remember { mutableIntStateOf(0) }
     var isEvaluating by remember { mutableStateOf(false) }
+    var isPlaying by remember { mutableStateOf(false) }
 
     val stockfishEngine = remember(context) {
         if (context != null) createStockfishEngine(context) else null
@@ -136,6 +141,15 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                 }
             }
             isEvaluating = false
+        }
+    }
+
+    LaunchedEffect(isPlaying, currentIndex) {
+        if (isPlaying && currentIndex < positions.lastIndex) {
+            delay(1000)
+            currentIndex++
+        } else if (currentIndex >= positions.lastIndex) {
+            isPlaying = false
         }
     }
 
@@ -215,111 +229,153 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                         if (f) {
                             Text(
                                 text = "Forced",
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
+
                     positions[currentIndex].classification?.let { cls ->
                         Text(
-                            text = "Move quality: $cls",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = "Classification: $cls",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = when (cls) {
+                                "Best" -> EvalGreen
+                                "Excellent" -> EvalGreen
+                                "Okay" -> EvalYellow
+                                "Inaccuracy" -> EvalYellow
+                                "Mistake" -> EvalRed
+                                "Blunder" -> EvalRed
+                                "Book" -> PrimaryBlue
+                                else -> MaterialTheme.colorScheme.onSurface
+                            }
                         )
                     }
+
                     positions[currentIndex].openingName?.let { name ->
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = name,
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = "Opening: $name",
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
-                    if (currentIndex > 0) {
-                        val prevPosition = positions[currentIndex - 1]
-                        val currentPosition = positions[currentIndex]
-                        val classification = currentPosition.classification
-
-                        if (classification != "Book" && classification != "Best" && classification != "Forced") {
-                            prevPosition.bestMove?.let { best ->
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Best: $best",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                    positions[currentIndex].bestMove?.let { bm ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Best: $bm",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Button(
+                EvaluationButtons(
                     onClick = { currentIndex = 0 },
                     enabled = currentIndex > 0,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BoardDark,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = "Start",
-                        style = MaterialTheme.typography.labelMedium
+                    Icon(
+                        imageVector = Icons.Filled.SkipPrevious,
+                        contentDescription = "First move",
+                        modifier = Modifier.size(28.dp)
                     )
                 }
-                Button(
-                    onClick = { if (currentIndex > 0) currentIndex-- },
+                EvaluationButtons(
+                    onClick = {
+                        isPlaying = false
+                        if (currentIndex > 0) currentIndex--
+                    },
                     enabled = currentIndex > 0,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BoardDark,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = "Back",
-                        style = MaterialTheme.typography.labelMedium
+                    Icon(
+                        imageVector = Icons.Filled.NavigateBefore,
+                        contentDescription = "Previous move",
+                        modifier = Modifier.size(28.dp)
                     )
                 }
-                Button(
-                    onClick = { if (currentIndex < positions.size - 1) currentIndex++ },
-                    enabled = currentIndex < positions.size - 1,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BoardDark,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
-                ) {
-                    Text(
-                        text = "Next",
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                }
-                Button(
-                    onClick = { currentIndex = positions.lastIndex },
+                EvaluationButtons(
+                    onClick = { isPlaying = !isPlaying },
                     enabled = currentIndex < positions.lastIndex,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BoardDark,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = "End",
-                        style = MaterialTheme.typography.labelMedium
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                EvaluationButtons(
+                    onClick = {
+                        isPlaying = false
+                        if (currentIndex < positions.size - 1) currentIndex++
+                    },
+                    enabled = currentIndex < positions.size - 1,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.NavigateNext,
+                        contentDescription = "Next move",
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                EvaluationButtons(
+                    onClick = {
+                        isPlaying = false
+                        currentIndex = positions.lastIndex
+                    },
+                    enabled = currentIndex < positions.lastIndex,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.SkipNext,
+                        contentDescription = "Last move",
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+fun EvaluationButtons(
+    onClick: () -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .height(56.dp)
+            .shadow(
+                elevation = if (enabled) 4.dp else 0.dp,
+                shape = RoundedCornerShape(12.dp)
+            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF3d3d3d),
+            contentColor = Color.White,
+            disabledContainerColor = Color(0xFF2a2a2a),
+            disabledContentColor = Color(0xFF555555)
+        ),
+        shape = RoundedCornerShape(12.dp),
+        contentPadding = PaddingValues(0.dp),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+            disabledElevation = 0.dp
+        )
+    ) {
+        content()
     }
 }
 
