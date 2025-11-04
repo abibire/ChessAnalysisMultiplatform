@@ -1,5 +1,6 @@
 package com.andrewbibire.chessanalysis
 
+import com.github.bhlangonijr.chesslib.Board
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.abs
@@ -123,5 +124,48 @@ fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour): St
         "Mistake"
     } else {
         "Blunder"
+    }
+}
+
+fun hasOnlyOneLegalMove(fen: String): Boolean {
+    val board = Board()
+    board.loadFromFen(fen)
+    val moves = board.legalMoves()
+    return moves.size == 1
+}
+
+fun classifyPositions(positions: List<Position>) {
+    var lastOpeningName: String? = null
+    for (i in 1 until positions.size) {
+        val prev = positions[i - 1]
+        val cur = positions[i]
+
+        val boardFen = cur.fenString.substringBefore(' ')
+        val openingName = OpeningBook.lookupBoardFen(boardFen)
+        if (openingName != null) {
+            cur.isBook = true
+            cur.openingName = openingName
+            cur.classification = "Book"
+            lastOpeningName = openingName
+            continue
+        } else {
+            cur.isBook = false
+            cur.openingName = lastOpeningName
+        }
+
+        val onlyMove = hasOnlyOneLegalMove(prev.fenString)
+        cur.forced = onlyMove
+        if (!onlyMove) {
+            val moveColour = if (isWhiteToMove(prev.fenString)) MoveColour.WHITE else MoveColour.BLACK
+            val prevEval = parseEvaluationWhiteCentric(prev.score, prev.fenString)
+            val curEval = parseEvaluationWhiteCentric(cur.score, cur.fenString)
+            cur.classification = if (prevEval != null && curEval != null) {
+                classifyPointLoss(prevEval, curEval, moveColour)
+            } else {
+                null
+            }
+        } else {
+            cur.classification = null
+        }
     }
 }

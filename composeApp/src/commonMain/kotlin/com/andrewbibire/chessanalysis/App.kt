@@ -16,7 +16,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.github.bhlangonijr.chesslib.Board
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -107,39 +106,7 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                     position.bestMove = result.bestMove
                 }
             }
-            var lastOpeningName: String? = null
-            for (i in 1 until positions.size) {
-                val prev = positions[i - 1]
-                val cur = positions[i]
-
-                val boardFen = cur.fenString.substringBefore(' ')
-                val openingName = OpeningBook.lookupBoardFen(boardFen)
-                if (openingName != null) {
-                    cur.isBook = true
-                    cur.openingName = openingName
-                    cur.classification = "Book"
-                    lastOpeningName = openingName
-                    continue
-                } else {
-                    cur.isBook = false
-                    cur.openingName = lastOpeningName
-                }
-
-                val onlyMove = hasOnlyOneLegalMove(prev.fenString)
-                cur.forced = onlyMove
-                if (!onlyMove) {
-                    val moveColour = if (isWhiteToMove(prev.fenString)) MoveColour.WHITE else MoveColour.BLACK
-                    val prevEval = parseEvaluationWhiteCentric(prev.score, prev.fenString)
-                    val curEval = parseEvaluationWhiteCentric(cur.score, cur.fenString)
-                    cur.classification = if (prevEval != null && curEval != null) {
-                        classifyPointLoss(prevEval, curEval, moveColour)
-                    } else {
-                        null
-                    }
-                } else {
-                    cur.classification = null
-                }
-            }
+            classifyPositions(positions)
             isEvaluating = false
         }
     }
@@ -276,7 +243,7 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                EvaluationButtons(
+                EvaluationButton(
                     onClick = { currentIndex = 0 },
                     enabled = currentIndex > 0,
                     modifier = Modifier.weight(1f)
@@ -287,7 +254,7 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                         modifier = Modifier.size(28.dp)
                     )
                 }
-                EvaluationButtons(
+                EvaluationButton(
                     onClick = {
                         isPlaying = false
                         if (currentIndex > 0) currentIndex--
@@ -301,7 +268,7 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                         modifier = Modifier.size(28.dp)
                     )
                 }
-                EvaluationButtons(
+                EvaluationButton(
                     onClick = { isPlaying = !isPlaying },
                     enabled = currentIndex < positions.lastIndex,
                     modifier = Modifier.weight(1f)
@@ -312,7 +279,7 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                         modifier = Modifier.size(28.dp)
                     )
                 }
-                EvaluationButtons(
+                EvaluationButton(
                     onClick = {
                         isPlaying = false
                         if (currentIndex < positions.size - 1) currentIndex++
@@ -326,7 +293,7 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
                         modifier = Modifier.size(28.dp)
                     )
                 }
-                EvaluationButtons(
+                EvaluationButton(
                     onClick = {
                         isPlaying = false
                         currentIndex = positions.lastIndex
@@ -346,7 +313,7 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
 }
 
 @Composable
-fun EvaluationButtons(
+fun EvaluationButton(
     onClick: () -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -397,13 +364,6 @@ fun normalizeScoreForDisplay(raw: String?, fen: String, isLast: Boolean): String
             roundedScore.toString()
         } else raw
     }
-}
-
-fun hasOnlyOneLegalMove(fen: String): Boolean {
-    val board = Board()
-    board.loadFromFen(fen)
-    val moves = board.legalMoves()
-    return moves.size == 1
 }
 
 @Composable
