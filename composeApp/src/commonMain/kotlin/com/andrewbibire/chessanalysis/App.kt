@@ -1,11 +1,15 @@
 package com.andrewbibire.chessanalysis
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.github.bhlangonijr.chesslib.Board
 import kotlinx.coroutines.withContext
@@ -73,6 +77,10 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55.
 Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
     """.trimIndent()
 
+    val gameResult = remember {
+        Regex("""\[Result\s+"([^"]+)"\]""").find(pgn)?.groupValues?.get(1) ?: "*"
+    }
+
     val positions = remember { generateFensFromPgn(pgn) }
     var currentIndex by remember { mutableIntStateOf(0) }
     var isEvaluating by remember { mutableStateOf(false) }
@@ -139,6 +147,8 @@ Qbb7 Ke6 56. Qxd5+ Ke7 57. Qe5+ Kd7 58. Qb7+ Kd8 59. Qee7# 1-0
         EvaluationBar(
             score = if (isEvaluating) null else positions[currentIndex].score,
             fen = positions[currentIndex].fenString,
+            gameResult = gameResult,
+            isLastMove = currentIndex == positions.lastIndex,
             modifier = Modifier.fillMaxWidth().height(24.dp)
         )
 
@@ -340,34 +350,131 @@ fun hasOnlyOneLegalMove(fen: String): Boolean {
 }
 
 @Composable
-fun EvaluationBar(score: String?, fen: String, modifier: Modifier = Modifier) {
+fun EvaluationBar(
+    score: String?,
+    fen: String,
+    gameResult: String,
+    isLastMove: Boolean,
+    modifier: Modifier = Modifier
+) {
     val whiteToMove = isWhiteToMove(fen)
     val evaluation = parseEvaluationWhiteCentric(score, fen)
 
     val whiteAdvantage = when {
         evaluation == null -> 0.5f
         evaluation.type == EvalType.Mate -> {
-            if (evaluation.value > 0) 0.99f else 0.01f
+            if (abs(evaluation.value) > 900) {
+                when (gameResult) {
+                    "1-0" -> 1f
+                    "0-1" -> 0f
+                    else -> 0.5f
+                }
+            } else {
+                if (evaluation.value > 0) 1f else 0f
+            }
         }
         else -> {
             val normalized = (evaluation.value / 100.0).coerceIn(-10.0, 10.0)
-            ((normalized + 10.0) / 20.0).toFloat().coerceIn(0.01f, 0.99f)
+            ((normalized + 10.0) / 20.0).toFloat().coerceIn(0.0f, 1.0f)
         }
     }
 
-    Row(modifier = modifier) {
-        Box(
+    val animatedWhiteAdvantage by animateFloatAsState(
+        targetValue = whiteAdvantage,
+        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)
+    )
+
+    val isMatePosition = evaluation?.type == EvalType.Mate
+
+    val displayWhiteAdvantage = if (isMatePosition) {
+        if (whiteAdvantage == 1f && animatedWhiteAdvantage > 0.98f) 0.999f
+        else if (whiteAdvantage == 0f && animatedWhiteAdvantage < 0.02f) 0.001f
+        else {
+            if (animatedWhiteAdvantage < 0.01f) 0.01f
+            else if (animatedWhiteAdvantage > 0.99f) 0.99f
+            else animatedWhiteAdvantage
+        }
+    } else {
+        if (animatedWhiteAdvantage < 0.01f) 0.01f
+        else if (animatedWhiteAdvantage > 0.99f) 0.99f
+        else animatedWhiteAdvantage
+    }
+
+    val isGameOver = isLastMove || (evaluation?.type == EvalType.Mate && abs(evaluation.value) > 900)
+
+    val (whiteScore, blackScore) = when {
+        isGameOver -> {
+            when (gameResult) {
+                "1-0" -> Pair("1", "0")
+                "0-1" -> Pair("0", "1")
+                "1/2-1/2" -> Pair("½", "½")
+                else -> Pair(null, null)
+            }
+        }
+        evaluation?.type == EvalType.Mate && evaluation.value > 0 -> {
+            val mateIn = abs(evaluation.value.toInt())
+            Pair("M$mateIn", null)
+        }
+        evaluation?.type == EvalType.Mate && evaluation.value < 0 -> {
+            val mateIn = abs(evaluation.value.toInt())
+            Pair(null, "M$mateIn")
+        }
+        evaluation?.type == EvalType.Centipawn -> {
+            val score = abs(evaluation.value / 100.0)
+            val rounded = (score * 10).roundToInt() / 10.0
+            val scoreStr = rounded.toString()
+            if (evaluation.value > 0) Pair(scoreStr, null) else Pair(null, scoreStr)
+        }
+        else -> Pair(null, null)
+    }
+
+    Box(modifier = modifier) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .weight(displayWhiteAdvantage)
+                    .fillMaxHeight()
+                    .background(Color.White)
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f - displayWhiteAdvantage)
+                    .fillMaxHeight()
+                    .background(Color(0xFF3a3a3a))
+            )
+        }
+
+        Row(
             modifier = Modifier
-                .weight(whiteAdvantage)
-                .fillMaxHeight()
-                .background(EvalGreen)
-        )
-        Box(
-            modifier = Modifier
-                .weight(1f - whiteAdvantage)
-                .fillMaxHeight()
-                .background(DarkSurfaceVariant)
-        )
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (whiteScore != null) {
+                val textColor = if (gameResult == "0-1") Color.White else Color(0xFF3a3a3a)
+                Text(
+                    text = whiteScore,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = textColor,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
+            } else {
+                Spacer(modifier = Modifier.width(1.dp))
+            }
+
+            if (blackScore != null) {
+                val textColor = if (gameResult == "1-0") Color(0xFF3a3a3a) else Color.White
+                Text(
+                    text = blackScore,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = textColor,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
+            } else {
+                Spacer(modifier = Modifier.width(1.dp))
+            }
+        }
     }
 }
 
