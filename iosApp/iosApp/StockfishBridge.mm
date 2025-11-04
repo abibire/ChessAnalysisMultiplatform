@@ -26,17 +26,14 @@ void stockfish_init(void) {
             Position::init();
             g_initialized = true;
         }
-
         if (!g_engine) {
             g_engine = new Engine();
-
             try {
                 g_engine->set_on_bestmove([](std::string_view best, std::string_view ponder) {
                     g_bestmove = std::string(best);
                 });
             } catch (...) {
             }
-
             try {
                 g_engine->set_on_update_full([](const Search::InfoFull& info) {
                     if (info.depth > 0) {
@@ -46,11 +43,9 @@ void stockfish_init(void) {
                 });
             } catch (...) {
             }
-
             try {
                 g_engine->set_on_update_no_moves([](const Search::InfoShort& info) {});
             } catch (...) {}
-
             try {
                 g_engine->set_on_iter([](const Search::InfoIteration& info) {});
             } catch (...) {}
@@ -64,21 +59,15 @@ const char* stockfish_evaluate(const char* fen, int depth) {
             g_lastResult = "error: no engine|";
             return g_lastResult.c_str();
         }
-
         g_bestmove.clear();
         g_lastScoreString.clear();
-
         std::vector<std::string> moves;
         g_engine->set_position(fen, moves);
-
         Search::LimitsType limits;
         limits.depth = depth;
-
         g_engine->go(limits);
         g_engine->wait_for_search_finished();
-
         std::string scoreResult;
-
         if (g_lastScoreString.empty()) {
             if (g_bestmove.empty()) {
                 scoreResult = "mate 0";
@@ -100,14 +89,12 @@ const char* stockfish_evaluate(const char* fen, int depth) {
         } else {
             scoreResult = g_lastScoreString;
         }
-
         if (scoreResult.rfind("mate", 0) == 0) {
             size_t space = scoreResult.find(' ');
             if (space != std::string::npos && space + 1 < scoreResult.size() && scoreResult[space + 1] == '+') {
                 scoreResult.erase(space + 1, 1);
             }
         }
-
         g_lastResult = scoreResult + "|" + g_bestmove;
         return g_lastResult.c_str();
     }
