@@ -2,6 +2,7 @@ package com.andrewbibire.chessanalysis
 
 import kotlin.math.exp
 import kotlin.math.max
+import kotlin.math.abs
 
 enum class EvalType { Centipawn, Mate }
 data class Eval(val type: EvalType, val value: Double)
@@ -56,9 +57,17 @@ fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour): St
     val previousSubjectiveValue = previous.value * if (moveColour == MoveColour.WHITE) 1.0 else -1.0
     val subjectiveValue = current.value * if (moveColour == MoveColour.WHITE) 1.0 else -1.0
 
-    if (previous.type == EvalType.Mate && previousSubjectiveValue == 1.0 && current.type == EvalType.Centipawn && current.value == 0.0) {
+    if (
+        previous.type == EvalType.Mate &&
+        previousSubjectiveValue > 0 &&
+        (
+                (current.type == EvalType.Mate && abs(current.value) > 900) ||
+                        (current.type == EvalType.Centipawn && current.value == 0.0)
+                )
+    ) {
         return "Best"
     }
+
     if (previous.type == EvalType.Mate && current.type == EvalType.Mate) {
         if (previousSubjectiveValue > 0 && subjectiveValue < 0) {
             return if (subjectiveValue < -3) "Mistake" else "Blunder"
@@ -74,6 +83,7 @@ fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour): St
             "Inaccuracy"
         }
     }
+
     if (previous.type == EvalType.Mate && current.type == EvalType.Centipawn) {
         return if (subjectiveValue >= 800) {
             "Excellent"
@@ -87,6 +97,7 @@ fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour): St
             "Blunder"
         }
     }
+
     if (previous.type == EvalType.Centipawn && current.type == EvalType.Mate) {
         return if (subjectiveValue > 0) {
             "Best"
@@ -98,6 +109,7 @@ fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour): St
             "Inaccuracy"
         }
     }
+
     val pointLoss = getExpectedPointsLoss(previous, current, moveColour)
     return if (pointLoss < 0.01) {
         "Best"
