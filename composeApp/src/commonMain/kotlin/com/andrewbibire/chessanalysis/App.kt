@@ -94,6 +94,16 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
         Regex("""\[Result\s+"([^"]+)"\]""").find(pgn)?.groupValues?.get(1) ?: "*"
     }
 
+    val gameTermination = remember {
+        val termination = Regex("""\[Termination\s+"([^"]+)"\]""").find(pgn)?.groupValues?.get(1)
+        termination ?: when (gameResult) {
+            "1-0" -> "White wins"
+            "0-1" -> "Black wins"
+            "1/2-1/2" -> "Draw"
+            else -> "Game over"
+        }
+    }
+
     val positions = remember { generateFensFromPgn(pgn) }
     var currentIndex by remember { mutableIntStateOf(0) }
     var isEvaluating by remember { mutableStateOf(false) }
@@ -203,16 +213,24 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                     )
                 } else {
                     val isLast = currentIndex == positions.lastIndex
-                    val displayScore = normalizeScoreForDisplay(
-                        positions[currentIndex].score,
-                        positions[currentIndex].fenString,
-                        isLast
-                    )
-                    Text(
-                        text = "Evaluation: $displayScore",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    if (isLast) {
+                        Text(
+                            text = gameTermination,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    } else {
+                        val displayScore = normalizeScoreForDisplay(
+                            positions[currentIndex].score,
+                            positions[currentIndex].fenString,
+                            isLast
+                        )
+                        Text(
+                            text = "Evaluation: $displayScore",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
