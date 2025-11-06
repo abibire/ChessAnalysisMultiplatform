@@ -263,29 +263,21 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(top = 4.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
                 EvaluationButton(
                     onClick = { isBoardFlipped = !isBoardFlipped },
                     enabled = true,
-                    modifier = Modifier.width(120.dp)
+                    modifier = Modifier
+                        .height(32.dp)
+                        .width(64.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.SwapVert,
-                            contentDescription = "Flip board",
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Flip",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Filled.SwapVert,
+                        contentDescription = "Flip board",
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
 
@@ -304,7 +296,7 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                     Icon(
                         imageVector = Icons.Filled.SkipPrevious,
                         contentDescription = "First move",
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -318,7 +310,7 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                     Icon(
                         imageVector = Icons.Filled.NavigateBefore,
                         contentDescription = "Previous move",
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -332,7 +324,7 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                     Icon(
                         imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Play",
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -346,7 +338,7 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                     Icon(
                         imageVector = Icons.Filled.NavigateNext,
                         contentDescription = "Next move",
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -360,7 +352,7 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                     Icon(
                         imageVector = Icons.Filled.SkipNext,
                         contentDescription = "Last move",
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -379,7 +371,7 @@ fun EvaluationButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier
-            .height(56.dp)
+            .height(48.dp)
             .shadow(
                 elevation = if (enabled) 4.dp else 0.dp,
                 shape = RoundedCornerShape(12.dp)
