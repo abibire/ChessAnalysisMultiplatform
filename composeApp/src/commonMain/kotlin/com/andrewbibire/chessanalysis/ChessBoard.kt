@@ -78,7 +78,7 @@ fun Chessboard(
                         val shaftEndX = ex - ux * ah
                         val shaftEndY = ey - uy * ah
                         drawLine(
-                            color = Color(0xCC7FA650),
+                            color = Color(0xCC81C14B),
                             start = androidx.compose.ui.geometry.Offset(sx, sy),
                             end = androidx.compose.ui.geometry.Offset(shaftEndX, shaftEndY),
                             strokeWidth = cw * 0.22f,
@@ -95,7 +95,7 @@ fun Chessboard(
                         path.lineTo(p1x, p1y)
                         path.lineTo(p2x, p2y)
                         path.close()
-                        drawPath(path = path, color = Color(0xCC7FA650))
+                        drawPath(path = path, color = Color(0xCC81C14B))
                     }
                 }
             }
