@@ -35,6 +35,7 @@ fun Chessboard(
     arrowUci: String? = null,
     badgeUci: String? = null,
     badgeDrawable: DrawableResource? = null,
+    flipped: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val board = parseFenToBoard(fen)
@@ -44,10 +45,12 @@ fun Chessboard(
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
                 for (row in 0..7) {
+                    val displayRow = if (flipped) 7 - row else row
                     Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
                         for (col in 0..7) {
+                            val displayCol = if (flipped) 7 - col else col
                             val isLight = (row + col) % 2 == 0
-                            val piece = board[row][col]
+                            val piece = board[displayRow][displayCol]
                             ChessSquare(
                                 piece = piece,
                                 isLight = isLight,
@@ -63,10 +66,10 @@ fun Chessboard(
                     val ch = size.height / 8f
                     val from = uciToCoords(arrowUci.substring(0, 2))
                     val to = uciToCoords(arrowUci.substring(2, 4))
-                    val sx = (from.second + 0.5f) * cw
-                    val sy = ((7 - from.first) + 0.5f) * ch
-                    val ex = (to.second + 0.5f) * cw
-                    val ey = ((7 - to.first) + 0.5f) * ch
+                    val sx = ((if (flipped) 7 - from.second else from.second) + 0.5f) * cw
+                    val sy = ((if (flipped) from.first else 7 - from.first) + 0.5f) * ch
+                    val ex = ((if (flipped) 7 - to.second else to.second) + 0.5f) * cw
+                    val ey = ((if (flipped) to.first else 7 - to.first) + 0.5f) * ch
                     val dx = ex - sx
                     val dy = ey - sy
                     val len = kotlin.math.sqrt(dx * dx + dy * dy)
@@ -102,11 +105,14 @@ fun Chessboard(
             if (badgeDrawable != null && badgeUci != null && badgeUci.length >= 4) {
                 val to = uciToCoords(badgeUci.substring(2, 4))
                 val badgeSize = (if (squareW < squareH) squareW else squareH) * 0.38f
-                val squareLeft = squareW * to.second
-                val squareTop = squareH * (7 - to.first)
+                val displayCol = if (flipped) 7 - to.second else to.second
+                val displayRow = if (flipped) to.first else 7 - to.first
+                val squareLeft = squareW * displayCol
+                val squareTop = squareH * displayRow
                 val adjustment = 3.dp
-                // Adjust X position for H file to prevent cutoff
-                val offsetXDp = if (to.second == 7) {
+                // Adjust X position for rightmost file to prevent cutoff (H file normally, A file when flipped)
+                val isRightmostFile = if (flipped) to.second == 0 else to.second == 7
+                val offsetXDp = if (isRightmostFile) {
                     squareLeft + squareW - badgeSize - adjustment
                 } else {
                     squareLeft + squareW - (badgeSize / 2) - adjustment
