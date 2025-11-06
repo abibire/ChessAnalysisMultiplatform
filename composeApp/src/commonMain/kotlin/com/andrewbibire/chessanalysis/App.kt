@@ -244,7 +244,7 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
 
                     if (currentIndex > 0) {
                         val cls = positions[currentIndex].classification
-                        if (cls != null && cls != "Best" && cls != "Book") {
+                        if (cls != null && cls != "Best" && cls != "Book" && cls != "Forced") {
                             positions[currentIndex - 1].bestMove?.let { bm ->
                                 val notation = uciToSan(bm, positions[currentIndex - 1].fenString)
                                 Text(

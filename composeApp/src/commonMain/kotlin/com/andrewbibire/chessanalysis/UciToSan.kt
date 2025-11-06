@@ -36,7 +36,7 @@ fun uciToSan(uci: String, fen: String): String {
         val notation = when {
             move.toString().contains("O-O-O") -> "O-O-O"
             move.toString().contains("O-O") -> "O-O"
-            piece.pieceType.name == "PAWN" -> {
+            piece.pieceType?.name == "PAWN" -> {
                 val file = from.toString()[0].lowercase()
                 if (captureNotation.isNotEmpty()) {
                     "$file$captureNotation${to.toString().lowercase()}" +
@@ -46,7 +46,17 @@ fun uciToSan(uci: String, fen: String): String {
                             if (uci.length > 4) "=${uci[4].uppercaseChar()}" else ""
                 }
             }
-            else -> "${piece.getFenSymbol().uppercase()}$captureNotation${to.toString().lowercase()}"
+            else -> {
+                val pieceSymbol = when (piece.pieceType?.name) {
+                    "KNIGHT" -> "N"
+                    "BISHOP" -> "B"
+                    "ROOK" -> "R"
+                    "QUEEN" -> "Q"
+                    "KING" -> "K"
+                    else -> ""
+                }
+                "$pieceSymbol$captureNotation${to.toString().lowercase()}"
+            }
         }
 
         val check = if (board.isMated) "#" else if (board.isKingAttacked) "+" else ""
