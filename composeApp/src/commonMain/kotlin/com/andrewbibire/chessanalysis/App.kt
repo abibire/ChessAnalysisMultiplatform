@@ -21,6 +21,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import org.jetbrains.compose.resources.DrawableResource
+import chessanalysis.composeapp.generated.resources.Res
+import chessanalysis.composeapp.generated.resources.best
+import chessanalysis.composeapp.generated.resources.excellent
+import chessanalysis.composeapp.generated.resources.forced
+import chessanalysis.composeapp.generated.resources.inaccuracy
+import chessanalysis.composeapp.generated.resources.mistake
+import chessanalysis.composeapp.generated.resources.okay
+import chessanalysis.composeapp.generated.resources.theory
+import chessanalysis.composeapp.generated.resources.blunder
 
 @Composable
 fun App(context: Any? = null) {
@@ -119,6 +129,11 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
         }
     }
 
+    val badgeUci = remember(currentIndex) {
+        if (currentIndex > 0) diffUci(positions[currentIndex - 1].fenString, positions[currentIndex].fenString) else null
+    }
+    val badgeDrawable = remember(currentIndex) { classificationBadge(positions[currentIndex].classification) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -139,12 +154,16 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                 .aspectRatio(1f),
             contentAlignment = Alignment.Center
         ) {
-            val arrow = if (positions[currentIndex].classification != "Best" && currentIndex > 0)
+            val cls = positions[currentIndex].classification ?: ""
+            val suppressArrow = cls == "Best" || cls == "Book" || cls == "Forced"
+            val arrow = if (!suppressArrow && currentIndex > 0)
                 positions[currentIndex - 1].bestMove?.takeIf { it.length >= 4 }?.substring(0, 4)
             else null
             Chessboard(
                 fen = positions[currentIndex].fenString,
                 arrowUci = arrow,
+                badgeUci = badgeUci,
+                badgeDrawable = badgeDrawable,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -479,6 +498,45 @@ fun EvaluationBar(
             }
         }
     }
+}
+
+fun classificationBadge(cls: String?): DrawableResource? {
+    return when (cls?.lowercase()) {
+        "best" -> Res.drawable.best
+        "excellent" -> Res.drawable.excellent
+        "okay" -> Res.drawable.okay
+        "inaccuracy" -> Res.drawable.inaccuracy
+        "mistake" -> Res.drawable.mistake
+        "blunder" -> Res.drawable.blunder
+        "book", "theory" -> Res.drawable.theory
+        "forced" -> Res.drawable.forced
+        else -> null
+    }
+}
+
+fun diffUci(prevFen: String, currFen: String): String? {
+    val prev = parseFenToBoard(prevFen)
+    val curr = parseFenToBoard(currFen)
+    val fromList = mutableListOf<Pair<Int, Int>>()
+    val toList = mutableListOf<Pair<Int, Int>>()
+    for (r in 0..7) {
+        for (c in 0..7) {
+            val a = prev[r][c]
+            val b = curr[r][c]
+            if (a != b) {
+                if (a.isNotEmpty() && b.isEmpty()) fromList.add(r to c)
+                if (b.isNotEmpty() && a.isEmpty()) toList.add(r to c)
+            }
+        }
+    }
+    if (fromList.isEmpty() || toList.isEmpty()) return null
+    val from = fromList.first()
+    val to = toList.first()
+    val fromFile = ('a' + from.second)
+    val toFile = ('a' + to.second)
+    val fromRank = ('8' - from.first)
+    val toRank = ('8' - to.first)
+    return "${fromFile}${fromRank}${toFile}${toRank}"
 }
 
 expect fun createStockfishEngine(context: Any?): StockfishEngine
