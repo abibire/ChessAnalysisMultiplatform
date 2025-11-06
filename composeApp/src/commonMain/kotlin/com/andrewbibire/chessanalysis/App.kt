@@ -130,7 +130,7 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
     }
 
     val badgeUci = remember(currentIndex) {
-        if (currentIndex > 0) diffUci(positions[currentIndex - 1].fenString, positions[currentIndex].fenString) else null
+        positions[currentIndex].playedMove
     }
     val badgeDrawable = remember(currentIndex) { classificationBadge(positions[currentIndex].classification) }
 
@@ -214,16 +214,6 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    positions[currentIndex].forced?.let { f ->
-                        if (f) {
-                            Text(
-                                text = "Forced",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
                     positions[currentIndex].classification?.let { c ->
                         Text(
                             text = "Classification: $c",
@@ -236,38 +226,47 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                                 "Mistake" -> EvalRed
                                 "Blunder" -> EvalRed
                                 "Book" -> PrimaryBlue
+                                "Forced" -> MaterialTheme.colorScheme.onSurfaceVariant
                                 else -> MaterialTheme.colorScheme.onSurface
                             }
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
 
                     positions[currentIndex].openingName?.let { name ->
-                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Opening: $name",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
 
-                    positions[currentIndex].bestMove?.let { bm ->
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Best: $bm",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    if (currentIndex > 0) {
+                        val cls = positions[currentIndex].classification
+                        if (cls != null && cls != "Best" && cls != "Book") {
+                            positions[currentIndex - 1].bestMove?.let { bm ->
+                                Text(
+                                    text = "Best: $bm",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = EvalGreen
+                                )
+                            }
+                        }
                     }
                 }
             }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 EvaluationButton(
                     onClick = { currentIndex = 0 },
-                    enabled = currentIndex > 0,
+                    enabled = currentIndex > 0 && !isEvaluating,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
@@ -276,12 +275,12 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                         modifier = Modifier.size(28.dp)
                     )
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 EvaluationButton(
-                    onClick = {
-                        isPlaying = false
-                        if (currentIndex > 0) currentIndex--
-                    },
-                    enabled = currentIndex > 0,
+                    onClick = { if (currentIndex > 0) currentIndex-- },
+                    enabled = currentIndex > 0 && !isEvaluating,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
@@ -290,9 +289,12 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                         modifier = Modifier.size(28.dp)
                     )
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 EvaluationButton(
-                    onClick = { if (currentIndex < positions.lastIndex) isPlaying = !isPlaying },
-                    enabled = currentIndex < positions.lastIndex,
+                    onClick = { isPlaying = !isPlaying },
+                    enabled = currentIndex < positions.lastIndex && !isEvaluating,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
@@ -301,12 +303,12 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                         modifier = Modifier.size(28.dp)
                     )
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 EvaluationButton(
-                    onClick = {
-                        isPlaying = false
-                        if (currentIndex < positions.size - 1) currentIndex++
-                    },
-                    enabled = currentIndex < positions.size - 1,
+                    onClick = { if (currentIndex < positions.lastIndex) currentIndex++ },
+                    enabled = currentIndex < positions.lastIndex && !isEvaluating,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
@@ -315,12 +317,12 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                         modifier = Modifier.size(28.dp)
                     )
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 EvaluationButton(
-                    onClick = {
-                        isPlaying = false
-                        currentIndex = positions.lastIndex
-                    },
-                    enabled = currentIndex < positions.lastIndex,
+                    onClick = { currentIndex = positions.lastIndex },
+                    enabled = currentIndex < positions.lastIndex && !isEvaluating,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
@@ -512,31 +514,6 @@ fun classificationBadge(cls: String?): DrawableResource? {
         "forced" -> Res.drawable.forced
         else -> null
     }
-}
-
-fun diffUci(prevFen: String, currFen: String): String? {
-    val prev = parseFenToBoard(prevFen)
-    val curr = parseFenToBoard(currFen)
-    val fromList = mutableListOf<Pair<Int, Int>>()
-    val toList = mutableListOf<Pair<Int, Int>>()
-    for (r in 0..7) {
-        for (c in 0..7) {
-            val a = prev[r][c]
-            val b = curr[r][c]
-            if (a != b) {
-                if (a.isNotEmpty() && b.isEmpty()) fromList.add(r to c)
-                if (b.isNotEmpty() && a.isEmpty()) toList.add(r to c)
-            }
-        }
-    }
-    if (fromList.isEmpty() || toList.isEmpty()) return null
-    val from = fromList.first()
-    val to = toList.first()
-    val fromFile = ('a' + from.second)
-    val toFile = ('a' + to.second)
-    val fromRank = ('8' - from.first)
-    val toRank = ('8' - to.first)
-    return "${fromFile}${fromRank}${toFile}${toRank}"
 }
 
 expect fun createStockfishEngine(context: Any?): StockfishEngine

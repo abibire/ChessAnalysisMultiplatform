@@ -78,7 +78,7 @@ fun Chessboard(
                         val shaftEndX = ex - ux * ah
                         val shaftEndY = ey - uy * ah
                         drawLine(
-                            color = Color(0xFF7FA650),
+                            color = Color(0xCC7FA650),
                             start = androidx.compose.ui.geometry.Offset(sx, sy),
                             end = androidx.compose.ui.geometry.Offset(shaftEndX, shaftEndY),
                             strokeWidth = cw * 0.22f,
@@ -95,17 +95,18 @@ fun Chessboard(
                         path.lineTo(p1x, p1y)
                         path.lineTo(p2x, p2y)
                         path.close()
-                        drawPath(path = path, color = Color(0xFF7FA650))
+                        drawPath(path = path, color = Color(0xCC7FA650))
                     }
                 }
             }
             if (badgeDrawable != null && badgeUci != null && badgeUci.length >= 4) {
                 val to = uciToCoords(badgeUci.substring(2, 4))
-                val badgeSize = (if (squareW < squareH) squareW else squareH) * 0.36f
+                val badgeSize = (if (squareW < squareH) squareW else squareH) * 0.38f
                 val squareLeft = squareW * to.second
                 val squareTop = squareH * (7 - to.first)
-                val offsetXDp = squareLeft + squareW - badgeSize
-                val offsetYDp = squareTop
+                val adjustment = 3.dp
+                val offsetXDp = squareLeft + squareW - (badgeSize / 2) - adjustment
+                val offsetYDp = squareTop - (badgeSize / 2) + adjustment
                 Image(
                     painter = painterResource(badgeDrawable),
                     contentDescription = "classification",

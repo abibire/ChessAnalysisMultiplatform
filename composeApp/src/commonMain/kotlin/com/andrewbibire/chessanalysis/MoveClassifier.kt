@@ -155,7 +155,9 @@ fun classifyPositions(positions: List<Position>) {
 
         val onlyMove = hasOnlyOneLegalMove(prev.fenString)
         cur.forced = onlyMove
-        if (!onlyMove) {
+        if (onlyMove) {
+            cur.classification = "Forced"
+        } else {
             val moveColour = if (isWhiteToMove(prev.fenString)) MoveColour.WHITE else MoveColour.BLACK
             val prevEval = parseEvaluationWhiteCentric(prev.score, prev.fenString)
             val curEval = parseEvaluationWhiteCentric(cur.score, cur.fenString)
@@ -164,8 +166,6 @@ fun classifyPositions(positions: List<Position>) {
             } else {
                 null
             }
-        } else {
-            cur.classification = null
         }
     }
 }

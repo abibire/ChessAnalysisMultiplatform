@@ -14,7 +14,11 @@ fun generateFensFromPgn(pgn: String): List<Position> {
     for (move in game.halfMoves) {
         val chessMove = Move(move.from, move.to, move.promotion)
         board.doMove(chessMove)
-        val playedMove = "${move.from.toString().lowercase()}${move.to.toString().lowercase()}"
+        val playedMove = if (move.promotion != null) {
+            "${move.from.toString().lowercase()}${move.to.toString().lowercase()}${move.promotion.toString().lowercase()}"
+        } else {
+            "${move.from.toString().lowercase()}${move.to.toString().lowercase()}"
+        }
         positions.add(Position(fenString = board.fen, playedMove = playedMove))
     }
     return positions
