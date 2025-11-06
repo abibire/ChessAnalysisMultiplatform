@@ -235,8 +235,35 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                     Spacer(modifier = Modifier.height(8.dp))
 
                     positions[currentIndex].classification?.let { c ->
+                        val playedMoveNotation = if (currentIndex > 0) {
+                            positions[currentIndex].playedMove?.let { uci ->
+                                uciToSan(uci, positions[currentIndex - 1].fenString)
+                            } ?: "This move"
+                        } else {
+                            "This move"
+                        }
+
+                        val classificationText = when (c) {
+                            "Best" -> "$playedMoveNotation is $c."
+                            "Excellent" -> "$playedMoveNotation is $c"
+                            "Okay" -> "$playedMoveNotation is $c"
+                            "Inaccuracy" -> "$playedMoveNotation is an $c"
+                            "Mistake" -> "$playedMoveNotation is a $c"
+                            "Blunder" -> "$playedMoveNotation is a $c"
+                            "Book" -> "$playedMoveNotation is a $c Move."
+                            "Forced" -> "$playedMoveNotation is $c."
+                            else -> "$playedMoveNotation is $c."
+                        }
+
+                        val bestMoveText = if (currentIndex > 0 && c != "Best" && c != "Book" && c != "Forced") {
+                            positions[currentIndex - 1].bestMove?.let { bm ->
+                                val notation = uciToSan(bm, positions[currentIndex - 1].fenString)
+                                ", $notation is Best."
+                            }
+                        } else null
+
                         Text(
-                            text = "Classification: $c",
+                            text = classificationText + (bestMoveText ?: ""),
                             style = MaterialTheme.typography.bodyMedium,
                             color = when (c) {
                                 "Best" -> EvalGreen
@@ -260,20 +287,6 @@ b3 49. Qe5 b2 50. Qxb2 Kd6 51. a5 Ke6 52. a6 Kd6 53. a7 Ke6 54. a8=Q Kd6 55. Qbb
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                    }
-
-                    if (currentIndex > 0) {
-                        val cls = positions[currentIndex].classification
-                        if (cls != null && cls != "Best" && cls != "Book" && cls != "Forced") {
-                            positions[currentIndex - 1].bestMove?.let { bm ->
-                                val notation = uciToSan(bm, positions[currentIndex - 1].fenString)
-                                Text(
-                                    text = "Best: $notation",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = EvalGreen
-                                )
-                            }
-                        }
                     }
                 }
             }

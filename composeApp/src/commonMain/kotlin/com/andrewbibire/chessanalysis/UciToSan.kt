@@ -6,22 +6,26 @@ import com.github.bhlangonijr.chesslib.Piece
 import com.github.bhlangonijr.chesslib.move.Move
 
 fun uciToSan(uci: String, fen: String): String {
-    if (uci.length < 4) return uci
+    val cleanUci = uci.trim()
+    if (cleanUci.length < 4) return cleanUci
 
     return try {
         val board = Board()
         board.loadFromFen(fen)
 
-        val from = Square.valueOf(uci.substring(0, 2).uppercase())
-        val to = Square.valueOf(uci.substring(2, 4).uppercase())
+        val from = Square.valueOf(cleanUci.substring(0, 2).uppercase())
+        val to = Square.valueOf(cleanUci.substring(2, 4).uppercase())
 
-        val move = if (uci.length > 4) {
-            val promotionPiece = when (uci[4].lowercaseChar()) {
+        // Only treat as promotion if length is exactly 5 and 5th char is a valid promotion piece
+        val isPromotion = cleanUci.length == 5 && cleanUci[4].lowercaseChar() in listOf('q', 'r', 'b', 'n')
+
+        val move = if (isPromotion) {
+            val promotionPiece = when (cleanUci[4].lowercaseChar()) {
                 'q' -> Piece.WHITE_QUEEN
                 'r' -> Piece.WHITE_ROOK
                 'b' -> Piece.WHITE_BISHOP
                 'n' -> Piece.WHITE_KNIGHT
-                else -> return uci
+                else -> return cleanUci
             }
             Move(from, to, promotionPiece)
         } else {
@@ -38,12 +42,11 @@ fun uciToSan(uci: String, fen: String): String {
             move.toString().contains("O-O") -> "O-O"
             piece.pieceType?.name == "PAWN" -> {
                 val file = from.toString()[0].lowercase()
+                val promotionSuffix = if (isPromotion) "=${cleanUci[4].uppercaseChar()}" else ""
                 if (captureNotation.isNotEmpty()) {
-                    "$file$captureNotation${to.toString().lowercase()}" +
-                            if (uci.length > 4) "=${uci[4].uppercaseChar()}" else ""
+                    "$file$captureNotation${to.toString().lowercase()}$promotionSuffix"
                 } else {
-                    to.toString().lowercase() +
-                            if (uci.length > 4) "=${uci[4].uppercaseChar()}" else ""
+                    "${to.toString().lowercase()}$promotionSuffix"
                 }
             }
             else -> {
@@ -62,8 +65,8 @@ fun uciToSan(uci: String, fen: String): String {
         val check = if (board.isMated) "#" else if (board.isKingAttacked) "+" else ""
         notation + check
     } catch (e: Exception) {
-        println("Error converting UCI $uci to SAN: ${e.message}")
+        println("Error converting UCI $cleanUci to SAN: ${e.message}")
         e.printStackTrace()
-        uci
+        cleanUci
     }
 }
