@@ -105,7 +105,12 @@ fun Chessboard(
                 val squareLeft = squareW * to.second
                 val squareTop = squareH * (7 - to.first)
                 val adjustment = 3.dp
-                val offsetXDp = squareLeft + squareW - (badgeSize / 2) - adjustment
+                // Adjust X position for H file to prevent cutoff
+                val offsetXDp = if (to.second == 7) {
+                    squareLeft + squareW - badgeSize - adjustment
+                } else {
+                    squareLeft + squareW - (badgeSize / 2) - adjustment
+                }
                 val offsetYDp = squareTop - (badgeSize / 2) + adjustment
                 Image(
                     painter = painterResource(badgeDrawable),
