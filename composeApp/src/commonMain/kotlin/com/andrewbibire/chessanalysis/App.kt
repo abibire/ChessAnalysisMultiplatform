@@ -545,7 +545,7 @@ fun ChessAnalysisApp(context: Any?) {
                                         com.andrewbibire.chessanalysis.online.Platform.LICHESS -> "Lichess Username"
                                         else -> "Enter Username"
                                     }
-                                } else "Import PGN",
+                                } else "Import Games",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
