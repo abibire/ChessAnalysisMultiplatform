@@ -67,6 +67,10 @@ fun ChessAnalysisApp(context: Any?) {
     var isPlaying by remember { mutableStateOf(false) }
     var isBoardFlipped by remember { mutableStateOf(false) }
 
+    var showUsernameDialog by remember { mutableStateOf(false) }
+    var selectedPlatform by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.Platform?>(null) }
+    var userProfile by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.UserProfile?>(null) }
+
     val gameResult = remember(pgn) {
         pgn?.let { Regex("""\[Result\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) } ?: "*"
     }
@@ -126,13 +130,25 @@ fun ChessAnalysisApp(context: Any?) {
         classificationBadge(positions.getOrNull(currentIndex)?.classification)
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBars),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    if (userProfile != null) {
+        com.andrewbibire.chessanalysis.online.GamesListScreen(
+            userProfile = userProfile!!,
+            onGameSelected = { game ->
+                pgn = game.pgn
+                userProfile = null
+            },
+            onBackPressed = {
+                userProfile = null
+            }
+        )
+    } else {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.statusBars),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
         if (pgn != null && positions.isNotEmpty()) {
             EvaluationBar(
                 score = if (isEvaluating) null else positions[currentIndex].score,
@@ -469,13 +485,8 @@ fun ChessAnalysisApp(context: Any?) {
                     title = "Chess.com",
                     description = "Import from Chess.com",
                     onClick = {
-                        coroutineScope.launch {
-                            showBottomSheet = false
-                            snackbarHostState.showSnackbar(
-                                message = "Coming soon",
-                                duration = SnackbarDuration.Short
-                            )
-                        }
+                        selectedPlatform = com.andrewbibire.chessanalysis.online.Platform.CHESS_COM
+                        showUsernameDialog = true
                     }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -486,13 +497,8 @@ fun ChessAnalysisApp(context: Any?) {
                     title = "Lichess",
                     description = "Import from Lichess",
                     onClick = {
-                        coroutineScope.launch {
-                            showBottomSheet = false
-                            snackbarHostState.showSnackbar(
-                                message = "Coming soon",
-                                duration = SnackbarDuration.Short
-                            )
-                        }
+                        selectedPlatform = com.andrewbibire.chessanalysis.online.Platform.LICHESS
+                        showUsernameDialog = true
                     }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -538,6 +544,35 @@ fun ChessAnalysisApp(context: Any?) {
                 )
             }
         }
+    }
+    }
+
+    if (showUsernameDialog && selectedPlatform != null) {
+        com.andrewbibire.chessanalysis.online.UsernameInputDialog(
+            platform = selectedPlatform!!,
+            onDismiss = {
+                showUsernameDialog = false
+                selectedPlatform = null
+            },
+            onConfirm = { username ->
+                val profile = com.andrewbibire.chessanalysis.online.DummyData.fetchUserProfile(username, selectedPlatform!!)
+                if (profile != null) {
+                    userProfile = profile
+                    showUsernameDialog = false
+                    showBottomSheet = false
+                    selectedPlatform = null
+                } else {
+                    showUsernameDialog = false
+                    selectedPlatform = null
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Failed to fetch user profile",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                }
+            }
+        )
     }
 }
 
