@@ -18,8 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.painterResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -207,13 +210,13 @@ fun ChessAnalysisApp(context: Any?) {
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = "Add PGN",
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Load Game",
                             modifier = Modifier.size(28.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Add PGN",
+                            text = "Load Game",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -484,9 +487,10 @@ fun ChessAnalysisApp(context: Any?) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 ImportOption(
-                    icon = Icons.Filled.Language,
+                    icon = painterResource(Res.drawable.chesspawn),
                     title = "Chess.com",
                     description = "Import from Chess.com",
+                    iconTint = Color(0xFF80b64d),
                     onClick = {
                         coroutineScope.launch {
                             showBottomSheet = false
@@ -721,9 +725,10 @@ fun classificationBadge(cls: String?): DrawableResource? {
 
 @Composable
 fun ImportOption(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: Any,
     title: String,
     description: String,
+    iconTint: Color = Color.White,
     onClick: () -> Unit
 ) {
     Card(
@@ -741,12 +746,24 @@ fun ImportOption(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            when (icon) {
+                is ImageVector -> {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        modifier = Modifier.size(32.dp),
+                        tint = iconTint
+                    )
+                }
+                is Painter -> {
+                    Icon(
+                        painter = icon,
+                        contentDescription = title,
+                        modifier = Modifier.size(32.dp),
+                        tint = iconTint
+                    )
+                }
+            }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
