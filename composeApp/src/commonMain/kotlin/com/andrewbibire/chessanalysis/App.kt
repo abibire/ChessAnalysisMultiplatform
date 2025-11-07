@@ -626,8 +626,10 @@ fun ChessAnalysisApp(context: Any?) {
                                     }
                                 ),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                                    focusedBorderColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 shape = RoundedCornerShape(12.dp)
                             )

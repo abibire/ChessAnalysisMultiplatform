@@ -402,7 +402,7 @@ fun MonthYearPickerDialog(
                                             .background(
                                                 when {
                                                     isDisabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                                    isSelected -> MaterialTheme.colorScheme.primary
+                                                    isSelected -> BoardDark
                                                     else -> MaterialTheme.colorScheme.surfaceVariant
                                                 }
                                             )
@@ -418,7 +418,7 @@ fun MonthYearPickerDialog(
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                             color = when {
                                                 isDisabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                                                isSelected -> MaterialTheme.colorScheme.onPrimary
+                                                isSelected -> Color.White
                                                 else -> MaterialTheme.colorScheme.onSurfaceVariant
                                             }
                                         )
@@ -432,13 +432,21 @@ fun MonthYearPickerDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onDateSelected(selectedYear, selectedMonth) }
+                onClick = { onDateSelected(selectedYear, selectedMonth) },
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = BoardDark
+                )
             ) {
                 Text("OK")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = BoardDark
+                )
+            ) {
                 Text("Cancel")
             }
         }
