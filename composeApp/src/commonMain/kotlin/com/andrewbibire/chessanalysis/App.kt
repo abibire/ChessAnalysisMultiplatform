@@ -641,7 +641,7 @@ fun ChessAnalysisApp(context: Any?) {
                                     .fillMaxWidth()
                                     .height(56.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF80b64d),
+                                    containerColor = BoardDark,
                                     contentColor = Color.White,
                                     disabledContainerColor = Color(0xFF3d3d3d),
                                     disabledContentColor = Color(0xFF888888)
