@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -59,7 +60,10 @@ fun App(context: Any? = null) {
 fun ChessAnalysisApp(context: Any?) {
     var pgn by remember { mutableStateOf<String?>(null) }
     var showBottomSheet by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
+    var showUsernameInput by remember { mutableStateOf(false) }
+    var usernameInputText by remember { mutableStateOf("") }
+    var usernameInputError by remember { mutableStateOf<String?>(null) }
+    val sheetSnackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     var currentIndex by remember { mutableIntStateOf(0) }
@@ -67,20 +71,17 @@ fun ChessAnalysisApp(context: Any?) {
     var isPlaying by remember { mutableStateOf(false) }
     var isBoardFlipped by remember { mutableStateOf(false) }
 
-    var showUsernameDialog by remember { mutableStateOf(false) }
     var selectedPlatform by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.Platform?>(null) }
     var userProfile by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.UserProfile?>(null) }
     var isLoadingProfile by remember { mutableStateOf(false) }
-    var pendingErrorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Show error snackbar when dialog closes with an error
-    LaunchedEffect(pendingErrorMessage) {
-        pendingErrorMessage?.let { errorMsg ->
-            snackbarHostState.showSnackbar(
-                message = errorMsg,
-                duration = SnackbarDuration.Short
-            )
-            pendingErrorMessage = null
+    // Reset input state when sheet is dismissed
+    LaunchedEffect(showBottomSheet) {
+        if (!showBottomSheet) {
+            showUsernameInput = false
+            usernameInputText = ""
+            usernameInputError = null
+            selectedPlatform = null
         }
     }
 
@@ -470,84 +471,16 @@ fun ChessAnalysisApp(context: Any?) {
         }
     }
 
-        if (showBottomSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showBottomSheet = false },
-                containerColor = MaterialTheme.colorScheme.surface
-            ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 16.dp, bottom = 48.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Text(
-                    text = "Import PGN",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                ImportOption(
-                    iconContent = {
-                        MaterialSymbol(name = "chess_pawn_2", tint = Color(0xFF80b64d), fill = 1f)
-                    },
-                    title = "Chess.com",
-                    description = "Import from Chess.com",
-                    onClick = {
-                        selectedPlatform = com.andrewbibire.chessanalysis.online.Platform.CHESS_COM
-                        showUsernameDialog = true
-                    }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                ImportOption(
-                    iconContent = {
-                        MaterialSymbol(name = "chess_knight", tint = Color.White, fill = 0f, flipHorizontally = true)
-                    },
-                    title = "Lichess",
-                    description = "Import from Lichess",
-                    onClick = {
-                        selectedPlatform = com.andrewbibire.chessanalysis.online.Platform.LICHESS
-                        showUsernameDialog = true
-                    }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                ImportOption(
-                    icon = Icons.Filled.ContentPaste,
-                    title = "Paste from Clipboard",
-                    description = "Import a PGN from your clipboard",
-                    iconTint = BookColor,
-                    onClick = {
-                        coroutineScope.launch {
-                            val clipboardText = readClipboard()
-                            if (isValidPgn(clipboardText)) {
-                                pgn = clipboardText
-                                showBottomSheet = false
-                            } else {
-                                showBottomSheet = false
-                                snackbarHostState.showSnackbar(
-                                    message = "Invalid or empty PGN in clipboard",
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        }
-                    }
-                )
-            }
-        }
-    }
+        // Snackbar overlay at top of app
         Box(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.BottomCenter
+            contentAlignment = Alignment.TopCenter
         ) {
             SnackbarHost(
-                hostState = snackbarHostState,
+                hostState = sheetSnackbarHostState,
                 modifier = Modifier
                     .padding(16.dp)
-                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .windowInsetsPadding(WindowInsets.statusBars)
             ) { data ->
                 Snackbar(
                     snackbarData = data,
@@ -557,69 +490,224 @@ fun ChessAnalysisApp(context: Any?) {
                 )
             }
         }
-    }
-    }
 
-    if (showUsernameDialog && selectedPlatform != null) {
-        com.andrewbibire.chessanalysis.online.UsernameInputDialog(
-            platform = selectedPlatform!!,
-            isLoading = isLoadingProfile,
-            onDismiss = {
-                showUsernameDialog = false
-                selectedPlatform = null
-            },
-            onConfirm = { username ->
-                isLoadingProfile = true
-
-                val result = when (selectedPlatform) {
-                    com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> {
-                        com.andrewbibire.chessanalysis.online.ChessComService.getUserProfile(username)
-                    }
-                    com.andrewbibire.chessanalysis.online.Platform.LICHESS -> {
-                        com.andrewbibire.chessanalysis.online.DummyData.fetchUserProfile(username, selectedPlatform!!)?.let {
-                            com.andrewbibire.chessanalysis.network.NetworkResult.Success(it)
-                        } ?: com.andrewbibire.chessanalysis.network.NetworkResult.Error(
-                            Exception("Invalid username"),
-                            "Invalid username"
-                        )
-                    }
-                    else -> com.andrewbibire.chessanalysis.network.NetworkResult.Error(
-                        Exception("Unknown platform"),
-                        "Unknown platform"
-                    )
-                }
-
-                isLoadingProfile = false
-                when (result) {
-                    is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
-                        userProfile = result.data
-                        showUsernameDialog = false
-                        showBottomSheet = false
-                        selectedPlatform = null
-                    }
-                    is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
-                        // Determine error message based on exception type and message
-                        val errorMessage = when {
-                            // Check if it's a network connectivity error (no internet)
-                            result.exception.message?.contains("Unable to resolve host", ignoreCase = true) == true ||
-                            result.exception.message?.contains("timeout", ignoreCase = true) == true ||
-                            result.exception.message?.contains("Failed to connect", ignoreCase = true) == true ||
-                            result.exception.message?.contains("Connection refused", ignoreCase = true) == true -> {
-                                "No internet connection. Please check your network and try again."
+        if (showBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showBottomSheet = false },
+                containerColor = MaterialTheme.colorScheme.surface,
+                scrimColor = Color.Transparent  // Remove the darkening overlay
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 16.dp, bottom = 16.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        // Header with back arrow when in input mode
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (showUsernameInput) {
+                                IconButton(
+                                    onClick = {
+                                        showUsernameInput = false
+                                        usernameInputText = ""
+                                        usernameInputError = null
+                                        selectedPlatform = null
+                                        isLoadingProfile = false
+                                    },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(4.dp))
                             }
-                            // For all other API failures, show user-friendly message
-                            else -> "Unable to find an account with that username"
+                            Text(
+                                text = if (showUsernameInput) {
+                                    when (selectedPlatform) {
+                                        com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> "Chess.com Username"
+                                        com.andrewbibire.chessanalysis.online.Platform.LICHESS -> "Lichess Username"
+                                        else -> "Enter Username"
+                                    }
+                                } else "Import PGN",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
 
-                        // Close dialog and bottom sheet, then set pending error to show snackbar
-                        showUsernameDialog = false
-                        showBottomSheet = false
-                        selectedPlatform = null
-                        pendingErrorMessage = errorMessage
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        if (showUsernameInput) {
+                            // Username input mode
+                            OutlinedTextField(
+                                value = usernameInputText,
+                                onValueChange = {
+                                    usernameInputText = it
+                                    usernameInputError = null // Clear error when typing
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Username") },
+                                enabled = !isLoadingProfile,
+                                isError = usernameInputError != null,
+                                supportingText = usernameInputError?.let { { Text(it) } },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                    errorBorderColor = Color(0xFFD32F2F),
+                                    errorSupportingTextColor = Color(0xFFD32F2F)
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Button(
+                                onClick = {
+                                    if (usernameInputText.isBlank()) {
+                                        usernameInputError = "Please enter a username"
+                                        return@Button
+                                    }
+
+                                    coroutineScope.launch {
+                                        isLoadingProfile = true
+                                        usernameInputError = null
+
+                                        val result = when (selectedPlatform) {
+                                            com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> {
+                                                com.andrewbibire.chessanalysis.online.ChessComService.getUserProfile(usernameInputText)
+                                            }
+                                            com.andrewbibire.chessanalysis.online.Platform.LICHESS -> {
+                                                com.andrewbibire.chessanalysis.online.DummyData.fetchUserProfile(usernameInputText, selectedPlatform!!)?.let {
+                                                    com.andrewbibire.chessanalysis.network.NetworkResult.Success(it)
+                                                } ?: com.andrewbibire.chessanalysis.network.NetworkResult.Error(
+                                                    Exception("Invalid username"),
+                                                    "Invalid username"
+                                                )
+                                            }
+                                            else -> com.andrewbibire.chessanalysis.network.NetworkResult.Error(
+                                                Exception("Unknown platform"),
+                                                "Unknown platform"
+                                            )
+                                        }
+
+                                        isLoadingProfile = false
+                                        when (result) {
+                                            is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
+                                                userProfile = result.data
+                                                showBottomSheet = false
+                                            }
+                                            is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
+                                                // Determine error message based on exception type and message
+                                                val errorMessage = when {
+                                                    // Check if it's a network connectivity error (no internet)
+                                                    result.exception.message?.contains("Unable to resolve host", ignoreCase = true) == true ||
+                                                    result.exception.message?.contains("timeout", ignoreCase = true) == true ||
+                                                    result.exception.message?.contains("Failed to connect", ignoreCase = true) == true ||
+                                                    result.exception.message?.contains("Connection refused", ignoreCase = true) == true -> {
+                                                        "No internet connection. Please check your network and try again."
+                                                    }
+                                                    // For all other API failures, show user-friendly message
+                                                    else -> "Unable to find an account with that username"
+                                                }
+                                                sheetSnackbarHostState.showSnackbar(
+                                                    message = errorMessage,
+                                                    duration = SnackbarDuration.Short
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
+                                enabled = !isLoadingProfile,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF3d3d3d),
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                if (isLoadingProfile) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = Color.White
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Load Games",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        } else {
+                            // Button mode
+                            ImportOption(
+                                iconContent = {
+                                    MaterialSymbol(name = "chess_pawn_2", tint = Color(0xFF80b64d), fill = 1f)
+                                },
+                                title = "Chess.com",
+                                description = "Import from Chess.com",
+                                onClick = {
+                                    selectedPlatform = com.andrewbibire.chessanalysis.online.Platform.CHESS_COM
+                                    showUsernameInput = true
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ImportOption(
+                                iconContent = {
+                                    MaterialSymbol(name = "chess_knight", tint = Color.White, fill = 0f, flipHorizontally = true)
+                                },
+                                title = "Lichess",
+                                description = "Import from Lichess",
+                                onClick = {
+                                    selectedPlatform = com.andrewbibire.chessanalysis.online.Platform.LICHESS
+                                    showUsernameInput = true
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ImportOption(
+                                icon = Icons.Filled.ContentPaste,
+                                title = "Paste from Clipboard",
+                                description = "Import a PGN from your clipboard",
+                                iconTint = BookColor,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        val clipboardText = readClipboard()
+                                        if (isValidPgn(clipboardText)) {
+                                            pgn = clipboardText
+                                            showBottomSheet = false
+                                        } else {
+                                            sheetSnackbarHostState.showSnackbar(
+                                                message = "Invalid or empty PGN in clipboard",
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
-        )
+        }
+    }
     }
 }
 
