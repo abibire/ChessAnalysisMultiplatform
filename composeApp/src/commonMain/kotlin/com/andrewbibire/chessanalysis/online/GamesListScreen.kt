@@ -34,13 +34,83 @@ fun GamesListScreen(
     var currentYear by remember { mutableIntStateOf(getCurrentYear()) }
     var currentMonth by remember { mutableIntStateOf(getCurrentMonth()) }
     var isLoading by remember { mutableStateOf(false) }
-    var monthGames by remember { mutableStateOf<MonthGames?>(null) }
+    var monthGames by remember { mutableStateOf<List<OnlineGame>?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var availableArchives by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isInitialized by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(currentYear, currentMonth) {
+    LaunchedEffect(Unit) {
+        if (userProfile.platform == Platform.CHESS_COM && !isInitialized) {
+            isLoading = true
+            val archivesResult = ChessComService.getAvailableArchives(userProfile.username)
+            when (archivesResult) {
+                is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
+                    availableArchives = archivesResult.data
+                    if (availableArchives.isNotEmpty()) {
+                        val lastArchive = availableArchives.last()
+                        val parts = lastArchive.split("/")
+                        if (parts.size >= 2) {
+                            currentYear = parts[parts.size - 2].toIntOrNull() ?: getCurrentYear()
+                            currentMonth = parts[parts.size - 1].toIntOrNull() ?: getCurrentMonth()
+                        }
+                    }
+                    isInitialized = true
+                }
+                is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
+                    errorMessage = archivesResult.message ?: "Failed to load archives"
+                    snackbarHostState.showSnackbar(
+                        message = errorMessage!!,
+                        duration = SnackbarDuration.Short
+                    )
+                    isInitialized = true
+                }
+            }
+            isLoading = false
+        } else if (userProfile.platform == Platform.LICHESS) {
+            isInitialized = true
+        }
+    }
+
+    LaunchedEffect(currentYear, currentMonth, isInitialized) {
+        if (!isInitialized) return@LaunchedEffect
+
         isLoading = true
-        monthGames = DummyData.fetchGamesForMonth(userProfile.username, userProfile.platform, currentYear, currentMonth)
+        errorMessage = null
+
+        val result = when (userProfile.platform) {
+            Platform.CHESS_COM -> ChessComService.getGamesForYearMonth(
+                userProfile.username,
+                currentYear,
+                currentMonth
+            )
+            Platform.LICHESS -> {
+                val dummyGames = DummyData.fetchGamesForMonth(
+                    userProfile.username,
+                    userProfile.platform,
+                    currentYear,
+                    currentMonth
+                )
+                com.andrewbibire.chessanalysis.network.NetworkResult.Success(dummyGames.games)
+            }
+        }
+
         isLoading = false
+        when (result) {
+            is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
+                monthGames = result.data
+                errorMessage = null
+            }
+            is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
+                monthGames = emptyList()
+                errorMessage = result.message ?: "Failed to load games"
+                snackbarHostState.showSnackbar(
+                    message = errorMessage!!,
+                    duration = SnackbarDuration.Short
+                )
+            }
+        }
     }
 
     val monthName = remember(currentMonth) {
@@ -144,40 +214,56 @@ fun GamesListScreen(
 
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = BoardDark)
-                }
-            } else {
-                val games = monthGames?.games ?: emptyList()
-                if (games.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isLoading) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "No games found for this month",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        CircularProgressIndicator(color = BoardDark)
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(games) { game ->
-                            GameCard(
-                                game = game,
-                                userProfile = userProfile,
-                                onClick = { onGameSelected(game) }
+                    val games = monthGames ?: emptyList()
+                    if (games.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (errorMessage != null) errorMessage!! else "No games found for this month",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(games) { game ->
+                                GameCard(
+                                    game = game,
+                                    userProfile = userProfile,
+                                    onClick = { onGameSelected(game) }
+                                )
+                            }
+                        }
                     }
+                }
+
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp)
+                ) { data ->
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = Color(0xFFD32F2F),
+                        contentColor = Color.White,
+                        shape = RoundedCornerShape(12.dp)
+                    )
                 }
             }
         }

@@ -70,6 +70,8 @@ fun ChessAnalysisApp(context: Any?) {
     var showUsernameDialog by remember { mutableStateOf(false) }
     var selectedPlatform by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.Platform?>(null) }
     var userProfile by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.UserProfile?>(null) }
+    var isLoadingProfile by remember { mutableStateOf(false) }
+    var profileErrorMessage by remember { mutableStateOf<String?>(null) }
 
     val gameResult = remember(pgn) {
         pgn?.let { Regex("""\[Result\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) } ?: "*"
@@ -550,25 +552,46 @@ fun ChessAnalysisApp(context: Any?) {
     if (showUsernameDialog && selectedPlatform != null) {
         com.andrewbibire.chessanalysis.online.UsernameInputDialog(
             platform = selectedPlatform!!,
+            isLoading = isLoadingProfile,
+            errorMessage = profileErrorMessage,
             onDismiss = {
                 showUsernameDialog = false
                 selectedPlatform = null
+                profileErrorMessage = null
             },
             onConfirm = { username ->
-                val profile = com.andrewbibire.chessanalysis.online.DummyData.fetchUserProfile(username, selectedPlatform!!)
-                if (profile != null) {
-                    userProfile = profile
-                    showUsernameDialog = false
-                    showBottomSheet = false
-                    selectedPlatform = null
-                } else {
-                    showUsernameDialog = false
-                    selectedPlatform = null
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = "Failed to fetch user profile",
-                            duration = SnackbarDuration.Short
+                isLoadingProfile = true
+                profileErrorMessage = null
+
+                val result = when (selectedPlatform) {
+                    com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> {
+                        com.andrewbibire.chessanalysis.online.ChessComService.getUserProfile(username)
+                    }
+                    com.andrewbibire.chessanalysis.online.Platform.LICHESS -> {
+                        com.andrewbibire.chessanalysis.online.DummyData.fetchUserProfile(username, selectedPlatform!!)?.let {
+                            com.andrewbibire.chessanalysis.network.NetworkResult.Success(it)
+                        } ?: com.andrewbibire.chessanalysis.network.NetworkResult.Error(
+                            Exception("Invalid username"),
+                            "Invalid username"
                         )
+                    }
+                    else -> com.andrewbibire.chessanalysis.network.NetworkResult.Error(
+                        Exception("Unknown platform"),
+                        "Unknown platform"
+                    )
+                }
+
+                isLoadingProfile = false
+                when (result) {
+                    is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
+                        userProfile = result.data
+                        showUsernameDialog = false
+                        showBottomSheet = false
+                        selectedPlatform = null
+                        profileErrorMessage = null
+                    }
+                    is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
+                        profileErrorMessage = result.message ?: "Failed to fetch user profile. Please check the username and try again."
                     }
                 }
             }

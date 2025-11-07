@@ -44,7 +44,7 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
-            implementation("io.ktor:ktor-client-okhttp:3.0.3")
+            implementation("io.ktor:ktor-client-okhttp:3.0.2")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -60,9 +60,9 @@ kotlin {
             implementation("io.coil-kt.coil3:coil-network-ktor3:3.3.0")
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
             implementation(compose.materialIconsExtended)
-            implementation("io.ktor:ktor-client-core:3.0.3")
-            implementation("io.ktor:ktor-client-content-negotiation:3.0.3")
-            implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.3")
+            implementation("io.ktor:ktor-client-core:3.0.2")
+            implementation("io.ktor:ktor-client-content-negotiation:3.0.2")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.2")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -70,10 +70,10 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
-            implementation("io.ktor:ktor-client-okhttp:3.0.3")
+            implementation("io.ktor:ktor-client-okhttp:3.0.2")
         }
         iosMain.dependencies {
-            implementation("io.ktor:ktor-client-darwin:3.0.3")
+            implementation("io.ktor:ktor-client-darwin:3.0.2")
         }
     }
 }
