@@ -483,11 +483,9 @@ fun ChessAnalysisApp(context: Any?) {
                         }
                     }
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
-
                 ImportOption(
-                    icon = painterResource(Res.drawable.chesspawn),
+                    icon = Icons.Filled.Public,
                     title = "Chess.com",
                     description = "Import from Chess.com",
                     iconTint = Color(0xFF80b64d),
@@ -501,9 +499,7 @@ fun ChessAnalysisApp(context: Any?) {
                         }
                     }
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
-
                 ImportOption(
                     icon = Icons.Filled.Language,
                     title = "Lichess",
@@ -521,7 +517,6 @@ fun ChessAnalysisApp(context: Any?) {
             }
         }
     }
-
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomCenter
