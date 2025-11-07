@@ -34,7 +34,7 @@ fun GamesListScreen(
 ) {
     var currentYear by remember { mutableIntStateOf(getCurrentYear()) }
     var currentMonth by remember { mutableIntStateOf(getCurrentMonth()) }
-    var isLoading by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
     var monthGames by remember { mutableStateOf<List<OnlineGame>?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var availableArchives by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -46,7 +46,6 @@ fun GamesListScreen(
 
     LaunchedEffect(Unit) {
         if (userProfile.platform == Platform.CHESS_COM && !isInitialized) {
-            isLoading = true
             val archivesResult = ChessComService.getAvailableArchives(userProfile.username)
             when (archivesResult) {
                 is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
@@ -68,9 +67,9 @@ fun GamesListScreen(
                         duration = SnackbarDuration.Short
                     )
                     isInitialized = true
+                    isLoading = false
                 }
             }
-            isLoading = false
         } else if (userProfile.platform == Platform.LICHESS) {
             isInitialized = true
         }
@@ -232,7 +231,7 @@ fun GamesListScreen(
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
             Box(modifier = Modifier.fillMaxSize()) {
-                if (isLoading) {
+                if (isLoading || !isInitialized) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
