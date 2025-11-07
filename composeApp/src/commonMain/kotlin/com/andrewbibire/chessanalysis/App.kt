@@ -333,7 +333,7 @@ fun ChessAnalysisApp(context: Any?) {
 
                     positions[currentIndex].openingName?.let { name ->
                         Text(
-                            text = "Opening: $name",
+                            text = name,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
