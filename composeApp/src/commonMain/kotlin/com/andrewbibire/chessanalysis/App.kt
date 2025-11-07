@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.jetbrains.compose.resources.painterResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -485,10 +484,11 @@ fun ChessAnalysisApp(context: Any?) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 ImportOption(
-                    icon = Icons.Filled.Public,
+                    iconContent = {
+                        MaterialSymbol(name = "chess_pawn_2", tint = Color(0xFF80b64d), fill = 1f)
+                    },
                     title = "Chess.com",
                     description = "Import from Chess.com",
-                    iconTint = Color(0xFF80b64d),
                     onClick = {
                         coroutineScope.launch {
                             showBottomSheet = false
@@ -720,7 +720,8 @@ fun classificationBadge(cls: String?): DrawableResource? {
 
 @Composable
 fun ImportOption(
-    icon: Any,
+    icon: Any? = null,
+    iconContent: (@Composable () -> Unit)? = null,
     title: String,
     description: String,
     iconTint: Color = Color.White,
@@ -741,22 +742,25 @@ fun ImportOption(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            when (icon) {
-                is ImageVector -> {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        modifier = Modifier.size(32.dp),
-                        tint = iconTint
-                    )
-                }
-                is Painter -> {
-                    Icon(
-                        painter = icon,
-                        contentDescription = title,
-                        modifier = Modifier.size(32.dp),
-                        tint = iconTint
-                    )
+            Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                when {
+                    iconContent != null -> iconContent()
+                    icon is ImageVector -> {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = title,
+                            modifier = Modifier.size(32.dp),
+                            tint = iconTint
+                        )
+                    }
+                    icon is Painter -> {
+                        Icon(
+                            painter = icon,
+                            contentDescription = title,
+                            modifier = Modifier.size(32.dp),
+                            tint = iconTint
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))
