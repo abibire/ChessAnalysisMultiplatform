@@ -4,12 +4,16 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -48,38 +52,25 @@ fun App(context: Any? = null) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChessAnalysisApp(context: Any?) {
-    val pgn = """
-       [Event "Paris"]
-[Site "Paris FRA"]
-[Date "1858.??.??"]
-[EventDate "?"]
-[Round "?"]
-[Result "1-0"]
-[White "Paul Morphy"]
-[Black "Duke Karl / Count Isouard"]
-[ECO "C41"]
-[WhiteElo "?"]
-[BlackElo "?"]
-[PlyCount "33"]
-[Source "(London) Field, London, 1858.12.04, p458"]
+    var pgn by remember { mutableStateOf<String?>(null) }
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
-1.e4 e5 2.Nf3 d6 3.d4 Bg4 {This is a weak move
-already.--Fischer} 4.dxe5 Bxf3 5.Qxf3 dxe5 6.Bc4 Nf6 7.Qb3 Qe7
-8.Nc3 c6 9.Bg5 {Black is in what's like a zugzwang position
-here. He can't develop the [Queen's] knight because the pawn
-is hanging, the bishop is blocked because of the
-Queen.--Fischer} b5 10.Nxb5 cxb5 11.Bxb5+ Nbd7 12.O-O-O Rd8
-13.Rxd7 Rxd7 14.Rd1 Qe6 15.Bxd7+ Nxd7 16.Qb8+ Nxb8 17.Rd8# 1-0
-    """.trimIndent()
+    var currentIndex by remember { mutableIntStateOf(0) }
+    var isEvaluating by remember { mutableStateOf(false) }
+    var isPlaying by remember { mutableStateOf(false) }
+    var isBoardFlipped by remember { mutableStateOf(false) }
 
-    val gameResult = remember {
-        Regex("""\[Result\s+"([^"]+)"\]""").find(pgn)?.groupValues?.get(1) ?: "*"
+    val gameResult = remember(pgn) {
+        pgn?.let { Regex("""\[Result\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) } ?: "*"
     }
 
-    val gameTermination = remember {
-        val termination = Regex("""\[Termination\s+"([^"]+)"\]""").find(pgn)?.groupValues?.get(1)
+    val gameTermination = remember(pgn, gameResult) {
+        val termination = pgn?.let { Regex("""\[Termination\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) }
         termination ?: when (gameResult) {
             "1-0" -> "White wins"
             "0-1" -> "Black wins"
@@ -88,11 +79,9 @@ Queen.--Fischer} b5 10.Nxb5 cxb5 11.Bxb5+ Nbd7 12.O-O-O Rd8
         }
     }
 
-    val positions = remember { generateFensFromPgn(pgn) }
-    var currentIndex by remember { mutableIntStateOf(0) }
-    var isEvaluating by remember { mutableStateOf(false) }
-    var isPlaying by remember { mutableStateOf(false) }
-    var isBoardFlipped by remember { mutableStateOf(false) }
+    val positions = remember(pgn) {
+        pgn?.let { generateFensFromPgn(it) } ?: emptyList()
+    }
 
     val stockfishEngine = remember(context) {
         if (context != null) createStockfishEngine(context) else null
@@ -100,9 +89,13 @@ Queen.--Fischer} b5 10.Nxb5 cxb5 11.Bxb5+ Nbd7 12.O-O-O Rd8
 
     LaunchedEffect(context) {
         OpeningBook.init()
-        if (stockfishEngine != null && positions.isNotEmpty()) {
+    }
+
+    LaunchedEffect(pgn, stockfishEngine) {
+        if (pgn != null && stockfishEngine != null && positions.isNotEmpty()) {
             isEvaluating = true
-            delay(2000)
+            currentIndex = 0
+            delay(500)
             withContext(Dispatchers.Default) {
                 for (position in positions) {
                     val result = stockfishEngine.evaluatePosition(position.fenString, depth = 14)
@@ -124,24 +117,31 @@ Queen.--Fischer} b5 10.Nxb5 cxb5 11.Bxb5+ Nbd7 12.O-O-O Rd8
         }
     }
 
-    val badgeUci = remember(currentIndex) {
-        positions[currentIndex].playedMove
+    val badgeUci = remember(currentIndex, positions) {
+        positions.getOrNull(currentIndex)?.playedMove
     }
-    val badgeDrawable = remember(currentIndex) { classificationBadge(positions[currentIndex].classification) }
+    val badgeDrawable = remember(currentIndex, positions) {
+        classificationBadge(positions.getOrNull(currentIndex)?.classification)
+    }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.statusBars),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        EvaluationBar(
-            score = if (isEvaluating) null else positions[currentIndex].score,
-            fen = positions[currentIndex].fenString,
-            gameResult = gameResult,
-            isLastMove = currentIndex == positions.lastIndex,
-            modifier = Modifier.fillMaxWidth().height(24.dp)
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBars),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+        if (pgn != null && positions.isNotEmpty()) {
+            EvaluationBar(
+                score = if (isEvaluating) null else positions[currentIndex].score,
+                fen = positions[currentIndex].fenString,
+                gameResult = gameResult,
+                isLastMove = currentIndex == positions.lastIndex,
+                modifier = Modifier.fillMaxWidth().height(24.dp)
+            )
+        } else {
+            Spacer(modifier = Modifier.height(24.dp))
+        }
 
         Box(
             modifier = Modifier
@@ -149,19 +149,30 @@ Queen.--Fischer} b5 10.Nxb5 cxb5 11.Bxb5+ Nbd7 12.O-O-O Rd8
                 .aspectRatio(1f),
             contentAlignment = Alignment.Center
         ) {
-            val cls = positions[currentIndex].classification ?: ""
-            val suppressArrow = cls == "Best" || cls == "Book" || cls == "Forced"
-            val arrow = if (!suppressArrow && currentIndex > 0)
-                positions[currentIndex - 1].bestMove?.takeIf { it.length >= 4 }?.substring(0, 4)
-            else null
-            Chessboard(
-                fen = positions[currentIndex].fenString,
-                arrowUci = arrow,
-                badgeUci = badgeUci,
-                badgeDrawable = badgeDrawable,
-                flipped = isBoardFlipped,
-                modifier = Modifier.fillMaxSize()
-            )
+            if (pgn != null && positions.isNotEmpty()) {
+                val cls = positions[currentIndex].classification ?: ""
+                val suppressArrow = cls == "Best" || cls == "Book" || cls == "Forced"
+                val arrow = if (!suppressArrow && currentIndex > 0)
+                    positions[currentIndex - 1].bestMove?.takeIf { it.length >= 4 }?.substring(0, 4)
+                else null
+                Chessboard(
+                    fen = positions[currentIndex].fenString,
+                    arrowUci = arrow,
+                    badgeUci = badgeUci,
+                    badgeDrawable = badgeDrawable,
+                    flipped = isBoardFlipped,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Chessboard(
+                    fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                    arrowUci = null,
+                    badgeUci = null,
+                    badgeDrawable = null,
+                    flipped = false,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
 
         Column(
@@ -172,18 +183,51 @@ Queen.--Fischer} b5 10.Nxb5 cxb5 11.Bxb5+ Nbd7 12.O-O-O Rd8
                 .windowInsetsPadding(WindowInsets.navigationBars),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "Move: ${currentIndex}",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+            if (pgn == null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Button(
+                        onClick = { showBottomSheet = true },
+                        modifier = Modifier
+                            .fillMaxWidth(0.7f)
+                            .height(64.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF3d3d3d),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = "Add PGN",
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Add PGN",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            } else {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Move: ${currentIndex}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                if (isEvaluating) {
+                    if (isEvaluating) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(32.dp),
                         color = BoardDark
@@ -272,36 +316,36 @@ Queen.--Fischer} b5 10.Nxb5 cxb5 11.Bxb5+ Nbd7 12.O-O-O Rd8
                         Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                EvaluationButton(
-                    onClick = { isBoardFlipped = !isBoardFlipped },
-                    enabled = true,
-                    modifier = Modifier
-                        .height(32.dp)
-                        .width(64.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.SwapVert,
-                        contentDescription = "Flip board",
-                        modifier = Modifier.size(18.dp)
-                    )
                 }
-            }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    EvaluationButton(
+                        onClick = { isBoardFlipped = !isBoardFlipped },
+                        enabled = true,
+                        modifier = Modifier
+                            .height(32.dp)
+                            .width(64.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.SwapVert,
+                            contentDescription = "Flip board",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                 EvaluationButton(
                     onClick = { currentIndex = 0 },
                     enabled = currentIndex > 0 && !isEvaluating,
@@ -358,17 +402,117 @@ Queen.--Fischer} b5 10.Nxb5 cxb5 11.Bxb5+ Nbd7 12.O-O-O Rd8
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                EvaluationButton(
-                    onClick = { currentIndex = positions.lastIndex },
-                    enabled = currentIndex < positions.lastIndex && !isEvaluating,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.SkipNext,
-                        contentDescription = "Last move",
-                        modifier = Modifier.size(24.dp)
-                    )
+                    EvaluationButton(
+                        onClick = { currentIndex = positions.lastIndex },
+                        enabled = currentIndex < positions.lastIndex && !isEvaluating,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.SkipNext,
+                            contentDescription = "Last move",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
+            }
+        }
+    }
+
+        if (showBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showBottomSheet = false },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 16.dp, bottom = 48.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = "Import PGN",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                ImportOption(
+                    icon = Icons.Filled.ContentPaste,
+                    title = "Paste from Clipboard",
+                    description = "Import a PGN from your clipboard",
+                    onClick = {
+                        coroutineScope.launch {
+                            val clipboardText = readClipboard()
+                            if (isValidPgn(clipboardText)) {
+                                pgn = clipboardText
+                                showBottomSheet = false
+                            } else {
+                                showBottomSheet = false
+                                snackbarHostState.showSnackbar(
+                                    message = "Invalid or empty PGN in clipboard",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                        }
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                ImportOption(
+                    icon = Icons.Filled.Language,
+                    title = "Chess.com",
+                    description = "Import from Chess.com",
+                    onClick = {
+                        coroutineScope.launch {
+                            showBottomSheet = false
+                            snackbarHostState.showSnackbar(
+                                message = "Coming soon",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                ImportOption(
+                    icon = Icons.Filled.Language,
+                    title = "Lichess",
+                    description = "Import from Lichess",
+                    onClick = {
+                        coroutineScope.launch {
+                            showBottomSheet = false
+                            snackbarHostState.showSnackbar(
+                                message = "Coming soon",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+            ) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = Color(0xFFD32F2F),
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(12.dp)
+                )
             }
         }
     }
@@ -554,4 +698,61 @@ fun classificationBadge(cls: String?): DrawableResource? {
     }
 }
 
+@Composable
+fun ImportOption(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    description: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+fun isValidPgn(text: String?): Boolean {
+    if (text.isNullOrBlank()) return false
+
+    val trimmed = text.trim()
+    val hasMoves = Regex("""\d+\.\s*[a-hNBRQKO]""").containsMatchIn(trimmed)
+
+    return hasMoves
+}
+
 expect fun createStockfishEngine(context: Any?): StockfishEngine
+
+expect suspend fun readClipboard(): String?
