@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.andrewbibire.chessanalysis.BoardDark
@@ -39,6 +40,7 @@ fun GamesListScreen(
     var availableArchives by remember { mutableStateOf<List<String>>(emptyList()) }
     var isInitialized by remember { mutableStateOf(false) }
     val gamesCache = remember { mutableMapOf<String, List<OnlineGame>>() }
+    var showDatePicker by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -201,7 +203,10 @@ fun GamesListScreen(
                 Text(
                     text = "$monthName $currentYear",
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clickable { showDatePicker = true }
+                        .padding(8.dp)
                 )
 
                 IconButton(
@@ -280,6 +285,165 @@ fun GamesListScreen(
             }
         }
     }
+
+    if (showDatePicker) {
+        MonthYearPickerDialog(
+            currentYear = currentYear,
+            currentMonth = currentMonth,
+            availableArchives = availableArchives,
+            onDismiss = { showDatePicker = false },
+            onDateSelected = { year, month ->
+                currentYear = year
+                currentMonth = month
+                showDatePicker = false
+            }
+        )
+    }
+}
+
+@Composable
+fun MonthYearPickerDialog(
+    currentYear: Int,
+    currentMonth: Int,
+    availableArchives: List<String>,
+    onDismiss: () -> Unit,
+    onDateSelected: (year: Int, month: Int) -> Unit
+) {
+    var selectedYear by remember { mutableIntStateOf(currentYear) }
+    var selectedMonth by remember { mutableIntStateOf(currentMonth) }
+
+    val yearRange = if (availableArchives.isNotEmpty()) {
+        val years = availableArchives.mapNotNull { archive ->
+            val parts = archive.split("/")
+            if (parts.size >= 2) parts[parts.size - 2].toIntOrNull() else null
+        }
+        (years.minOrNull() ?: 2010)..(years.maxOrNull() ?: getCurrentYear())
+    } else {
+        2010..getCurrentYear()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Select Month and Year",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Year selection
+                Column {
+                    Text(
+                        text = "Year",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { if (selectedYear > yearRange.first) selectedYear-- },
+                            enabled = selectedYear > yearRange.first
+                        ) {
+                            Icon(Icons.Filled.NavigateBefore, "Previous year")
+                        }
+                        Text(
+                            text = selectedYear.toString(),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Center
+                        )
+                        IconButton(
+                            onClick = { if (selectedYear < yearRange.last) selectedYear++ },
+                            enabled = selectedYear < yearRange.last
+                        ) {
+                            Icon(Icons.Filled.NavigateNext, "Next year")
+                        }
+                    }
+                }
+
+                // Month selection grid
+                Column {
+                    Text(
+                        text = "Month",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val months = listOf(
+                        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (row in 0..2) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                for (col in 0..3) {
+                                    val monthIndex = row * 4 + col + 1
+                                    val isSelected = monthIndex == selectedMonth
+                                    val isDisabled = selectedYear == getCurrentYear() && monthIndex > getCurrentMonth()
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(
+                                                when {
+                                                    isDisabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                                    isSelected -> MaterialTheme.colorScheme.primary
+                                                    else -> MaterialTheme.colorScheme.surfaceVariant
+                                                }
+                                            )
+                                            .clickable(enabled = !isDisabled) {
+                                                selectedMonth = monthIndex
+                                            }
+                                            .padding(vertical = 12.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = months[monthIndex - 1],
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = when {
+                                                isDisabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                                isSelected -> MaterialTheme.colorScheme.onPrimary
+                                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onDateSelected(selectedYear, selectedMonth) }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
