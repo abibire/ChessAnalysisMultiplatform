@@ -9,11 +9,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.text.input.ImeAction
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,7 +65,6 @@ fun ChessAnalysisApp(context: Any?) {
     var showBottomSheet by remember { mutableStateOf(false) }
     var showUsernameInput by remember { mutableStateOf(false) }
     var usernameInputText by remember { mutableStateOf("") }
-    var usernameInputError by remember { mutableStateOf<String?>(null) }
     val sheetSnackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -80,7 +82,6 @@ fun ChessAnalysisApp(context: Any?) {
         if (!showBottomSheet) {
             showUsernameInput = false
             usernameInputText = ""
-            usernameInputError = null
             selectedPlatform = null
         }
     }
@@ -523,7 +524,6 @@ fun ChessAnalysisApp(context: Any?) {
                                     onClick = {
                                         showUsernameInput = false
                                         usernameInputText = ""
-                                        usernameInputError = null
                                         selectedPlatform = null
                                         isLoadingProfile = false
                                     },
@@ -555,22 +555,79 @@ fun ChessAnalysisApp(context: Any?) {
 
                         if (showUsernameInput) {
                             // Username input mode
+                            val loadGamesAction: () -> Unit = {
+                                coroutineScope.launch {
+                                    isLoadingProfile = true
+
+                                    val result = when (selectedPlatform) {
+                                        com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> {
+                                            com.andrewbibire.chessanalysis.online.ChessComService.getUserProfile(usernameInputText)
+                                        }
+                                        com.andrewbibire.chessanalysis.online.Platform.LICHESS -> {
+                                            com.andrewbibire.chessanalysis.online.DummyData.fetchUserProfile(usernameInputText, selectedPlatform!!)?.let {
+                                                com.andrewbibire.chessanalysis.network.NetworkResult.Success(it)
+                                            } ?: com.andrewbibire.chessanalysis.network.NetworkResult.Error(
+                                                Exception("Invalid username"),
+                                                "Invalid username"
+                                            )
+                                        }
+                                        else -> com.andrewbibire.chessanalysis.network.NetworkResult.Error(
+                                            Exception("Unknown platform"),
+                                            "Unknown platform"
+                                        )
+                                    }
+
+                                    isLoadingProfile = false
+                                    when (result) {
+                                        is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
+                                            userProfile = result.data
+                                            showBottomSheet = false
+                                        }
+                                        is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
+                                            // Determine error message based on exception type and message
+                                            val errorMessage = when {
+                                                // Check if it's a network connectivity error (no internet)
+                                                result.exception.message?.contains("Unable to resolve host", ignoreCase = true) == true ||
+                                                result.exception.message?.contains("timeout", ignoreCase = true) == true ||
+                                                result.exception.message?.contains("Failed to connect", ignoreCase = true) == true ||
+                                                result.exception.message?.contains("Connection refused", ignoreCase = true) == true -> {
+                                                    "No internet connection. Please check your network and try again."
+                                                }
+                                                // For all other API failures, show user-friendly message
+                                                else -> "Unable to find an account with that username"
+                                            }
+                                            sheetSnackbarHostState.showSnackbar(
+                                                message = errorMessage,
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
                             OutlinedTextField(
                                 value = usernameInputText,
                                 onValueChange = {
-                                    usernameInputText = it
-                                    usernameInputError = null // Clear error when typing
+                                    // Filter out spaces
+                                    usernameInputText = it.replace(" ", "")
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 label = { Text("Username") },
                                 enabled = !isLoadingProfile,
-                                isError = usernameInputError != null,
-                                supportingText = usernameInputError?.let { { Text(it) } },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        if (usernameInputText.isNotBlank() && !isLoadingProfile) {
+                                            loadGamesAction()
+                                        }
+                                    }
+                                ),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    errorBorderColor = Color(0xFFD32F2F),
-                                    errorSupportingTextColor = Color(0xFFD32F2F)
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
                                 ),
                                 shape = RoundedCornerShape(12.dp)
                             )
@@ -578,68 +635,16 @@ fun ChessAnalysisApp(context: Any?) {
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Button(
-                                onClick = {
-                                    if (usernameInputText.isBlank()) {
-                                        usernameInputError = "Please enter a username"
-                                        return@Button
-                                    }
-
-                                    coroutineScope.launch {
-                                        isLoadingProfile = true
-                                        usernameInputError = null
-
-                                        val result = when (selectedPlatform) {
-                                            com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> {
-                                                com.andrewbibire.chessanalysis.online.ChessComService.getUserProfile(usernameInputText)
-                                            }
-                                            com.andrewbibire.chessanalysis.online.Platform.LICHESS -> {
-                                                com.andrewbibire.chessanalysis.online.DummyData.fetchUserProfile(usernameInputText, selectedPlatform!!)?.let {
-                                                    com.andrewbibire.chessanalysis.network.NetworkResult.Success(it)
-                                                } ?: com.andrewbibire.chessanalysis.network.NetworkResult.Error(
-                                                    Exception("Invalid username"),
-                                                    "Invalid username"
-                                                )
-                                            }
-                                            else -> com.andrewbibire.chessanalysis.network.NetworkResult.Error(
-                                                Exception("Unknown platform"),
-                                                "Unknown platform"
-                                            )
-                                        }
-
-                                        isLoadingProfile = false
-                                        when (result) {
-                                            is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
-                                                userProfile = result.data
-                                                showBottomSheet = false
-                                            }
-                                            is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
-                                                // Determine error message based on exception type and message
-                                                val errorMessage = when {
-                                                    // Check if it's a network connectivity error (no internet)
-                                                    result.exception.message?.contains("Unable to resolve host", ignoreCase = true) == true ||
-                                                    result.exception.message?.contains("timeout", ignoreCase = true) == true ||
-                                                    result.exception.message?.contains("Failed to connect", ignoreCase = true) == true ||
-                                                    result.exception.message?.contains("Connection refused", ignoreCase = true) == true -> {
-                                                        "No internet connection. Please check your network and try again."
-                                                    }
-                                                    // For all other API failures, show user-friendly message
-                                                    else -> "Unable to find an account with that username"
-                                                }
-                                                sheetSnackbarHostState.showSnackbar(
-                                                    message = errorMessage,
-                                                    duration = SnackbarDuration.Short
-                                                )
-                                            }
-                                        }
-                                    }
-                                },
-                                enabled = !isLoadingProfile,
+                                onClick = loadGamesAction,
+                                enabled = usernameInputText.isNotBlank() && !isLoadingProfile,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(56.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF3d3d3d),
-                                    contentColor = Color.White
+                                    containerColor = Color(0xFF80b64d),
+                                    contentColor = Color.White,
+                                    disabledContainerColor = Color(0xFF3d3d3d),
+                                    disabledContentColor = Color(0xFF888888)
                                 ),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
