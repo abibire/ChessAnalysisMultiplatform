@@ -38,6 +38,7 @@ fun GamesListScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var availableArchives by remember { mutableStateOf<List<String>>(emptyList()) }
     var isInitialized by remember { mutableStateOf(false) }
+    val gamesCache = remember { mutableMapOf<String, List<OnlineGame>>() }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -76,39 +77,50 @@ fun GamesListScreen(
     LaunchedEffect(currentYear, currentMonth, isInitialized) {
         if (!isInitialized) return@LaunchedEffect
 
-        isLoading = true
-        errorMessage = null
+        val cacheKey = "$currentYear-$currentMonth"
+        val cachedGames = gamesCache[cacheKey]
 
-        val result = when (userProfile.platform) {
-            Platform.CHESS_COM -> ChessComService.getGamesForYearMonth(
-                userProfile.username,
-                currentYear,
-                currentMonth
-            )
-            Platform.LICHESS -> {
-                val dummyGames = DummyData.fetchGamesForMonth(
+        if (cachedGames != null) {
+            // Use cached data
+            monthGames = cachedGames
+            errorMessage = null
+        } else {
+            // Fetch new data
+            isLoading = true
+            errorMessage = null
+
+            val result = when (userProfile.platform) {
+                Platform.CHESS_COM -> ChessComService.getGamesForYearMonth(
                     userProfile.username,
-                    userProfile.platform,
                     currentYear,
                     currentMonth
                 )
-                com.andrewbibire.chessanalysis.network.NetworkResult.Success(dummyGames.games)
+                Platform.LICHESS -> {
+                    val dummyGames = DummyData.fetchGamesForMonth(
+                        userProfile.username,
+                        userProfile.platform,
+                        currentYear,
+                        currentMonth
+                    )
+                    com.andrewbibire.chessanalysis.network.NetworkResult.Success(dummyGames.games)
+                }
             }
-        }
 
-        isLoading = false
-        when (result) {
-            is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
-                monthGames = result.data
-                errorMessage = null
-            }
-            is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
-                monthGames = emptyList()
-                errorMessage = result.message ?: "Failed to load games"
-                snackbarHostState.showSnackbar(
-                    message = errorMessage!!,
-                    duration = SnackbarDuration.Short
-                )
+            isLoading = false
+            when (result) {
+                is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
+                    monthGames = result.data
+                    gamesCache[cacheKey] = result.data
+                    errorMessage = null
+                }
+                is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
+                    monthGames = emptyList()
+                    errorMessage = result.message ?: "Failed to load games"
+                    snackbarHostState.showSnackbar(
+                        message = errorMessage!!,
+                        duration = SnackbarDuration.Short
+                    )
+                }
             }
         }
     }
