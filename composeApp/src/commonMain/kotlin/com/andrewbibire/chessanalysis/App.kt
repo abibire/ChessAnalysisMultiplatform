@@ -461,27 +461,6 @@ fun ChessAnalysisApp(context: Any?) {
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-
-                ImportOption(
-                    icon = Icons.Filled.ContentPaste,
-                    title = "Paste from Clipboard",
-                    description = "Import a PGN from your clipboard",
-                    onClick = {
-                        coroutineScope.launch {
-                            val clipboardText = readClipboard()
-                            if (isValidPgn(clipboardText)) {
-                                pgn = clipboardText
-                                showBottomSheet = false
-                            } else {
-                                showBottomSheet = false
-                                snackbarHostState.showSnackbar(
-                                    message = "Invalid or empty PGN in clipboard",
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        }
-                    }
-                )
                 Spacer(modifier = Modifier.height(8.dp))
                 ImportOption(
                     iconContent = {
@@ -501,7 +480,9 @@ fun ChessAnalysisApp(context: Any?) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 ImportOption(
-                    icon = Icons.Filled.Language,
+                    iconContent = {
+                        MaterialSymbol(name = "chess_knight", tint = Color.White, fill = 0f, flipHorizontally = true)
+                    },
                     title = "Lichess",
                     description = "Import from Lichess",
                     onClick = {
@@ -511,6 +492,28 @@ fun ChessAnalysisApp(context: Any?) {
                                 message = "Coming soon",
                                 duration = SnackbarDuration.Short
                             )
+                        }
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                ImportOption(
+                    icon = Icons.Filled.ContentPaste,
+                    title = "Paste from Clipboard",
+                    description = "Import a PGN from your clipboard",
+                    iconTint = BookColor,
+                    onClick = {
+                        coroutineScope.launch {
+                            val clipboardText = readClipboard()
+                            if (isValidPgn(clipboardText)) {
+                                pgn = clipboardText
+                                showBottomSheet = false
+                            } else {
+                                showBottomSheet = false
+                                snackbarHostState.showSnackbar(
+                                    message = "Invalid or empty PGN in clipboard",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
                         }
                     }
                 )
