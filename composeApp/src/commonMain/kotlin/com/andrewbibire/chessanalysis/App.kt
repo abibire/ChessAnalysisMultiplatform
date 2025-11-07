@@ -195,7 +195,11 @@ fun ChessAnalysisApp(context: Any?) {
                         onClick = { showBottomSheet = true },
                         modifier = Modifier
                             .fillMaxWidth(0.7f)
-                            .height(64.dp),
+                            .height(64.dp)
+                            .shadow(
+                                elevation = 4.dp,
+                                shape = RoundedCornerShape(16.dp)
+                            ),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF3d3d3d),
                             contentColor = Color.White
@@ -324,8 +328,25 @@ fun ChessAnalysisApp(context: Any?) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.Center
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    EvaluationButton(
+                        onClick = { showBottomSheet = true },
+                        enabled = true,
+                        modifier = Modifier
+                            .height(32.dp)
+                            .width(64.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = "Load PGN",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     EvaluationButton(
                         onClick = { isBoardFlipped = !isBoardFlipped },
                         enabled = true,
@@ -748,9 +769,11 @@ fun isValidPgn(text: String?): Boolean {
     if (text.isNullOrBlank()) return false
 
     val trimmed = text.trim()
-    val hasMoves = Regex("""\d+\.\s*[a-hNBRQKO]""").containsMatchIn(trimmed)
 
-    return hasMoves
+    val movePattern = Regex("""\d+\.\s*([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](=[NBRQ])?[+#]?|O-O(-O)?[+#]?)""")
+    val matches = movePattern.findAll(trimmed).toList()
+
+    return matches.size >= 2
 }
 
 expect fun createStockfishEngine(context: Any?): StockfishEngine
