@@ -71,7 +71,18 @@ fun ChessAnalysisApp(context: Any?) {
     var selectedPlatform by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.Platform?>(null) }
     var userProfile by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.UserProfile?>(null) }
     var isLoadingProfile by remember { mutableStateOf(false) }
-    var profileErrorMessage by remember { mutableStateOf<String?>(null) }
+    var pendingErrorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Show error snackbar when dialog closes with an error
+    LaunchedEffect(pendingErrorMessage) {
+        pendingErrorMessage?.let { errorMsg ->
+            snackbarHostState.showSnackbar(
+                message = errorMsg,
+                duration = SnackbarDuration.Short
+            )
+            pendingErrorMessage = null
+        }
+    }
 
     val gameResult = remember(pgn) {
         pgn?.let { Regex("""\[Result\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) } ?: "*"
@@ -553,15 +564,12 @@ fun ChessAnalysisApp(context: Any?) {
         com.andrewbibire.chessanalysis.online.UsernameInputDialog(
             platform = selectedPlatform!!,
             isLoading = isLoadingProfile,
-            errorMessage = profileErrorMessage,
             onDismiss = {
                 showUsernameDialog = false
                 selectedPlatform = null
-                profileErrorMessage = null
             },
             onConfirm = { username ->
                 isLoadingProfile = true
-                profileErrorMessage = null
 
                 val result = when (selectedPlatform) {
                     com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> {
@@ -588,10 +596,26 @@ fun ChessAnalysisApp(context: Any?) {
                         showUsernameDialog = false
                         showBottomSheet = false
                         selectedPlatform = null
-                        profileErrorMessage = null
                     }
                     is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
-                        profileErrorMessage = result.message ?: "Failed to fetch user profile. Please check the username and try again."
+                        // Determine error message based on exception type and message
+                        val errorMessage = when {
+                            // Check if it's a network connectivity error (no internet)
+                            result.exception.message?.contains("Unable to resolve host", ignoreCase = true) == true ||
+                            result.exception.message?.contains("timeout", ignoreCase = true) == true ||
+                            result.exception.message?.contains("Failed to connect", ignoreCase = true) == true ||
+                            result.exception.message?.contains("Connection refused", ignoreCase = true) == true -> {
+                                "No internet connection. Please check your network and try again."
+                            }
+                            // For all other API failures, show user-friendly message
+                            else -> "Unable to find an account with that username"
+                        }
+
+                        // Close dialog and bottom sheet, then set pending error to show snackbar
+                        showUsernameDialog = false
+                        showBottomSheet = false
+                        selectedPlatform = null
+                        pendingErrorMessage = errorMessage
                     }
                 }
             }

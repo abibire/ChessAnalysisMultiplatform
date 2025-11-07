@@ -16,18 +16,11 @@ fun UsernameInputDialog(
     platform: Platform,
     onDismiss: () -> Unit,
     onConfirm: suspend (String) -> Unit,
-    isLoading: Boolean = false,
-    errorMessage: String? = null
+    isLoading: Boolean = false
 ) {
     var username by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(errorMessage) {
-        if (errorMessage != null) {
-            isError = true
-        }
-    }
 
     AlertDialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
@@ -61,14 +54,6 @@ fun UsernameInputDialog(
                     ),
                     shape = RoundedCornerShape(12.dp)
                 )
-                if (isError) {
-                    Text(
-                        text = errorMessage ?: "Invalid username. Use only letters, numbers, underscore, or hyphen (min 3 characters)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
                 if (isLoading) {
                     Row(
                         modifier = Modifier
