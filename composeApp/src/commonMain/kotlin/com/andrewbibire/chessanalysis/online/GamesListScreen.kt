@@ -8,7 +8,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.NavigateBefore
 import androidx.compose.material.icons.filled.NavigateNext
 import androidx.compose.material3.*
@@ -22,6 +25,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.andrewbibire.chessanalysis.BoardDark
 import com.andrewbibire.chessanalysis.icons.BulletIcon
+import com.andrewbibire.chessanalysis.icons.BlitzIcon
+import com.andrewbibire.chessanalysis.icons.RapidIcon
+import com.andrewbibire.chessanalysis.icons.ClassicIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -574,12 +580,43 @@ fun GameCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Icon(
-                        imageVector = BulletIcon,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color(0xFFE4AA23)
-                    )
+
+                    val timeCategory = getTimeControlCategory(game.timeControl)
+                    when (timeCategory) {
+                        TimeControlCategory.BULLET -> {
+                            Icon(
+                                imageVector = BulletIcon,
+                                contentDescription = timeCategory.name,
+                                modifier = Modifier.size(16.dp),
+                                tint = Color.Unspecified
+                            )
+                        }
+                        TimeControlCategory.BLITZ -> {
+                            Icon(
+                                imageVector = Icons.Filled.Bolt,
+                                contentDescription = timeCategory.name,
+                                modifier = Modifier.size(20.dp),
+                                tint = Color(0xFFFAD642)
+                            )
+                        }
+                        TimeControlCategory.RAPID -> {
+                            Icon(
+                                imageVector = Icons.Filled.Schedule,
+                                contentDescription = timeCategory.name,
+                                modifier = Modifier.size(20.dp),
+                                tint = BoardDark
+                            )
+                        }
+                        TimeControlCategory.CLASSIC -> {
+                            Icon(
+                                imageVector = Icons.Filled.AllInclusive,
+                                contentDescription = timeCategory.name,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
                     Text(
                         text = formatTimeControl(game.timeControl),
                         style = MaterialTheme.typography.bodySmall,
@@ -620,5 +657,33 @@ private fun formatTimeControl(timeControl: String): String {
             val seconds = timeControl.toIntOrNull() ?: 0
             "${seconds / 60} min"
         }
+    }
+}
+
+enum class TimeControlCategory {
+    BULLET,
+    BLITZ,
+    RAPID,
+    CLASSIC
+}
+
+private fun getTimeControlCategory(timeControl: String): TimeControlCategory {
+    val totalSeconds = when {
+        timeControl.contains("+") -> {
+            val parts = timeControl.split("+")
+            parts[0].toIntOrNull() ?: 0
+        }
+        else -> {
+            timeControl.toIntOrNull() ?: Int.MAX_VALUE // Default to CLASSIC if no time info
+        }
+    }
+
+    val minutes = totalSeconds / 60
+
+    return when {
+        minutes <= 2 -> TimeControlCategory.BULLET
+        minutes < 10 -> TimeControlCategory.BLITZ
+        minutes in 10..60 -> TimeControlCategory.RAPID
+        else -> TimeControlCategory.CLASSIC
     }
 }

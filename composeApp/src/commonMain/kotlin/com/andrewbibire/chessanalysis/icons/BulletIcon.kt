@@ -16,7 +16,7 @@ val BulletIcon: ImageVector
         viewportHeight = 512f
     ).apply {
         path(
-            fill = SolidColor(Color.Black),
+            fill = SolidColor(Color(0xFFE4AA23)),
             fillAlpha = 1.0f,
             pathFillType = PathFillType.NonZero
         ) {
@@ -29,7 +29,7 @@ val BulletIcon: ImageVector
             close()
         }
         path(
-            fill = SolidColor(Color.Black),
+            fill = SolidColor(Color(0xFFE4AA23)),
             fillAlpha = 1.0f,
             pathFillType = PathFillType.NonZero
         ) {
