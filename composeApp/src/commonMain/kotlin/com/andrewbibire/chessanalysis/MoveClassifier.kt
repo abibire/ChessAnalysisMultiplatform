@@ -54,7 +54,28 @@ fun getExpectedPointsLoss(previous: Eval, current: Eval, moveColour: MoveColour)
     return max(0.0, (prevEp - curEp) * if (moveColour == MoveColour.WHITE) 1.0 else -1.0)
 }
 
-fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour): String {
+fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour, playedMove: String? = null, bestMove: String? = null): String {
+    if (playedMove != null && bestMove != null) {
+        val processedPlayedMove = if (playedMove.length > 4) {
+            val promotion = playedMove.substring(4).lowercase()
+            if (promotion == "none") {
+                playedMove.take(4)
+            } else {
+                "${playedMove.take(4)}$promotion"
+            }
+        } else {
+            playedMove
+        }
+        val processedBestMove = if (bestMove.length > 4) {
+            "${bestMove.take(4)}${bestMove.substring(4).lowercase()}"
+        } else {
+            bestMove
+        }
+        if (processedPlayedMove == processedBestMove) {
+            return "Best"
+        }
+    }
+
     val previousSubjectiveValue = previous.value * if (moveColour == MoveColour.WHITE) 1.0 else -1.0
     val subjectiveValue = current.value * if (moveColour == MoveColour.WHITE) 1.0 else -1.0
 
@@ -162,7 +183,7 @@ fun classifyPositions(positions: List<Position>) {
             val prevEval = parseEvaluationWhiteCentric(prev.score, prev.fenString)
             val curEval = parseEvaluationWhiteCentric(cur.score, cur.fenString)
             cur.classification = if (prevEval != null && curEval != null) {
-                classifyPointLoss(prevEval, curEval, moveColour)
+                classifyPointLoss(prevEval, curEval, moveColour, cur.playedMove, prev.bestMove)
             } else {
                 null
             }
