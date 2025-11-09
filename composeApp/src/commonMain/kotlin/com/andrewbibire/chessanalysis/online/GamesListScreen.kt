@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
@@ -495,12 +496,6 @@ fun GameCard(
         else -> Color(0xFFEF5350)
     }
 
-    val resultText = when {
-        game.result == "1/2-1/2" -> "="
-        (game.result == "1-0" && isUserWhite) || (game.result == "0-1" && !isUserWhite) -> "+"
-        else -> "-"
-    }
-
     val dateText = remember(game.endTime) {
         formatGameDate(game.endTime)
     }
@@ -627,14 +622,13 @@ fun GameCard(
 
             Box(
                 modifier = Modifier
-                    .width(32.dp)
+                    .width(21.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(resultColor)
-                    .padding(vertical = 6.dp),
+                    .background(resultColor),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = resultText,
+                    text = " ",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
