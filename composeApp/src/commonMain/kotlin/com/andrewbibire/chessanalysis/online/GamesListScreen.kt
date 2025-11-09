@@ -164,7 +164,7 @@ fun GamesListScreen(
                 title = {
                     Column {
                         Text(
-                            text = "${userProfile.username}'s Games",
+                            text = userProfile.username,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
