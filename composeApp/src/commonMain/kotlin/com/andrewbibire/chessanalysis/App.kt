@@ -990,8 +990,6 @@ fun ImportOption(
 
 fun isValidPgn(text: String?): Boolean {
     if (text.isNullOrBlank()) return false
-
-    // Simply check if the parser can handle it
     return isValidParsablePgn(text)
 }
 
