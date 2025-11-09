@@ -104,6 +104,33 @@ fun ChessAnalysisApp(context: Any?) {
         pgn?.let { generateFensFromPgn(it) } ?: emptyList()
     }
 
+    // Show error if PGN failed to parse
+    if (pgn != null && positions.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Failed to parse game",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "This game format is not supported (e.g., Chess960 variants)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 32.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { pgn = null }) {
+                    Text("Go Back")
+                }
+            }
+        }
+        return
+    }
+
     val stockfishEngine = remember(context) {
         if (context != null) createStockfishEngine(context) else null
     }
@@ -964,12 +991,8 @@ fun ImportOption(
 fun isValidPgn(text: String?): Boolean {
     if (text.isNullOrBlank()) return false
 
-    val trimmed = text.trim()
-
-    val movePattern = Regex("""\d+\.\s*([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](=[NBRQ])?[+#]?|O-O(-O)?[+#]?)""")
-    val matches = movePattern.findAll(trimmed).toList()
-
-    return matches.size >= 2
+    // Simply check if the parser can handle it
+    return isValidParsablePgn(text)
 }
 
 expect fun createStockfishEngine(context: Any?): StockfishEngine

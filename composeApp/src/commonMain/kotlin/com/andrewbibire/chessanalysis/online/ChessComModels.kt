@@ -25,7 +25,8 @@ data class ChessComGame(
     val white: ChessComPlayer,
     val black: ChessComPlayer,
     @SerialName("time_class")
-    val timeClass: String? = null
+    val timeClass: String? = null,
+    val rules: String? = null
 )
 
 @Serializable

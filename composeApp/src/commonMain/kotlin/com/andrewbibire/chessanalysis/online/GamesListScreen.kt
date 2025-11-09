@@ -257,6 +257,10 @@ fun GamesListScreen(
                     }
                 } else {
                     val games = monthGames ?: emptyList()
+                    println("GamesListScreen: Displaying ${games.size} games")
+                    if (games.isNotEmpty()) {
+                        println("First 5 displayed games: ${games.take(5).map { "${it.white} vs ${it.black}" }}")
+                    }
                     if (games.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),

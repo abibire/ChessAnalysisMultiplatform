@@ -94,18 +94,31 @@ object LichessService {
      * Parse NDJSON (Newline Delimited JSON) response
      */
     private fun parseNdJson(bodyText: String): List<OnlineGame> {
-        return bodyText
+        var variantCount = 0
+        val games = bodyText
             .split("\n")
             .filter { it.isNotBlank() }
             .mapNotNull { line ->
                 try {
                     val lichessGame = json.decodeFromString<LichessGame>(line)
-                    lichessGame.toOnlineGame()
+                    // Filter out variant games by variant field only (fast and reliable)
+                    if (lichessGame.variant.equals("standard", ignoreCase = true)) {
+                        lichessGame.toOnlineGame()
+                    } else {
+                        variantCount++
+                        null
+                    }
                 } catch (e: Exception) {
-                    println("Parse error: ${e.message}")
+                    println("JSON parse error: ${e.message}")
                     null // Skip malformed lines
                 }
             }
+
+        if (variantCount > 0) {
+            println("Lichess: Filtered out $variantCount variant games")
+        }
+
+        return games
     }
 
     /**
