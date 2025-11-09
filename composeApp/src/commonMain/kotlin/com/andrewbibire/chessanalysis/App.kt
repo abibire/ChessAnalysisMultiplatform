@@ -39,8 +39,8 @@ import chessanalysis.composeapp.generated.resources.forced
 import chessanalysis.composeapp.generated.resources.inaccuracy
 import chessanalysis.composeapp.generated.resources.mistake
 import chessanalysis.composeapp.generated.resources.good
-import chessanalysis.composeapp.generated.resources.theory
 import chessanalysis.composeapp.generated.resources.blunder
+import chessanalysis.composeapp.generated.resources.book
 
 @Composable
 fun App(context: Any? = null) {
@@ -919,7 +919,7 @@ fun classificationBadge(cls: String?): DrawableResource? {
         "inaccuracy" -> Res.drawable.inaccuracy
         "mistake" -> Res.drawable.mistake
         "blunder" -> Res.drawable.blunder
-        "book", "theory" -> Res.drawable.theory
+        "book" -> Res.drawable.book
         "forced" -> Res.drawable.forced
         else -> null
     }
