@@ -481,21 +481,20 @@ fun GameCard(
     onClick: () -> Unit
 ) {
     val isUserWhite = game.white.equals(userProfile.username, ignoreCase = true)
-    val userColor = if (isUserWhite) "White" else "Black"
     val opponentName = if (isUserWhite) game.black else game.white
     val userRating = if (isUserWhite) game.whiteRating else game.blackRating
     val opponentRating = if (isUserWhite) game.blackRating else game.whiteRating
 
     val resultColor = when {
-        game.result == "1/2-1/2" -> Color(0xFFFFB74D)
+        game.result == "1/2-1/2" -> Color(0xFF939391)
         (game.result == "1-0" && isUserWhite) || (game.result == "0-1" && !isUserWhite) -> Color(0xFF66BB6A)
         else -> Color(0xFFEF5350)
     }
 
     val resultText = when {
-        game.result == "1/2-1/2" -> "Draw"
-        (game.result == "1-0" && isUserWhite) || (game.result == "0-1" && !isUserWhite) -> "Won"
-        else -> "Lost"
+        game.result == "1/2-1/2" -> "="
+        (game.result == "1-0" && isUserWhite) || (game.result == "0-1" && !isUserWhite) -> "+"
+        else -> "-"
     }
 
     val dateText = remember(game.endTime) {
@@ -591,15 +590,18 @@ fun GameCard(
 
             Box(
                 modifier = Modifier
+                    .width(32.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(resultColor)
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .padding(vertical = 6.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = resultText,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color.White,
+                    textAlign = TextAlign.Center
                 )
             }
         }
