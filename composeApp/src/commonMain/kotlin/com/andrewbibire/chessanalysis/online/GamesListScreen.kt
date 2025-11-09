@@ -70,8 +70,29 @@ fun GamesListScreen(
                     isLoading = false
                 }
             }
-        } else if (userProfile.platform == Platform.LICHESS) {
-            isInitialized = true
+        } else if (userProfile.platform == Platform.LICHESS && !isInitialized) {
+            // For Lichess, fetch current month's games initially (no 'until' parameter)
+            val result = LichessService.getCurrentMonthGames(userProfile.username)
+            when (result) {
+                is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
+                    // Cache the current month's games
+                    val cacheKey = "$currentYear-$currentMonth"
+                    gamesCache[cacheKey] = result.data
+                    monthGames = result.data
+                    errorMessage = null
+                    isInitialized = true
+                    isLoading = false
+                }
+                is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
+                    errorMessage = result.message ?: "Failed to load games"
+                    snackbarHostState.showSnackbar(
+                        message = errorMessage!!,
+                        duration = SnackbarDuration.Short
+                    )
+                    isInitialized = true
+                    isLoading = false
+                }
+            }
         }
     }
 
@@ -96,15 +117,11 @@ fun GamesListScreen(
                     currentYear,
                     currentMonth
                 )
-                Platform.LICHESS -> {
-                    val dummyGames = DummyData.fetchGamesForMonth(
-                        userProfile.username,
-                        userProfile.platform,
-                        currentYear,
-                        currentMonth
-                    )
-                    com.andrewbibire.chessanalysis.network.NetworkResult.Success(dummyGames.games)
-                }
+                Platform.LICHESS -> LichessService.getGamesForYearMonth(
+                    userProfile.username,
+                    currentYear,
+                    currentMonth
+                )
             }
 
             isLoading = false

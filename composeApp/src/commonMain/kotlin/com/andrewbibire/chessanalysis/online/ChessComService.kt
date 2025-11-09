@@ -27,7 +27,7 @@ object ChessComService {
         val result = client.get<ChessComGamesResponse>(cleanUrl)
         return when (result) {
             is NetworkResult.Success -> {
-                val games = result.data.games.map { it.toOnlineGame() }
+                val games = result.data.games.map { it.toOnlineGame() }.reversed()
                 NetworkResult.Success(games)
             }
             is NetworkResult.Error -> result

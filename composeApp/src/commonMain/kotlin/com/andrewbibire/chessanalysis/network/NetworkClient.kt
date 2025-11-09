@@ -3,6 +3,7 @@ package com.andrewbibire.chessanalysis.network
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -19,6 +20,13 @@ class NetworkClient(
                 isLenient = true
                 prettyPrint = false
             })
+        }
+        if (defaultHeaders.isNotEmpty()) {
+            install(DefaultRequest) {
+                defaultHeaders.forEach { (key, value) ->
+                    header(key, value)
+                }
+            }
         }
     }
 
