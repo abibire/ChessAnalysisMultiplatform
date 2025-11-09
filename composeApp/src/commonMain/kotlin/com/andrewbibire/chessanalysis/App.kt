@@ -38,7 +38,7 @@ import chessanalysis.composeapp.generated.resources.excellent
 import chessanalysis.composeapp.generated.resources.forced
 import chessanalysis.composeapp.generated.resources.inaccuracy
 import chessanalysis.composeapp.generated.resources.mistake
-import chessanalysis.composeapp.generated.resources.okay
+import chessanalysis.composeapp.generated.resources.good
 import chessanalysis.composeapp.generated.resources.theory
 import chessanalysis.composeapp.generated.resources.blunder
 
@@ -337,7 +337,7 @@ fun ChessAnalysisApp(context: Any?) {
                         val classificationText = when (c) {
                             "Best" -> "$playedMoveNotation is $c."
                             "Excellent" -> "$playedMoveNotation is $c"
-                            "Okay" -> "$playedMoveNotation is $c"
+                            "Good" -> "$playedMoveNotation is $c"
                             "Inaccuracy" -> "$playedMoveNotation is an $c"
                             "Mistake" -> "$playedMoveNotation is a $c"
                             "Blunder" -> "$playedMoveNotation is a $c"
@@ -359,7 +359,7 @@ fun ChessAnalysisApp(context: Any?) {
                             color = when (c) {
                                 "Best" -> BestColor
                                 "Excellent" -> EvalGreen
-                                "Okay" -> OkayColor
+                                "Good" -> GoodColor
                                 "Inaccuracy" -> InaccuracyColor
                                 "Mistake" -> MistakeColor
                                 "Blunder" -> BlunderColor
@@ -915,7 +915,7 @@ fun classificationBadge(cls: String?): DrawableResource? {
     return when (cls?.lowercase()) {
         "best" -> Res.drawable.best
         "excellent" -> Res.drawable.excellent
-        "okay" -> Res.drawable.okay
+        "good" -> Res.drawable.good
         "inaccuracy" -> Res.drawable.inaccuracy
         "mistake" -> Res.drawable.mistake
         "blunder" -> Res.drawable.blunder

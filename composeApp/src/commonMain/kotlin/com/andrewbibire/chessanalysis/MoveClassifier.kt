@@ -100,7 +100,7 @@ fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour, pla
         } else if (mateLoss < 2) {
             "Excellent"
         } else if (mateLoss < 7) {
-            "Okay"
+            "Good"
         } else {
             "Inaccuracy"
         }
@@ -110,7 +110,7 @@ fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour, pla
         return if (subjectiveValue >= 800) {
             "Excellent"
         } else if (subjectiveValue >= 400) {
-            "Okay"
+            "Good"
         } else if (subjectiveValue >= 200) {
             "Inaccuracy"
         } else if (subjectiveValue >= 0) {
@@ -138,7 +138,7 @@ fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour, pla
     } else if (pointLoss < 0.045) {
         "Excellent"
     } else if (pointLoss < 0.08) {
-        "Okay"
+        "Good"
     } else if (pointLoss < 0.12) {
         "Inaccuracy"
     } else if (pointLoss < 0.22) {
