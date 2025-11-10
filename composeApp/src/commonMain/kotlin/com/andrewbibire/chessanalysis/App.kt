@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
@@ -119,6 +120,20 @@ fun ChessAnalysisApp(context: Any?) {
             "1/2-1/2" -> "Draw"
             else -> "Game over"
         }
+    }
+
+    // Parse player information from PGN
+    val whitePlayer = remember(pgn) {
+        pgn?.let { Regex("""\[White\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) }
+    }
+    val blackPlayer = remember(pgn) {
+        pgn?.let { Regex("""\[Black\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) }
+    }
+    val whiteElo = remember(pgn) {
+        pgn?.let { Regex("""\[WhiteElo\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) }
+    }
+    val blackElo = remember(pgn) {
+        pgn?.let { Regex("""\[BlackElo\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) }
     }
 
     val positions = remember(pgn) {
@@ -313,11 +328,34 @@ fun ChessAnalysisApp(context: Any?) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "Move: ${currentIndex}",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    // Box with Move text and player profiles at same level
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        // White player profile (top left)
+                        PlayerProfile(
+                            playerName = whitePlayer,
+                            rating = whiteElo,
+                            color = "white",
+                            modifier = Modifier.align(Alignment.TopStart)
+                        )
+
+                        // Move text (center)
+                        Text(
+                            text = "Move: ${currentIndex}",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.align(Alignment.TopCenter)
+                        )
+
+                        // Black player profile (top right)
+                        PlayerProfile(
+                            playerName = blackPlayer,
+                            rating = blackElo,
+                            color = "black",
+                            modifier = Modifier.align(Alignment.TopEnd)
+                        )
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
 
                     if (isEvaluating) {
@@ -345,6 +383,7 @@ fun ChessAnalysisApp(context: Any?) {
                             positions[currentIndex].fenString,
                             isLast
                         )
+
                         Text(
                             text = "Evaluation: $displayScore",
                             style = MaterialTheme.typography.titleMedium,
@@ -1059,6 +1098,53 @@ fun ImportOption(
 fun isValidPgn(text: String?): Boolean {
     if (text.isNullOrBlank()) return false
     return isValidParsablePgn(text)
+}
+
+@Composable
+fun PlayerProfile(
+    playerName: String?,
+    rating: String?,
+    color: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(4.dp),
+        horizontalAlignment = if (color == "white") Alignment.Start else Alignment.End
+    ) {
+        // Player name with color indicator
+        if (playerName != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (color == "white") Arrangement.Start else Arrangement.End
+            ) {
+                Text(
+                    text = playerName.take(15),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                // Color indicator - same as GamesListScreen
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (color == "white") Color.White else Color(0xFF2C2C2C))
+                )
+            }
+        }
+
+        // Rating - only show if available
+        if (rating != null && rating != "?" && rating.isNotBlank()) {
+            Text(
+                text = rating,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+    }
 }
 
 expect fun createStockfishEngine(context: Any?): StockfishEngine
