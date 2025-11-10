@@ -56,14 +56,32 @@ fun UsernameInputDialog(
                 OutlinedTextField(
                     value = textFieldValue,
                     onValueChange = { newValue ->
-                        // Check if backspace was pressed on prefilled text
-                        if (isPrefilledText && newValue.text.length < textFieldValue.text.length) {
-                            // Clear entire field on first backspace
-                            textFieldValue = TextFieldValue(text = "", selection = TextRange(0))
-                            isPrefilledText = false
+                        // If text is prefilled and user makes ANY change
+                        if (isPrefilledText) {
+                            // Check if text was deleted (backspace) - clear the field completely
+                            if (newValue.text.length < textFieldValue.text.length) {
+                                textFieldValue = TextFieldValue(text = "", selection = TextRange(0))
+                                isPrefilledText = false
+                            } else {
+                                // Text was added - extract only the newly typed characters
+                                val oldText = textFieldValue.text
+                                val newText = newValue.text
+
+                                // Find what was actually typed (the difference)
+                                val addedText = if (newText.startsWith(oldText)) {
+                                    newText.removePrefix(oldText)
+                                } else if (newText.endsWith(oldText)) {
+                                    newText.removeSuffix(oldText)
+                                } else {
+                                    // Character inserted in middle or text replaced - use new text
+                                    newText
+                                }
+
+                                textFieldValue = TextFieldValue(text = addedText, selection = TextRange(addedText.length))
+                                isPrefilledText = false
+                            }
                         } else {
                             textFieldValue = newValue
-                            isPrefilledText = false
                         }
                         isError = false
                     },
@@ -72,24 +90,7 @@ fun UsernameInputDialog(
                     isError = isError,
                     singleLine = true,
                     enabled = !isLoading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onPreviewKeyEvent { keyEvent ->
-                            // Handle backspace key for clearing prefilled text
-                            if (isPrefilledText &&
-                                keyEvent.type == KeyEventType.KeyDown &&
-                                keyEvent.key == Key.Backspace) {
-                                textFieldValue = TextFieldValue(text = "", selection = TextRange(0))
-                                isPrefilledText = false
-                                true
-                            } else if (keyEvent.type == KeyEventType.KeyDown) {
-                                // Any other key disables the prefilled state
-                                isPrefilledText = false
-                                false
-                            } else {
-                                false
-                            }
-                        },
+                    modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline,
@@ -101,13 +102,9 @@ fun UsernameInputDialog(
                     keyboardActions = KeyboardActions(
                         onDone = {
                             if (textFieldValue.text.isNotBlank() && !isLoading) {
-                                if (DummyData.validateUsername(textFieldValue.text, platform)) {
-                                    coroutineScope.launch {
-                                        UserPreferences.saveLastUsername(textFieldValue.text)
-                                        onConfirm(textFieldValue.text)
-                                    }
-                                } else {
-                                    isError = true
+                                coroutineScope.launch {
+                                    UserPreferences.saveLastUsername(textFieldValue.text)
+                                    onConfirm(textFieldValue.text)
                                 }
                             }
                         }
@@ -137,13 +134,9 @@ fun UsernameInputDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (DummyData.validateUsername(textFieldValue.text, platform)) {
-                        coroutineScope.launch {
-                            UserPreferences.saveLastUsername(textFieldValue.text)
-                            onConfirm(textFieldValue.text)
-                        }
-                    } else {
-                        isError = true
+                    coroutineScope.launch {
+                        UserPreferences.saveLastUsername(textFieldValue.text)
+                        onConfirm(textFieldValue.text)
                     }
                 },
                 enabled = textFieldValue.text.isNotBlank() && !isLoading,

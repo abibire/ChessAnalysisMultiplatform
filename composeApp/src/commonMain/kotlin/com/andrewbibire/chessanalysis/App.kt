@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
@@ -203,7 +205,15 @@ fun ChessAnalysisApp(context: Any?) {
             }
         )
     } else {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    // Dismiss any active snackbars on tap
+                    sheetSnackbarHostState.currentSnackbarData?.dismiss()
+                }
+            }
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -604,52 +614,57 @@ fun ChessAnalysisApp(context: Any?) {
                             // Username input mode
                             val loadGamesAction: () -> Unit = {
                                 coroutineScope.launch {
-                                    isLoadingProfile = true
+                                    try {
+                                        isLoadingProfile = true
 
-                                    val result = when (selectedPlatform) {
-                                        com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> {
-                                            com.andrewbibire.chessanalysis.online.ChessComService.getUserProfile(usernameTextFieldValue.text)
-                                        }
-                                        com.andrewbibire.chessanalysis.online.Platform.LICHESS -> {
-                                            com.andrewbibire.chessanalysis.online.DummyData.fetchUserProfile(usernameTextFieldValue.text, selectedPlatform!!)?.let {
-                                                com.andrewbibire.chessanalysis.network.NetworkResult.Success(it)
-                                            } ?: com.andrewbibire.chessanalysis.network.NetworkResult.Error(
-                                                Exception("Invalid username"),
-                                                "Invalid username"
-                                            )
-                                        }
-                                        else -> com.andrewbibire.chessanalysis.network.NetworkResult.Error(
-                                            Exception("Unknown platform"),
-                                            "Unknown platform"
-                                        )
-                                    }
-
-                                    isLoadingProfile = false
-                                    when (result) {
-                                        is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
-                                            // Save username for next time
-                                            com.andrewbibire.chessanalysis.online.UserPreferences.saveLastUsername(usernameTextFieldValue.text)
-                                            userProfile = result.data
-                                            showBottomSheet = false
-                                        }
-                                        is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
-                                            // Determine error message based on exception type and message
-                                            val errorMessage = when {
-                                                // Check if it's a network connectivity error (no internet)
-                                                result.exception.message?.contains("Unable to resolve host", ignoreCase = true) == true ||
-                                                result.exception.message?.contains("timeout", ignoreCase = true) == true ||
-                                                result.exception.message?.contains("Failed to connect", ignoreCase = true) == true ||
-                                                result.exception.message?.contains("Connection refused", ignoreCase = true) == true -> {
-                                                    "No internet connection. Please check your network and try again."
-                                                }
-                                                // For all other API failures, show user-friendly message
-                                                else -> "Unable to find an account with that username"
+                                        val result = when (selectedPlatform) {
+                                            com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> {
+                                                com.andrewbibire.chessanalysis.online.ChessComService.getUserProfile(usernameTextFieldValue.text)
                                             }
-                                            sheetSnackbarHostState.showSnackbar(
-                                                message = errorMessage,
-                                                duration = SnackbarDuration.Short
+                                            com.andrewbibire.chessanalysis.online.Platform.LICHESS -> {
+                                                com.andrewbibire.chessanalysis.online.LichessService.getUserProfile(usernameTextFieldValue.text)
+                                            }
+                                            else -> com.andrewbibire.chessanalysis.network.NetworkResult.Error(
+                                                Exception("Unknown platform"),
+                                                "Unknown platform"
                                             )
                                         }
+
+                                        when (result) {
+                                            is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
+                                                isLoadingProfile = false
+                                                // Save username for next time
+                                                com.andrewbibire.chessanalysis.online.UserPreferences.saveLastUsername(usernameTextFieldValue.text)
+                                                userProfile = result.data
+                                                showBottomSheet = false
+                                            }
+                                            is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
+                                                isLoadingProfile = false
+                                                // Determine error message based on exception type and message
+                                                val errorMessage = when {
+                                                    // Check if it's a network connectivity error (no internet)
+                                                    result.exception.message?.contains("Unable to resolve host", ignoreCase = true) == true ||
+                                                    result.exception.message?.contains("timeout", ignoreCase = true) == true ||
+                                                    result.exception.message?.contains("Failed to connect", ignoreCase = true) == true ||
+                                                    result.exception.message?.contains("Connection refused", ignoreCase = true) == true -> {
+                                                        "No internet connection. Please check your network and try again."
+                                                    }
+                                                    // For all other API failures, show user-friendly message
+                                                    else -> "Unable to find an account with that username"
+                                                }
+                                                sheetSnackbarHostState.showSnackbar(
+                                                    message = errorMessage,
+                                                    duration = SnackbarDuration.Short
+                                                )
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        isLoadingProfile = false
+                                        // Handle any unexpected errors
+                                        sheetSnackbarHostState.showSnackbar(
+                                            message = "An error occurred: ${e.message}",
+                                            duration = SnackbarDuration.Short
+                                        )
                                     }
                                 }
                             }
@@ -657,36 +672,39 @@ fun ChessAnalysisApp(context: Any?) {
                             OutlinedTextField(
                                 value = usernameTextFieldValue,
                                 onValueChange = { newValue ->
-                                    // Check if backspace was pressed on prefilled text
-                                    if (isPrefilledUsername && newValue.text.length < usernameTextFieldValue.text.length) {
-                                        // Clear entire field on first backspace
-                                        usernameTextFieldValue = TextFieldValue(text = "", selection = TextRange(0))
-                                        isPrefilledUsername = false
+                                    // If text is prefilled and user makes ANY change
+                                    if (isPrefilledUsername) {
+                                        // Check if text was deleted (backspace) - clear the field completely
+                                        if (newValue.text.length < usernameTextFieldValue.text.length) {
+                                            usernameTextFieldValue = TextFieldValue(text = "", selection = TextRange(0))
+                                            isPrefilledUsername = false
+                                        } else {
+                                            // Text was added - extract only the newly typed characters
+                                            // by removing the old prefilled text and keeping what was added
+                                            val oldText = usernameTextFieldValue.text
+                                            val newText = newValue.text
+
+                                            // Find what was actually typed (the difference)
+                                            val addedText = if (newText.startsWith(oldText)) {
+                                                newText.removePrefix(oldText)
+                                            } else if (newText.endsWith(oldText)) {
+                                                newText.removeSuffix(oldText)
+                                            } else {
+                                                // Character inserted in middle or text replaced - use new text
+                                                newText
+                                            }
+
+                                            val filteredText = addedText.replace(" ", "")
+                                            usernameTextFieldValue = TextFieldValue(text = filteredText, selection = TextRange(filteredText.length))
+                                            isPrefilledUsername = false
+                                        }
                                     } else {
                                         // Filter out spaces
                                         val filteredText = newValue.text.replace(" ", "")
                                         usernameTextFieldValue = newValue.copy(text = filteredText)
-                                        isPrefilledUsername = false
                                     }
                                 },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .onPreviewKeyEvent { keyEvent ->
-                                        // Handle backspace key for clearing prefilled text
-                                        if (isPrefilledUsername &&
-                                            keyEvent.type == KeyEventType.KeyDown &&
-                                            keyEvent.key == Key.Backspace) {
-                                            usernameTextFieldValue = TextFieldValue(text = "", selection = TextRange(0))
-                                            isPrefilledUsername = false
-                                            true
-                                        } else if (keyEvent.type == KeyEventType.KeyDown) {
-                                            // Any other key disables the prefilled state
-                                            isPrefilledUsername = false
-                                            false
-                                        } else {
-                                            false
-                                        }
-                                    },
+                                modifier = Modifier.fillMaxWidth(),
                                 label = { Text("Username") },
                                 enabled = !isLoadingProfile,
                                 singleLine = true,
