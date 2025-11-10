@@ -12,8 +12,14 @@ data class ChessComArchivesResponse(
 data class ChessComPlayerProfile(
     val avatar: String? = null,
     val username: String,
-    val name: String? = null
+    val name: String? = null,
+    val country: String? = null
 )
+
+fun ChessComPlayerProfile.getCountryCode(): String? {
+    // Extract country code from URL like "https://api.chess.com/pub/country/GB"
+    return country?.substringAfterLast("/")?.takeIf { it.length == 2 }
+}
 
 @Serializable
 data class ChessComGamesResponse(

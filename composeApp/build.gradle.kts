@@ -65,6 +65,7 @@ kotlin {
             implementation("io.ktor:ktor-client-content-negotiation:3.0.2")
             implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.2")
             implementation(libs.multiplatform.settings.noarg)
+            implementation("dev.carlsen.flagkit:flagkit:1.1.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

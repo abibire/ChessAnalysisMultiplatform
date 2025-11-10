@@ -48,6 +48,8 @@ import chessanalysis.composeapp.generated.resources.mistake
 import chessanalysis.composeapp.generated.resources.good
 import chessanalysis.composeapp.generated.resources.blunder
 import chessanalysis.composeapp.generated.resources.book
+import com.andrewbibire.chessanalysis.online.getCountryCode
+import dev.carlsen.flagkit.FlagKit
 
 @Composable
 fun App(context: Any? = null) {
@@ -137,19 +139,23 @@ fun ChessAnalysisApp(context: Any?) {
         pgn?.let { Regex("""\[BlackElo\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) }
     }
 
-    // Avatar URLs state
+    // Avatar URLs and country codes state
     var whiteAvatar by remember { mutableStateOf<String?>(null) }
     var blackAvatar by remember { mutableStateOf<String?>(null) }
+    var whiteCountryCode by remember { mutableStateOf<String?>(null) }
+    var blackCountryCode by remember { mutableStateOf<String?>(null) }
 
     // Detect platform from PGN headers (Chess.com games have [Site "Chess.com"])
     val isChessComGame = remember(pgn) {
         pgn?.contains("[Site \"Chess.com\"]", ignoreCase = true) == true
     }
 
-    // Fetch Chess.com avatars when players change
+    // Fetch Chess.com avatars and country codes when players change
     LaunchedEffect(whitePlayer, blackPlayer, isChessComGame) {
         whiteAvatar = null
         blackAvatar = null
+        whiteCountryCode = null
+        blackCountryCode = null
 
         // Only fetch for Chess.com games
         if (isChessComGame) {
@@ -157,14 +163,16 @@ fun ChessAnalysisApp(context: Any?) {
                 val result = com.andrewbibire.chessanalysis.online.ChessComService.getPlayerProfile(username)
                 if (result is com.andrewbibire.chessanalysis.network.NetworkResult.Success) {
                     whiteAvatar = result.data.avatar
-                    println("DEBUG: Fetched white avatar for $username: ${result.data.avatar}")
+                    whiteCountryCode = result.data.getCountryCode()
+                    println("DEBUG: Fetched white avatar for $username: ${result.data.avatar}, country: ${whiteCountryCode}")
                 }
             }
             blackPlayer?.let { username ->
                 val result = com.andrewbibire.chessanalysis.online.ChessComService.getPlayerProfile(username)
                 if (result is com.andrewbibire.chessanalysis.network.NetworkResult.Success) {
                     blackAvatar = result.data.avatar
-                    println("DEBUG: Fetched black avatar for $username: ${result.data.avatar}")
+                    blackCountryCode = result.data.getCountryCode()
+                    println("DEBUG: Fetched black avatar for $username: ${result.data.avatar}, country: ${blackCountryCode}")
                 }
             }
         }
@@ -198,6 +206,9 @@ fun ChessAnalysisApp(context: Any?) {
     val leftAvatar = remember(isSearchedPlayerWhite, whiteAvatar, blackAvatar) {
         if (isSearchedPlayerWhite) whiteAvatar else blackAvatar
     }
+    val leftCountryCode = remember(isSearchedPlayerWhite, whiteCountryCode, blackCountryCode) {
+        if (isSearchedPlayerWhite) whiteCountryCode else blackCountryCode
+    }
 
     val rightPlayer = remember(isSearchedPlayerWhite, whitePlayer, blackPlayer) {
         val player = if (isSearchedPlayerWhite) blackPlayer else whitePlayer
@@ -212,6 +223,9 @@ fun ChessAnalysisApp(context: Any?) {
     }
     val rightAvatar = remember(isSearchedPlayerWhite, whiteAvatar, blackAvatar) {
         if (isSearchedPlayerWhite) blackAvatar else whiteAvatar
+    }
+    val rightCountryCode = remember(isSearchedPlayerWhite, whiteCountryCode, blackCountryCode) {
+        if (isSearchedPlayerWhite) blackCountryCode else whiteCountryCode
     }
 
     val positions = remember(pgn) {
@@ -418,6 +432,7 @@ fun ChessAnalysisApp(context: Any?) {
                             avatarUrl = leftAvatar,
                             otherPlayerHasAvatar = rightAvatar != null,
                             isLeftSide = true,
+                            countryCode = leftCountryCode,
                             modifier = Modifier.align(Alignment.TopStart)
                         )
 
@@ -437,6 +452,7 @@ fun ChessAnalysisApp(context: Any?) {
                             avatarUrl = rightAvatar,
                             otherPlayerHasAvatar = leftAvatar != null,
                             isLeftSide = false,
+                            countryCode = rightCountryCode,
                             modifier = Modifier.align(Alignment.TopEnd)
                         )
                     }
@@ -1192,6 +1208,7 @@ fun PlayerProfile(
     avatarUrl: String?,
     otherPlayerHasAvatar: Boolean,
     isLeftSide: Boolean,
+    countryCode: String? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -1227,12 +1244,25 @@ fun PlayerProfile(
             Spacer(modifier = Modifier.height(4.dp))
         }
 
-        // Player name with color indicator
+        // Player name with flag and color indicator
         if (playerName != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = if (isLeftSide) Arrangement.Start else Arrangement.End
             ) {
+                // Flag icon (if available)
+                if (countryCode != null) {
+                    FlagKit.getFlag(countryCode = countryCode)?.let { flagIcon ->
+                        Icon(
+                            imageVector = flagIcon,
+                            contentDescription = "$countryCode flag",
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Unspecified
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                }
+
                 Text(
                     text = playerName.take(15),
                     style = MaterialTheme.typography.bodySmall,
