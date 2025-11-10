@@ -9,6 +9,13 @@ data class ChessComArchivesResponse(
 )
 
 @Serializable
+data class ChessComPlayerProfile(
+    val avatar: String? = null,
+    val username: String,
+    val name: String? = null
+)
+
+@Serializable
 data class ChessComGamesResponse(
     val games: List<ChessComGame>
 )

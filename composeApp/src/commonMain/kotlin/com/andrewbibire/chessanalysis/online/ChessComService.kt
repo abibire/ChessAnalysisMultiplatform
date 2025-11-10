@@ -14,6 +14,10 @@ object ChessComService {
         )
     )
 
+    suspend fun getPlayerProfile(username: String): NetworkResult<ChessComPlayerProfile> {
+        return client.get<ChessComPlayerProfile>("player/$username")
+    }
+
     suspend fun getAvailableArchives(username: String): NetworkResult<List<String>> {
         val result = client.get<ChessComArchivesResponse>("player/$username/games/archives")
         return when (result) {

@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import coil3.compose.rememberAsyncImagePainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -134,6 +135,76 @@ fun ChessAnalysisApp(context: Any?) {
     }
     val blackElo = remember(pgn) {
         pgn?.let { Regex("""\[BlackElo\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) }
+    }
+
+    // Avatar URLs state
+    var whiteAvatar by remember { mutableStateOf<String?>(null) }
+    var blackAvatar by remember { mutableStateOf<String?>(null) }
+
+    // Fetch Chess.com avatars when players change
+    LaunchedEffect(whitePlayer, blackPlayer, userProfile) {
+        whiteAvatar = null
+        blackAvatar = null
+
+        // Only fetch for Chess.com games
+        if (userProfile?.platform == com.andrewbibire.chessanalysis.online.Platform.CHESS_COM) {
+            whitePlayer?.let { username ->
+                val result = com.andrewbibire.chessanalysis.online.ChessComService.getPlayerProfile(username)
+                if (result is com.andrewbibire.chessanalysis.network.NetworkResult.Success) {
+                    whiteAvatar = result.data.avatar
+                }
+            }
+            blackPlayer?.let { username ->
+                val result = com.andrewbibire.chessanalysis.online.ChessComService.getPlayerProfile(username)
+                if (result is com.andrewbibire.chessanalysis.network.NetworkResult.Success) {
+                    blackAvatar = result.data.avatar
+                }
+            }
+        }
+    }
+
+    // Determine display order - searched player always on left
+    // Use the saved username from preferences (gets saved every time user searches)
+    val searchedUsername = remember(pgn) {
+        com.andrewbibire.chessanalysis.online.UserPreferences.getLastUsername()?.lowercase()
+    }
+
+    val isSearchedPlayerWhite = remember(searchedUsername, whitePlayer, blackPlayer) {
+        val whiteLower = whitePlayer?.lowercase()
+        val blackLower = blackPlayer?.lowercase()
+        val result = whiteLower == searchedUsername
+        println("DEBUG: searchedUsername=$searchedUsername, whiteLower=$whiteLower, blackLower=$blackLower, isSearchedPlayerWhite=$result")
+        result
+    }
+
+    val leftPlayer = remember(isSearchedPlayerWhite, whitePlayer, blackPlayer) {
+        val player = if (isSearchedPlayerWhite) whitePlayer else blackPlayer
+        println("DEBUG: leftPlayer=$player (isSearchedPlayerWhite=$isSearchedPlayerWhite)")
+        player
+    }
+    val leftElo = remember(isSearchedPlayerWhite, whiteElo, blackElo) {
+        if (isSearchedPlayerWhite) whiteElo else blackElo
+    }
+    val leftColor = remember(isSearchedPlayerWhite) {
+        if (isSearchedPlayerWhite) "white" else "black"
+    }
+    val leftAvatar = remember(isSearchedPlayerWhite, whiteAvatar, blackAvatar) {
+        if (isSearchedPlayerWhite) whiteAvatar else blackAvatar
+    }
+
+    val rightPlayer = remember(isSearchedPlayerWhite, whitePlayer, blackPlayer) {
+        val player = if (isSearchedPlayerWhite) blackPlayer else whitePlayer
+        println("DEBUG: rightPlayer=$player (isSearchedPlayerWhite=$isSearchedPlayerWhite)")
+        player
+    }
+    val rightElo = remember(isSearchedPlayerWhite, whiteElo, blackElo) {
+        if (isSearchedPlayerWhite) blackElo else whiteElo
+    }
+    val rightColor = remember(isSearchedPlayerWhite) {
+        if (isSearchedPlayerWhite) "black" else "white"
+    }
+    val rightAvatar = remember(isSearchedPlayerWhite, whiteAvatar, blackAvatar) {
+        if (isSearchedPlayerWhite) blackAvatar else whiteAvatar
     }
 
     val positions = remember(pgn) {
@@ -332,11 +403,13 @@ fun ChessAnalysisApp(context: Any?) {
                     Box(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        // White player profile (top left)
+                        // Searched player profile (top left)
                         PlayerProfile(
-                            playerName = whitePlayer,
-                            rating = whiteElo,
-                            color = "white",
+                            playerName = leftPlayer,
+                            rating = leftElo,
+                            color = leftColor,
+                            avatarUrl = leftAvatar,
+                            isLeftSide = true,
                             modifier = Modifier.align(Alignment.TopStart)
                         )
 
@@ -348,11 +421,13 @@ fun ChessAnalysisApp(context: Any?) {
                             modifier = Modifier.align(Alignment.TopCenter)
                         )
 
-                        // Black player profile (top right)
+                        // Opponent profile (top right)
                         PlayerProfile(
-                            playerName = blackPlayer,
-                            rating = blackElo,
-                            color = "black",
+                            playerName = rightPlayer,
+                            rating = rightElo,
+                            color = rightColor,
+                            avatarUrl = rightAvatar,
+                            isLeftSide = false,
                             modifier = Modifier.align(Alignment.TopEnd)
                         )
                     }
@@ -1105,17 +1180,36 @@ fun PlayerProfile(
     playerName: String?,
     rating: String?,
     color: String,
+    avatarUrl: String?,
+    isLeftSide: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier.padding(4.dp),
-        horizontalAlignment = if (color == "white") Alignment.Start else Alignment.End
+        horizontalAlignment = if (isLeftSide) Alignment.Start else Alignment.End
     ) {
+        // Avatar image - show above name if available
+        if (avatarUrl != null) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                androidx.compose.foundation.Image(
+                    painter = rememberAsyncImagePainter(avatarUrl),
+                    contentDescription = "$playerName avatar",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+
         // Player name with color indicator
         if (playerName != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (color == "white") Arrangement.Start else Arrangement.End
+                horizontalArrangement = if (isLeftSide) Arrangement.Start else Arrangement.End
             ) {
                 Text(
                     text = playerName.take(15),
