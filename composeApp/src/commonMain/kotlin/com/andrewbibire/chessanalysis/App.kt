@@ -141,23 +141,30 @@ fun ChessAnalysisApp(context: Any?) {
     var whiteAvatar by remember { mutableStateOf<String?>(null) }
     var blackAvatar by remember { mutableStateOf<String?>(null) }
 
+    // Detect platform from PGN headers (Chess.com games have [Site "Chess.com"])
+    val isChessComGame = remember(pgn) {
+        pgn?.contains("[Site \"Chess.com\"]", ignoreCase = true) == true
+    }
+
     // Fetch Chess.com avatars when players change
-    LaunchedEffect(whitePlayer, blackPlayer, userProfile) {
+    LaunchedEffect(whitePlayer, blackPlayer, isChessComGame) {
         whiteAvatar = null
         blackAvatar = null
 
         // Only fetch for Chess.com games
-        if (userProfile?.platform == com.andrewbibire.chessanalysis.online.Platform.CHESS_COM) {
+        if (isChessComGame) {
             whitePlayer?.let { username ->
                 val result = com.andrewbibire.chessanalysis.online.ChessComService.getPlayerProfile(username)
                 if (result is com.andrewbibire.chessanalysis.network.NetworkResult.Success) {
                     whiteAvatar = result.data.avatar
+                    println("DEBUG: Fetched white avatar for $username: ${result.data.avatar}")
                 }
             }
             blackPlayer?.let { username ->
                 val result = com.andrewbibire.chessanalysis.online.ChessComService.getPlayerProfile(username)
                 if (result is com.andrewbibire.chessanalysis.network.NetworkResult.Success) {
                     blackAvatar = result.data.avatar
+                    println("DEBUG: Fetched black avatar for $username: ${result.data.avatar}")
                 }
             }
         }
@@ -409,6 +416,7 @@ fun ChessAnalysisApp(context: Any?) {
                             rating = leftElo,
                             color = leftColor,
                             avatarUrl = leftAvatar,
+                            otherPlayerHasAvatar = rightAvatar != null,
                             isLeftSide = true,
                             modifier = Modifier.align(Alignment.TopStart)
                         )
@@ -427,6 +435,7 @@ fun ChessAnalysisApp(context: Any?) {
                             rating = rightElo,
                             color = rightColor,
                             avatarUrl = rightAvatar,
+                            otherPlayerHasAvatar = leftAvatar != null,
                             isLeftSide = false,
                             modifier = Modifier.align(Alignment.TopEnd)
                         )
@@ -1181,6 +1190,7 @@ fun PlayerProfile(
     rating: String?,
     color: String,
     avatarUrl: String?,
+    otherPlayerHasAvatar: Boolean,
     isLeftSide: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -1188,19 +1198,31 @@ fun PlayerProfile(
         modifier = modifier.padding(4.dp),
         horizontalAlignment = if (isLeftSide) Alignment.Start else Alignment.End
     ) {
-        // Avatar image - show above name if available
-        if (avatarUrl != null) {
+        // Only show avatar section if this player has an avatar OR the other player has one (for uniformity)
+        val shouldShowAvatar = avatarUrl != null || otherPlayerHasAvatar
+
+        if (shouldShowAvatar) {
             androidx.compose.foundation.layout.Box(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
             ) {
-                androidx.compose.foundation.Image(
-                    painter = rememberAsyncImagePainter(avatarUrl),
-                    contentDescription = "$playerName avatar",
-                    modifier = Modifier.fillMaxSize()
-                )
+                if (avatarUrl != null) {
+                    androidx.compose.foundation.Image(
+                        painter = rememberAsyncImagePainter(avatarUrl),
+                        contentDescription = "$playerName avatar",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "No avatar",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(4.dp))
         }
