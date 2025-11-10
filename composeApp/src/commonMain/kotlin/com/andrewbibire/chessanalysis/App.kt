@@ -16,7 +16,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,7 +67,8 @@ fun ChessAnalysisApp(context: Any?) {
     var pgn by remember { mutableStateOf<String?>(null) }
     var showBottomSheet by remember { mutableStateOf(false) }
     var showUsernameInput by remember { mutableStateOf(false) }
-    var usernameInputText by remember { mutableStateOf("") }
+    var usernameTextFieldValue by remember { mutableStateOf(TextFieldValue()) }
+    var isPrefilledUsername by remember { mutableStateOf(false) }
     val sheetSnackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -77,11 +81,26 @@ fun ChessAnalysisApp(context: Any?) {
     var userProfile by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.UserProfile?>(null) }
     var isLoadingProfile by remember { mutableStateOf(false) }
 
+    // Load last username when entering input mode
+    LaunchedEffect(showUsernameInput) {
+        if (showUsernameInput && usernameTextFieldValue.text.isEmpty()) {
+            val lastUsername = com.andrewbibire.chessanalysis.online.UserPreferences.getLastUsername()
+            if (lastUsername != null) {
+                usernameTextFieldValue = TextFieldValue(
+                    text = lastUsername,
+                    selection = TextRange(lastUsername.length)
+                )
+                isPrefilledUsername = true
+            }
+        }
+    }
+
     // Reset input state when sheet is dismissed
     LaunchedEffect(showBottomSheet) {
         if (!showBottomSheet) {
             showUsernameInput = false
-            usernameInputText = ""
+            usernameTextFieldValue = TextFieldValue()
+            isPrefilledUsername = false
             selectedPlatform = null
         }
     }
@@ -550,7 +569,8 @@ fun ChessAnalysisApp(context: Any?) {
                                 IconButton(
                                     onClick = {
                                         showUsernameInput = false
-                                        usernameInputText = ""
+                                        usernameTextFieldValue = TextFieldValue()
+                                        isPrefilledUsername = false
                                         selectedPlatform = null
                                         isLoadingProfile = false
                                     },
@@ -588,10 +608,10 @@ fun ChessAnalysisApp(context: Any?) {
 
                                     val result = when (selectedPlatform) {
                                         com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> {
-                                            com.andrewbibire.chessanalysis.online.ChessComService.getUserProfile(usernameInputText)
+                                            com.andrewbibire.chessanalysis.online.ChessComService.getUserProfile(usernameTextFieldValue.text)
                                         }
                                         com.andrewbibire.chessanalysis.online.Platform.LICHESS -> {
-                                            com.andrewbibire.chessanalysis.online.DummyData.fetchUserProfile(usernameInputText, selectedPlatform!!)?.let {
+                                            com.andrewbibire.chessanalysis.online.DummyData.fetchUserProfile(usernameTextFieldValue.text, selectedPlatform!!)?.let {
                                                 com.andrewbibire.chessanalysis.network.NetworkResult.Success(it)
                                             } ?: com.andrewbibire.chessanalysis.network.NetworkResult.Error(
                                                 Exception("Invalid username"),
@@ -607,6 +627,8 @@ fun ChessAnalysisApp(context: Any?) {
                                     isLoadingProfile = false
                                     when (result) {
                                         is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
+                                            // Save username for next time
+                                            com.andrewbibire.chessanalysis.online.UserPreferences.saveLastUsername(usernameTextFieldValue.text)
                                             userProfile = result.data
                                             showBottomSheet = false
                                         }
@@ -633,12 +655,38 @@ fun ChessAnalysisApp(context: Any?) {
                             }
 
                             OutlinedTextField(
-                                value = usernameInputText,
-                                onValueChange = {
-                                    // Filter out spaces
-                                    usernameInputText = it.replace(" ", "")
+                                value = usernameTextFieldValue,
+                                onValueChange = { newValue ->
+                                    // Check if backspace was pressed on prefilled text
+                                    if (isPrefilledUsername && newValue.text.length < usernameTextFieldValue.text.length) {
+                                        // Clear entire field on first backspace
+                                        usernameTextFieldValue = TextFieldValue(text = "", selection = TextRange(0))
+                                        isPrefilledUsername = false
+                                    } else {
+                                        // Filter out spaces
+                                        val filteredText = newValue.text.replace(" ", "")
+                                        usernameTextFieldValue = newValue.copy(text = filteredText)
+                                        isPrefilledUsername = false
+                                    }
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onPreviewKeyEvent { keyEvent ->
+                                        // Handle backspace key for clearing prefilled text
+                                        if (isPrefilledUsername &&
+                                            keyEvent.type == KeyEventType.KeyDown &&
+                                            keyEvent.key == Key.Backspace) {
+                                            usernameTextFieldValue = TextFieldValue(text = "", selection = TextRange(0))
+                                            isPrefilledUsername = false
+                                            true
+                                        } else if (keyEvent.type == KeyEventType.KeyDown) {
+                                            // Any other key disables the prefilled state
+                                            isPrefilledUsername = false
+                                            false
+                                        } else {
+                                            false
+                                        }
+                                    },
                                 label = { Text("Username") },
                                 enabled = !isLoadingProfile,
                                 singleLine = true,
@@ -647,7 +695,7 @@ fun ChessAnalysisApp(context: Any?) {
                                 ),
                                 keyboardActions = KeyboardActions(
                                     onDone = {
-                                        if (usernameInputText.isNotBlank() && !isLoadingProfile) {
+                                        if (usernameTextFieldValue.text.isNotBlank() && !isLoadingProfile) {
                                             loadGamesAction()
                                         }
                                     }
@@ -656,7 +704,9 @@ fun ChessAnalysisApp(context: Any?) {
                                     focusedBorderColor = MaterialTheme.colorScheme.onSurface,
                                     unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                                     focusedLabelColor = MaterialTheme.colorScheme.onSurface,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedTextColor = if (isPrefilledUsername) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = if (isPrefilledUsername) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
                                 ),
                                 shape = RoundedCornerShape(12.dp)
                             )
@@ -665,7 +715,7 @@ fun ChessAnalysisApp(context: Any?) {
 
                             Button(
                                 onClick = loadGamesAction,
-                                enabled = usernameInputText.isNotBlank() && !isLoadingProfile,
+                                enabled = usernameTextFieldValue.text.isNotBlank() && !isLoadingProfile,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(56.dp),
