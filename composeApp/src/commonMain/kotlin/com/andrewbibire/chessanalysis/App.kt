@@ -82,6 +82,7 @@ fun ChessAnalysisApp(context: Any?) {
     var isEvaluating by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(false) }
     var isBoardFlipped by remember { mutableStateOf(false) }
+    var analysisCompleted by remember { mutableStateOf(0) }
 
     var selectedPlatform by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.Platform?>(null) }
     var userProfile by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.UserProfile?>(null) }
@@ -232,6 +233,60 @@ fun ChessAnalysisApp(context: Any?) {
         pgn?.let { generateFensFromPgn(it) } ?: emptyList()
     }
 
+    // Count move classifications for each player
+    data class ClassificationStats(
+        val best: Int = 0,
+        val excellent: Int = 0,
+        val good: Int = 0,
+        val inaccuracy: Int = 0,
+        val mistake: Int = 0,
+        val blunder: Int = 0,
+        val book: Int = 0,
+        val forced: Int = 0
+    )
+
+    // Calculate stats when analysis is completed
+    val (whiteStats, blackStats) = remember(analysisCompleted) {
+        val white = mutableMapOf<String, Int>()
+        val black = mutableMapOf<String, Int>()
+
+        positions.forEachIndexed { index, position ->
+            if (index > 0) { // Skip initial position
+                position.classification?.let { classification ->
+                    // Determine who made the move: odd indices = white moves, even indices = black moves
+                    val isWhiteMove = index % 2 == 1
+                    val stats = if (isWhiteMove) white else black
+                    stats[classification] = (stats[classification] ?: 0) + 1
+                }
+            }
+        }
+
+        val whiteStats = ClassificationStats(
+            best = white["Best"] ?: 0,
+            excellent = white["Excellent"] ?: 0,
+            good = white["Good"] ?: 0,
+            inaccuracy = white["Inaccuracy"] ?: 0,
+            mistake = white["Mistake"] ?: 0,
+            blunder = white["Blunder"] ?: 0,
+            forced = white["Forced"] ?: 0
+        )
+
+        val blackStats = ClassificationStats(
+            best = black["Best"] ?: 0,
+            excellent = black["Excellent"] ?: 0,
+            good = black["Good"] ?: 0,
+            inaccuracy = black["Inaccuracy"] ?: 0,
+            mistake = black["Mistake"] ?: 0,
+            blunder = black["Blunder"] ?: 0,
+            forced = black["Forced"] ?: 0
+        )
+
+        println("DEBUG: Analysis completed=$analysisCompleted, White stats: $whiteStats")
+        println("DEBUG: Analysis completed=$analysisCompleted, Black stats: $blackStats")
+
+        Pair(whiteStats, blackStats)
+    }
+
     // Show error if PGN failed to parse
     if (pgn != null && positions.isEmpty()) {
         Box(
@@ -271,6 +326,7 @@ fun ChessAnalysisApp(context: Any?) {
         if (pgn != null && stockfishEngine != null && positions.isNotEmpty()) {
             isEvaluating = true
             currentIndex = 0
+            analysisCompleted = 0
             delay(500)
             withContext(Dispatchers.Default) {
                 for (position in positions) {
@@ -281,6 +337,7 @@ fun ChessAnalysisApp(context: Any?) {
             }
             classifyPositions(positions)
             isEvaluating = false
+            analysisCompleted++ // Trigger stats recalculation
         }
     }
 
@@ -477,6 +534,58 @@ fun ChessAnalysisApp(context: Any?) {
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                    } else if (currentIndex == 0) {
+                        // Show classification statistics at starting position
+                        // Determine left and right stats based on player colors
+                        val leftStats = if (isSearchedPlayerWhite) whiteStats else blackStats
+                        val rightStats = if (isSearchedPlayerWhite) blackStats else whiteStats
+
+                        // Check if there are any stats to show
+                        val hasStats = (leftStats.best + leftStats.excellent + leftStats.good +
+                                       leftStats.inaccuracy + leftStats.mistake + leftStats.blunder +
+                                       leftStats.forced +
+                                       rightStats.best + rightStats.excellent + rightStats.good +
+                                       rightStats.inaccuracy + rightStats.mistake + rightStats.blunder +
+                                       rightStats.forced) > 0
+
+                        if (hasStats) {
+                            Text(
+                                text = "Game Statistics",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Display in a 2-column grid for compactness
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    ClassificationStatItem("Best", leftStats.best, rightStats.best)
+                                    ClassificationStatItem("Excellent", leftStats.excellent, rightStats.excellent)
+                                    ClassificationStatItem("Good", leftStats.good, rightStats.good)
+                                    ClassificationStatItem("Forced", leftStats.forced, rightStats.forced)
+                                }
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    ClassificationStatItem("Inaccuracy", leftStats.inaccuracy, rightStats.inaccuracy)
+                                    ClassificationStatItem("Mistake", leftStats.mistake, rightStats.mistake)
+                                    ClassificationStatItem("Blunder", leftStats.blunder, rightStats.blunder)
+                                }
+                            }
+                        } else {
+                            Text(
+                                text = "Analysis not yet complete",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     } else {
                         val displayScore = normalizeScoreForDisplay(
                             positions[currentIndex].score,
@@ -1129,6 +1238,57 @@ fun classificationBadge(cls: String?): DrawableResource? {
         "book" -> Res.drawable.book
         "forced" -> Res.drawable.forced
         else -> null
+    }
+}
+
+@Composable
+fun ClassificationStatItem(
+    classification: String,
+    leftCount: Int,
+    rightCount: Int,
+    modifier: Modifier = Modifier
+) {
+    val icon = classificationBadge(classification)
+
+    if (leftCount > 0 || rightCount > 0) {
+        Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left player count
+            Text(
+                text = leftCount.toString(),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.width(20.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.End
+            )
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            // Classification icon
+            if (icon != null) {
+                androidx.compose.foundation.Image(
+                    painter = org.jetbrains.compose.resources.painterResource(icon),
+                    contentDescription = classification,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            // Right player count
+            Text(
+                text = rightCount.toString(),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.width(20.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Start
+            )
+        }
     }
 }
 
