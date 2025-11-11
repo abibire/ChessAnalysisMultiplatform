@@ -42,7 +42,6 @@ import org.jetbrains.compose.resources.DrawableResource
 import chessanalysis.composeapp.generated.resources.Res
 import chessanalysis.composeapp.generated.resources.best
 import chessanalysis.composeapp.generated.resources.excellent
-import chessanalysis.composeapp.generated.resources.forced
 import chessanalysis.composeapp.generated.resources.inaccuracy
 import chessanalysis.composeapp.generated.resources.mistake
 import chessanalysis.composeapp.generated.resources.good
@@ -241,8 +240,7 @@ fun ChessAnalysisApp(context: Any?) {
         val inaccuracy: Int = 0,
         val mistake: Int = 0,
         val blunder: Int = 0,
-        val book: Int = 0,
-        val forced: Int = 0
+        val book: Int = 0
     )
 
     // Calculate stats when analysis is completed
@@ -267,8 +265,7 @@ fun ChessAnalysisApp(context: Any?) {
             good = white["Good"] ?: 0,
             inaccuracy = white["Inaccuracy"] ?: 0,
             mistake = white["Mistake"] ?: 0,
-            blunder = white["Blunder"] ?: 0,
-            forced = white["Forced"] ?: 0
+            blunder = white["Blunder"] ?: 0
         )
 
         val blackStats = ClassificationStats(
@@ -277,8 +274,7 @@ fun ChessAnalysisApp(context: Any?) {
             good = black["Good"] ?: 0,
             inaccuracy = black["Inaccuracy"] ?: 0,
             mistake = black["Mistake"] ?: 0,
-            blunder = black["Blunder"] ?: 0,
-            forced = black["Forced"] ?: 0
+            blunder = black["Blunder"] ?: 0
         )
 
         println("DEBUG: Analysis completed=$analysisCompleted, White stats: $whiteStats")
@@ -543,10 +539,8 @@ fun ChessAnalysisApp(context: Any?) {
                         // Check if there are any stats to show
                         val hasStats = (leftStats.best + leftStats.excellent + leftStats.good +
                                        leftStats.inaccuracy + leftStats.mistake + leftStats.blunder +
-                                       leftStats.forced +
                                        rightStats.best + rightStats.excellent + rightStats.good +
-                                       rightStats.inaccuracy + rightStats.mistake + rightStats.blunder +
-                                       rightStats.forced) > 0
+                                       rightStats.inaccuracy + rightStats.mistake + rightStats.blunder) > 0
 
                         if (hasStats) {
                             Text(
@@ -556,7 +550,7 @@ fun ChessAnalysisApp(context: Any?) {
                             )
                             Spacer(modifier = Modifier.height(6.dp))
 
-                            // Display in a 2-column grid for compactness
+                            // Display in a 3-column grid with 2 items each
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -567,14 +561,18 @@ fun ChessAnalysisApp(context: Any?) {
                                 ) {
                                     ClassificationStatItem("Best", leftStats.best, rightStats.best)
                                     ClassificationStatItem("Excellent", leftStats.excellent, rightStats.excellent)
-                                    ClassificationStatItem("Good", leftStats.good, rightStats.good)
-                                    ClassificationStatItem("Forced", leftStats.forced, rightStats.forced)
                                 }
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
+                                    ClassificationStatItem("Good", leftStats.good, rightStats.good)
                                     ClassificationStatItem("Inaccuracy", leftStats.inaccuracy, rightStats.inaccuracy)
+                                }
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
                                     ClassificationStatItem("Mistake", leftStats.mistake, rightStats.mistake)
                                     ClassificationStatItem("Blunder", leftStats.blunder, rightStats.blunder)
                                 }
@@ -1236,7 +1234,6 @@ fun classificationBadge(cls: String?): DrawableResource? {
         "mistake" -> Res.drawable.mistake
         "blunder" -> Res.drawable.blunder
         "book" -> Res.drawable.book
-        "forced" -> Res.drawable.forced
         else -> null
     }
 }
@@ -1250,45 +1247,43 @@ fun ClassificationStatItem(
 ) {
     val icon = classificationBadge(classification)
 
-    if (leftCount > 0 || rightCount > 0) {
-        Row(
-            modifier = modifier,
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left player count
-            Text(
-                text = leftCount.toString(),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.width(20.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.End
-            )
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Left player count
+        Text(
+            text = leftCount.toString(),
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.width(20.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.End
+        )
 
-            Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(4.dp))
 
-            // Classification icon
-            if (icon != null) {
-                androidx.compose.foundation.Image(
-                    painter = org.jetbrains.compose.resources.painterResource(icon),
-                    contentDescription = classification,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(4.dp))
-
-            // Right player count
-            Text(
-                text = rightCount.toString(),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.width(20.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Start
+        // Classification icon
+        if (icon != null) {
+            androidx.compose.foundation.Image(
+                painter = org.jetbrains.compose.resources.painterResource(icon),
+                contentDescription = classification,
+                modifier = Modifier.size(24.dp)
             )
         }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // Right player count
+        Text(
+            text = rightCount.toString(),
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.width(20.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Start
+        )
     }
 }
 
