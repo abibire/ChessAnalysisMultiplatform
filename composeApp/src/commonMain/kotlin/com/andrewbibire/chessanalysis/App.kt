@@ -338,7 +338,7 @@ fun ChessAnalysisApp(context: Any?) {
     }
 
     val stockfishEngine = remember(context) {
-        if (context != null) createStockfishEngine(context) else null
+        createStockfishEngine(context)
     }
 
     LaunchedEffect(context) {
@@ -346,7 +346,7 @@ fun ChessAnalysisApp(context: Any?) {
     }
 
     LaunchedEffect(pgn, stockfishEngine) {
-        if (pgn != null && stockfishEngine != null && positions.isNotEmpty()) {
+        if (pgn != null && positions.isNotEmpty()) {
             isEvaluating = true
             currentIndex = 0
             analysisCompleted = 0
