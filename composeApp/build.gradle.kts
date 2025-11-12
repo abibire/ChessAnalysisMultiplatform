@@ -133,6 +133,17 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.andrewbibire.chessanalysis"
             packageVersion = "1.0.0"
+
+            // Set app icon for all desktop platforms
+            macOS {
+                iconFile.set(project.file("src/jvmMain/resources/app-icon.icns"))
+            }
+            windows {
+                iconFile.set(project.file("src/jvmMain/resources/app-icon.png"))
+            }
+            linux {
+                iconFile.set(project.file("src/jvmMain/resources/app-icon.png"))
+            }
         }
     }
 }
