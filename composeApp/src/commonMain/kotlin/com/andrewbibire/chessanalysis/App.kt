@@ -951,8 +951,12 @@ fun ChessAnalysisApp(context: Any?) {
             }
 
             if (showBottomSheet) {
+                val sheetState = rememberModalBottomSheetState(
+                    skipPartiallyExpanded = true
+                )
                 ModalBottomSheet(
                     onDismissRequest = { showBottomSheet = false },
+                    sheetState = sheetState,
                     containerColor = MaterialTheme.colorScheme.surface,
                     scrimColor = Color.Transparent  // Remove the darkening overlay
                 ) {
@@ -960,7 +964,9 @@ fun ChessAnalysisApp(context: Any?) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
-                            .padding(top = 16.dp, bottom = 16.dp),
+                            .padding(top = 16.dp)
+                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .padding(bottom = 16.dp),
                         horizontalAlignment = Alignment.Start
                     ) {
                         Column(
