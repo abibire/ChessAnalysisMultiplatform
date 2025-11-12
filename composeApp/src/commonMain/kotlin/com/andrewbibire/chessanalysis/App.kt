@@ -146,9 +146,13 @@ fun ChessAnalysisApp(context: Any?) {
     var whiteCountryCode by remember { mutableStateOf<String?>(null) }
     var blackCountryCode by remember { mutableStateOf<String?>(null) }
 
-    // Detect platform from PGN headers (Chess.com games have [Site "Chess.com"])
+    // Detect platform from PGN headers
     val isChessComGame = remember(pgn) {
         pgn?.contains("[Site \"Chess.com\"]", ignoreCase = true) == true
+    }
+
+    val isLichessGame = remember(pgn) {
+        pgn?.contains("[Site \"https://lichess.org", ignoreCase = true) == true
     }
 
     // Fetch Chess.com avatars and country codes when players change
@@ -244,6 +248,14 @@ fun ChessAnalysisApp(context: Any?) {
             currentIndex = 0
         }
         isPlaying = false
+    }
+
+    // Auto-flip board based on searched player's color
+    // If they're playing Black, flip the board so Black is at the bottom
+    LaunchedEffect(isSearchedPlayerWhite, pgn, isChessComGame, isLichessGame) {
+        if ((isChessComGame || isLichessGame) && pgn != null) {
+            isBoardFlipped = !isSearchedPlayerWhite
+        }
     }
 
     // Count move classifications for each player
