@@ -233,6 +233,19 @@ fun ChessAnalysisApp(context: Any?) {
         pgn?.let { generateFensFromPgn(it) } ?: emptyList()
     }
 
+    // Safe index that's always within bounds - use this instead of currentIndex directly
+    val safeCurrentIndex = if (positions.isEmpty()) 0 else currentIndex.coerceIn(0, positions.lastIndex)
+
+    // Clamp currentIndex to valid range when positions changes to prevent crashes
+    LaunchedEffect(positions.size) {
+        if (positions.isNotEmpty()) {
+            currentIndex = currentIndex.coerceIn(0, positions.lastIndex)
+        } else {
+            currentIndex = 0
+        }
+        isPlaying = false
+    }
+
     // Count move classifications for each player
     data class ClassificationStats(
         val best: Int = 0,
@@ -383,10 +396,10 @@ fun ChessAnalysisApp(context: Any?) {
             ) {
                 if (pgn != null && positions.isNotEmpty()) {
                     EvaluationBar(
-                        score = if (isEvaluating) null else positions[currentIndex].score,
-                        fen = positions[currentIndex].fenString,
+                        score = if (isEvaluating) null else positions[safeCurrentIndex].score,
+                        fen = positions[safeCurrentIndex].fenString,
                         gameResult = gameResult,
-                        isLastMove = currentIndex == positions.lastIndex,
+                        isLastMove = safeCurrentIndex == positions.lastIndex,
                         modifier = Modifier.fillMaxWidth().height(24.dp)
                     )
                 } else {
@@ -437,13 +450,13 @@ fun ChessAnalysisApp(context: Any?) {
                         contentAlignment = Alignment.Center
                     ) {
                         if (pgn != null && positions.isNotEmpty()) {
-                            val cls = positions[currentIndex].classification ?: ""
+                            val cls = positions[safeCurrentIndex].classification ?: ""
                             val suppressArrow = cls == "Best" || cls == "Book" || cls == "Forced"
-                            val arrow = if (!suppressArrow && currentIndex > 0)
-                                positions[currentIndex - 1].bestMove?.takeIf { it.length >= 4 }?.substring(0, 4)
+                            val arrow = if (!suppressArrow && safeCurrentIndex > 0)
+                                positions[safeCurrentIndex - 1].bestMove?.takeIf { it.length >= 4 }?.substring(0, 4)
                             else null
                             Chessboard(
-                                fen = positions[currentIndex].fenString,
+                                fen = positions[safeCurrentIndex].fenString,
                                 arrowUci = arrow,
                                 badgeUci = badgeUci,
                                 badgeDrawable = badgeDrawable,
@@ -636,7 +649,7 @@ fun ChessAnalysisApp(context: Any?) {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             } else {
-                                val isLast = currentIndex == positions.lastIndex
+                                val isLast = safeCurrentIndex == positions.lastIndex
                                 if (isLast) {
                                     Text(
                                         text = gameTermination,
@@ -644,7 +657,7 @@ fun ChessAnalysisApp(context: Any?) {
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
-                                } else if (currentIndex == 0) {
+                                } else if (safeCurrentIndex == 0) {
                                     // Show classification statistics at starting position
                                     // Determine left and right stats based on player colors
                                     val leftStats = if (isSearchedPlayerWhite) whiteStats else blackStats
@@ -701,8 +714,8 @@ fun ChessAnalysisApp(context: Any?) {
                                     }
                                 } else {
                                     val displayScore = normalizeScoreForDisplay(
-                                        positions[currentIndex].score,
-                                        positions[currentIndex].fenString,
+                                        positions[safeCurrentIndex].score,
+                                        positions[safeCurrentIndex].fenString,
                                         isLast
                                     )
 
@@ -716,10 +729,10 @@ fun ChessAnalysisApp(context: Any?) {
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                positions[currentIndex].classification?.let { c ->
-                                    val playedMoveNotation = if (currentIndex > 0) {
-                                        positions[currentIndex].playedMove?.let { uci ->
-                                            uciToSan(uci, positions[currentIndex - 1].fenString)
+                                positions[safeCurrentIndex].classification?.let { c ->
+                                    val playedMoveNotation = if (safeCurrentIndex > 0) {
+                                        positions[safeCurrentIndex].playedMove?.let { uci ->
+                                            uciToSan(uci, positions[safeCurrentIndex - 1].fenString)
                                         } ?: "This move"
                                     } else {
                                         "This move"
@@ -737,9 +750,9 @@ fun ChessAnalysisApp(context: Any?) {
                                         else -> "$playedMoveNotation is $c."
                                     }
 
-                                    val bestMoveText = if (currentIndex > 0 && c != "Best" && c != "Book" && c != "Forced") {
-                                        positions[currentIndex - 1].bestMove?.let { bm ->
-                                            val notation = uciToSan(bm, positions[currentIndex - 1].fenString)
+                                    val bestMoveText = if (safeCurrentIndex > 0 && c != "Best" && c != "Book" && c != "Forced") {
+                                        positions[safeCurrentIndex - 1].bestMove?.let { bm ->
+                                            val notation = uciToSan(bm, positions[safeCurrentIndex - 1].fenString)
                                             ", $notation is Best."
                                         }
                                     } else null
@@ -762,7 +775,7 @@ fun ChessAnalysisApp(context: Any?) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                 }
 
-                                positions[currentIndex].openingName?.let { name ->
+                                positions[safeCurrentIndex].openingName?.let { name ->
                                     Text(
                                         text = name,
                                         fontSize = smallFontSize * 0.9f,
