@@ -1,3 +1,2 @@
 language = C
 headers = StockfishBridge.h
-compilerOpts = -I/Users/a/programming/ChessAnalysisMultiplatform/ChessAnalysis/composeApp/src/nativeInterop/cinterop/headers

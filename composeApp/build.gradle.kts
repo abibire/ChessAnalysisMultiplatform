@@ -33,6 +33,7 @@ kotlin {
                 val stockfishBridge by creating {
                     defFile(project.file("src/nativeInterop/cinterop/StockfishBridge.def"))
                     packageName("stockfish")
+                    includeDirs(project.file("src/nativeInterop/cinterop/headers"))
                 }
             }
         }
