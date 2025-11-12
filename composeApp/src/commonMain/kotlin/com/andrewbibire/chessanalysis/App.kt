@@ -958,7 +958,7 @@ fun ChessAnalysisApp(context: Any?) {
                     onDismissRequest = { showBottomSheet = false },
                     sheetState = sheetState,
                     containerColor = MaterialTheme.colorScheme.surface,
-                    scrimColor = Color.Transparent  // Remove the darkening overlay
+                    scrimColor = Color.Black.copy(alpha = 0.32f)  // Semi-transparent overlay for better click detection
                 ) {
                     Column(
                         modifier = Modifier
