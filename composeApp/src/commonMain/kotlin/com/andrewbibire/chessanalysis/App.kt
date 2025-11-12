@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -396,12 +397,36 @@ fun ChessAnalysisApp(context: Any?) {
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    val maxBoardSize = 550.dp
-                    val minSpaceForButtons = 180.dp
-                    val availableHeight = maxHeight - 24.dp
+                    val screenWidth = maxWidth
+                    val screenHeight = maxHeight
+
+                    // Detect device type based on screen width
+                    val isTinyPhone = screenWidth < 380.dp
+                    val isPhone = screenWidth < 600.dp
+                    val isTablet = screenWidth >= 600.dp && screenWidth < 900.dp
+                    val isLargeTablet = screenWidth >= 900.dp
+
+                    // Space needed for buttons and controls
+                    // Tiny phones (like iPhone SE 2) need more space to prevent button crushing
+                    val minSpaceForButtons = when {
+                        isTinyPhone -> 300.dp  // Extra space for tiny phones
+                        isPhone -> 180.dp      // Regular phones
+                        isTablet -> 200.dp
+                        else -> 220.dp
+                    }
+
+                    val availableHeight = screenHeight - 24.dp
                     val maxBoardFromHeight = availableHeight - minSpaceForButtons
+
+                    // Scale board size based on device type
+                    val maxBoardSize = when {
+                        isPhone -> screenWidth  // Full width on phones
+                        isTablet -> 700.dp      // Larger on tablets
+                        isLargeTablet -> 900.dp // Even larger on big tablets
+                        else -> 550.dp
+                    }
+
                     val boardSize = minOf(
-                        maxWidth,
                         maxBoardSize,
                         maxBoardFromHeight.coerceAtLeast(200.dp)
                     )
@@ -438,14 +463,81 @@ fun ChessAnalysisApp(context: Any?) {
                     }
                 }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(16.dp)
-                        .windowInsetsPadding(WindowInsets.navigationBars),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                BoxWithConstraints(
+                    modifier = Modifier.fillMaxWidth().weight(1f)
                 ) {
+                    val screenWidth = maxWidth
+
+                    // Detect device type based on screen width
+                    val isTinyPhone = screenWidth < 380.dp
+                    val isPhone = screenWidth < 600.dp
+                    val isTablet = screenWidth >= 600.dp && screenWidth < 900.dp
+                    val isLargeTablet = screenWidth >= 900.dp
+
+                    // Responsive sizing for UI elements
+                    val avatarSize = when {
+                        isTinyPhone -> 28.dp
+                        isPhone -> 32.dp
+                        isTablet -> 48.dp
+                        isLargeTablet -> 56.dp
+                        else -> 32.dp
+                    }
+
+                    val flagSize = when {
+                        isTinyPhone -> 14.dp
+                        isPhone -> 16.dp
+                        isTablet -> 20.dp
+                        isLargeTablet -> 24.dp
+                        else -> 16.dp
+                    }
+
+                    val profileFontSize = when {
+                        isTinyPhone -> 12.sp
+                        isPhone -> 14.sp
+                        isTablet -> 18.sp
+                        isLargeTablet -> 22.sp
+                        else -> 14.sp
+                    }
+
+                    val moveFontSize = when {
+                        isTinyPhone -> 20.sp
+                        isPhone -> 22.sp
+                        isTablet -> 32.sp
+                        isLargeTablet -> 40.sp
+                        else -> 22.sp
+                    }
+
+                    val bodyFontSize = when {
+                        isTinyPhone -> 14.sp
+                        isPhone -> 16.sp
+                        isTablet -> 20.sp
+                        isLargeTablet -> 24.sp
+                        else -> 16.sp
+                    }
+
+                    val smallFontSize = when {
+                        isTinyPhone -> 12.sp
+                        isPhone -> 14.sp
+                        isTablet -> 16.sp
+                        isLargeTablet -> 18.sp
+                        else -> 14.sp
+                    }
+
+                    val statIconSize = when {
+                        isTinyPhone -> 20.dp
+                        isPhone -> 24.dp
+                        isTablet -> 32.dp
+                        isLargeTablet -> 40.dp
+                        else -> 24.dp
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .windowInsetsPadding(WindowInsets.navigationBars),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                     if (pgn == null) {
                         Column(
                             modifier = Modifier
@@ -500,13 +592,17 @@ fun ChessAnalysisApp(context: Any?) {
                                     otherPlayerHasAvatar = rightAvatar != null,
                                     isLeftSide = true,
                                     countryCode = leftCountryCode,
+                                    avatarSize = avatarSize,
+                                    flagSize = flagSize,
+                                    fontSize = profileFontSize,
                                     modifier = Modifier.align(Alignment.TopStart)
                                 )
 
                                 // Move text (center)
                                 Text(
                                     text = "Move: ${currentIndex}",
-                                    style = MaterialTheme.typography.titleLarge,
+                                    fontSize = moveFontSize,
+                                    fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.align(Alignment.TopCenter)
                                 )
@@ -520,6 +616,9 @@ fun ChessAnalysisApp(context: Any?) {
                                     otherPlayerHasAvatar = leftAvatar != null,
                                     isLeftSide = false,
                                     countryCode = rightCountryCode,
+                                    avatarSize = avatarSize,
+                                    flagSize = flagSize,
+                                    fontSize = profileFontSize,
                                     modifier = Modifier.align(Alignment.TopEnd)
                                 )
                             }
@@ -533,7 +632,7 @@ fun ChessAnalysisApp(context: Any?) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "Analyzing...",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontSize = bodyFontSize,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             } else {
@@ -541,7 +640,8 @@ fun ChessAnalysisApp(context: Any?) {
                                 if (isLast) {
                                     Text(
                                         text = gameTermination,
-                                        style = MaterialTheme.typography.titleMedium,
+                                        fontSize = bodyFontSize,
+                                        fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                 } else if (currentIndex == 0) {
@@ -559,7 +659,8 @@ fun ChessAnalysisApp(context: Any?) {
                                     if (hasStats) {
                                         Text(
                                             text = "Game Statistics",
-                                            style = MaterialTheme.typography.titleSmall,
+                                            fontSize = bodyFontSize,
+                                            fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Spacer(modifier = Modifier.height(6.dp))
@@ -573,28 +674,28 @@ fun ChessAnalysisApp(context: Any?) {
                                                 horizontalAlignment = Alignment.CenterHorizontally,
                                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                ClassificationStatItem("Best", leftStats.best, rightStats.best)
-                                                ClassificationStatItem("Excellent", leftStats.excellent, rightStats.excellent)
+                                                ClassificationStatItem("Best", leftStats.best, rightStats.best, statIconSize, smallFontSize)
+                                                ClassificationStatItem("Excellent", leftStats.excellent, rightStats.excellent, statIconSize, smallFontSize)
                                             }
                                             Column(
                                                 horizontalAlignment = Alignment.CenterHorizontally,
                                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                ClassificationStatItem("Good", leftStats.good, rightStats.good)
-                                                ClassificationStatItem("Inaccuracy", leftStats.inaccuracy, rightStats.inaccuracy)
+                                                ClassificationStatItem("Good", leftStats.good, rightStats.good, statIconSize, smallFontSize)
+                                                ClassificationStatItem("Inaccuracy", leftStats.inaccuracy, rightStats.inaccuracy, statIconSize, smallFontSize)
                                             }
                                             Column(
                                                 horizontalAlignment = Alignment.CenterHorizontally,
                                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                ClassificationStatItem("Mistake", leftStats.mistake, rightStats.mistake)
-                                                ClassificationStatItem("Blunder", leftStats.blunder, rightStats.blunder)
+                                                ClassificationStatItem("Mistake", leftStats.mistake, rightStats.mistake, statIconSize, smallFontSize)
+                                                ClassificationStatItem("Blunder", leftStats.blunder, rightStats.blunder, statIconSize, smallFontSize)
                                             }
                                         }
                                     } else {
                                         Text(
                                             text = "Analysis not yet complete",
-                                            style = MaterialTheme.typography.titleMedium,
+                                            fontSize = bodyFontSize,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
@@ -607,7 +708,8 @@ fun ChessAnalysisApp(context: Any?) {
 
                                     Text(
                                         text = "Evaluation: $displayScore",
-                                        style = MaterialTheme.typography.titleMedium,
+                                        fontSize = bodyFontSize,
+                                        fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
@@ -644,7 +746,7 @@ fun ChessAnalysisApp(context: Any?) {
 
                                     Text(
                                         text = classificationText + (bestMoveText ?: ""),
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontSize = smallFontSize,
                                         color = when (c) {
                                             "Best" -> BestColor
                                             "Excellent" -> EvalGreen
@@ -663,7 +765,7 @@ fun ChessAnalysisApp(context: Any?) {
                                 positions[currentIndex].openingName?.let { name ->
                                     Text(
                                         text = name,
-                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = smallFontSize * 0.9f,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -785,6 +887,8 @@ fun ChessAnalysisApp(context: Any?) {
                             }
                         }
                     }
+                }
+            }
                 }
             }
 
@@ -1071,7 +1175,6 @@ fun ChessAnalysisApp(context: Any?) {
             }
         }
     }
-}
 
 @Composable
 fun EvaluationButton(
@@ -1257,6 +1360,8 @@ fun ClassificationStatItem(
     classification: String,
     leftCount: Int,
     rightCount: Int,
+    iconSize: androidx.compose.ui.unit.Dp = 24.dp,
+    fontSize: androidx.compose.ui.unit.TextUnit = 14.sp,
     modifier: Modifier = Modifier
 ) {
     val icon = classificationBadge(classification)
@@ -1266,13 +1371,13 @@ fun ClassificationStatItem(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left player count
+        // Left player count - fixed width to prevent wrapping
         Text(
             text = leftCount.toString(),
-            style = MaterialTheme.typography.bodySmall,
+            fontSize = fontSize,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.width(20.dp),
+            modifier = Modifier.widthIn(min = 24.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.End
         )
 
@@ -1283,19 +1388,19 @@ fun ClassificationStatItem(
             androidx.compose.foundation.Image(
                 painter = org.jetbrains.compose.resources.painterResource(icon),
                 contentDescription = classification,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(iconSize)
             )
         }
 
         Spacer(modifier = Modifier.width(4.dp))
 
-        // Right player count
+        // Right player count - fixed width to prevent wrapping
         Text(
             text = rightCount.toString(),
-            style = MaterialTheme.typography.bodySmall,
+            fontSize = fontSize,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.width(20.dp),
+            modifier = Modifier.widthIn(min = 24.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Start
         )
     }
@@ -1378,6 +1483,9 @@ fun PlayerProfile(
     otherPlayerHasAvatar: Boolean,
     isLeftSide: Boolean,
     countryCode: String? = null,
+    avatarSize: androidx.compose.ui.unit.Dp = 32.dp,
+    flagSize: androidx.compose.ui.unit.Dp = 16.dp,
+    fontSize: androidx.compose.ui.unit.TextUnit = 14.sp,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -1390,7 +1498,7 @@ fun PlayerProfile(
         if (shouldShowAvatar) {
             androidx.compose.foundation.layout.Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(avatarSize)
                     .clip(RoundedCornerShape(4.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
@@ -1405,7 +1513,7 @@ fun PlayerProfile(
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = "No avatar",
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(avatarSize * 0.6f),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -1425,7 +1533,7 @@ fun PlayerProfile(
                         Icon(
                             imageVector = flagIcon,
                             contentDescription = "$countryCode flag",
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(flagSize),
                             tint = Color.Unspecified
                         )
                         Spacer(modifier = Modifier.width(4.dp))
@@ -1434,7 +1542,7 @@ fun PlayerProfile(
 
                 Text(
                     text = playerName.take(15),
-                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = fontSize,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
@@ -1443,7 +1551,7 @@ fun PlayerProfile(
                 // Color indicator - same as GamesListScreen
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(fontSize.value.dp * 0.6f)
                         .clip(RoundedCornerShape(4.dp))
                         .background(if (color == "white") Color.White else Color(0xFF2C2C2C))
                 )
@@ -1454,7 +1562,7 @@ fun PlayerProfile(
         if (rating != null && rating != "?" && rating.isNotBlank()) {
             Text(
                 text = rating,
-                style = MaterialTheme.typography.bodySmall,
+                fontSize = fontSize * 0.9f,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
             )
