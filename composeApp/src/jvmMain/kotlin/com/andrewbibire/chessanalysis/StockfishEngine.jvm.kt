@@ -65,7 +65,9 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 println("JVM Stockfish: Made binary executable")
             }
 
-            process = ProcessBuilder(stockfishBinary.absolutePath).start()
+            process = ProcessBuilder(stockfishBinary.absolutePath)
+                .redirectErrorStream(true)  // Merge stderr into stdout to prevent buffer deadlock
+                .start()
             writer = BufferedWriter(OutputStreamWriter(process!!.outputStream))
             reader = BufferedReader(InputStreamReader(process!!.inputStream))
             println("JVM Stockfish: Process started, sending UCI command")
