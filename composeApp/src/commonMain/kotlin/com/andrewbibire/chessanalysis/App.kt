@@ -17,7 +17,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
@@ -49,6 +48,7 @@ import chessanalysis.composeapp.generated.resources.mistake
 import chessanalysis.composeapp.generated.resources.good
 import chessanalysis.composeapp.generated.resources.blunder
 import chessanalysis.composeapp.generated.resources.book
+import chessanalysis.composeapp.generated.resources.forced
 import com.andrewbibire.chessanalysis.online.getCountryCode
 import dev.carlsen.flagkit.FlagKit
 
@@ -1395,6 +1395,7 @@ fun classificationBadge(cls: String?): DrawableResource? {
         "mistake" -> Res.drawable.mistake
         "blunder" -> Res.drawable.blunder
         "book" -> Res.drawable.book
+        "forced" -> Res.drawable.forced
         else -> null
     }
 }
