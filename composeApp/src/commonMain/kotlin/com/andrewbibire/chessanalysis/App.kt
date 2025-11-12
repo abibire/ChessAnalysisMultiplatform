@@ -23,6 +23,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -350,16 +351,29 @@ fun ChessAnalysisApp(context: Any?) {
             currentIndex = 0
             analysisCompleted = 0
             delay(500)
-            withContext(Dispatchers.Default) {
-                for (position in positions) {
-                    val result = stockfishEngine.evaluatePosition(position.fenString, depth = 14)
-                    position.score = result.score
-                    position.bestMove = result.bestMove
+            try {
+                withContext(Dispatchers.Default) {
+                    for (position in positions) {
+                        // Check if coroutine is still active (allows cancellation)
+                        if (!isActive) break
+
+                        val result = stockfishEngine.evaluatePosition(position.fenString, depth = 14)
+                        position.score = result.score
+                        position.bestMove = result.bestMove
+                    }
                 }
+
+                // Only classify if we completed the full analysis (not cancelled)
+                if (isActive) {
+                    classifyPositions(positions)
+                    analysisCompleted++ // Trigger stats recalculation
+                }
+            } catch (e: Exception) {
+                println("KOTLIN: Analysis error: ${e.message}")
+            } finally {
+                // Always reset evaluating state, even if cancelled or error
+                isEvaluating = false
             }
-            classifyPositions(positions)
-            isEvaluating = false
-            analysisCompleted++ // Trigger stats recalculation
         }
     }
 
@@ -718,10 +732,9 @@ fun ChessAnalysisApp(context: Any?) {
                                             }
                                         }
                                     } else {
-                                        Text(
-                                            text = "Analysis not yet complete",
-                                            fontSize = bodyFontSize,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(32.dp),
+                                            color = BoardDark
                                         )
                                     }
                                 } else {
