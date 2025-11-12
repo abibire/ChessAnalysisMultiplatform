@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:opacity="opaque">
+
+    <!-- Background color -->
+    <item android:drawable="@color/ic_launcher_background"/>
+
+    <!-- Centered app icon, scaled larger -->
+    <item
+        android:width="200dp"
+        android:height="200dp"
+        android:drawable="@mipmap/ic_launcher_foreground"
+        android:gravity="center"/>
+</layer-list>
