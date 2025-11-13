@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -17,6 +18,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
@@ -146,6 +151,16 @@ fun ChessAnalysisApp(context: Any?) {
     var blackAvatar by remember { mutableStateOf<String?>(null) }
     var whiteCountryCode by remember { mutableStateOf<String?>(null) }
     var blackCountryCode by remember { mutableStateOf<String?>(null) }
+
+    // Focus requester for keyboard navigation
+    val focusRequester = remember { FocusRequester() }
+
+    // Request focus when a game is loaded
+    LaunchedEffect(pgn) {
+        if (pgn != null) {
+            focusRequester.requestFocus()
+        }
+    }
 
     // Detect platform from PGN headers
     val isChessComGame = remember(pgn) {
@@ -407,6 +422,61 @@ fun ChessAnalysisApp(context: Any?) {
     } else {
         Box(modifier = Modifier
             .fillMaxSize()
+            .focusRequester(focusRequester)
+            .focusTarget()
+            .onPreviewKeyEvent { keyEvent ->
+                // Handle keyboard navigation on desktop
+                if (keyEvent.type == KeyEventType.KeyDown && !isEvaluating && positions.isNotEmpty()) {
+                    when (keyEvent.key) {
+                        Key.DirectionRight -> {
+                            // Right arrow: move forward
+                            if (currentIndex < positions.lastIndex) {
+                                currentIndex++
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        Key.DirectionLeft -> {
+                            // Left arrow: move backward
+                            if (currentIndex > 0) {
+                                currentIndex--
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        Key.DirectionUp -> {
+                            // Up arrow: go to last move
+                            if (currentIndex < positions.lastIndex) {
+                                currentIndex = positions.lastIndex
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        Key.DirectionDown -> {
+                            // Down arrow: go to first move
+                            if (currentIndex > 0) {
+                                currentIndex = 0
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        else -> false
+                    }
+                } else {
+                    false
+                }
+            }
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                // Click to gain focus for keyboard navigation
+                focusRequester.requestFocus()
+            }
             .pointerInput(Unit) {
                 detectTapGestures {
                     // Dismiss any active snackbars on tap
