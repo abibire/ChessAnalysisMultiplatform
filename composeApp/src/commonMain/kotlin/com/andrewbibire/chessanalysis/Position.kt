@@ -8,5 +8,6 @@ data class Position(
     var isBook: Boolean = false,
     var openingName: String? = null,
     var bestMove: String? = null,
-    var playedMove: String? = null
+    var playedMove: String? = null,
+    var sanNotation: String? = null
 )

@@ -56,6 +56,8 @@ import chessanalysis.composeapp.generated.resources.book
 import chessanalysis.composeapp.generated.resources.forced
 import com.andrewbibire.chessanalysis.online.getCountryCode
 import dev.carlsen.flagkit.FlagKit
+import com.andrewbibire.chessanalysis.audio.ChessSoundManager
+import com.andrewbibire.chessanalysis.audio.MoveAnalyzer
 
 @Composable
 fun App(context: Any? = null) {
@@ -83,6 +85,9 @@ fun ChessAnalysisApp(context: Any?) {
     var isPrefilledUsername by remember { mutableStateOf(false) }
     val sheetSnackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+
+    // Sound manager for move sounds
+    val soundManager = remember { ChessSoundManager() }
 
     var currentIndex by remember { mutableIntStateOf(0) }
     var isEvaluating by remember { mutableStateOf(false) }
@@ -398,6 +403,59 @@ fun ChessAnalysisApp(context: Any?) {
             currentIndex++
         } else if (currentIndex >= positions.lastIndex) {
             isPlaying = false
+        }
+    }
+
+    // Play move sounds when position changes
+    LaunchedEffect(currentIndex, positions, gameTermination) {
+        if (currentIndex > 0 && positions.isNotEmpty()) {
+            val currentPosition = positions.getOrNull(currentIndex)
+            val previousPosition = positions.getOrNull(currentIndex - 1)
+
+            if (currentPosition != null && previousPosition != null) {
+                val uciMove = currentPosition.playedMove
+                val currentFen = currentPosition.fenString
+                val previousFen = previousPosition.fenString
+
+                // Parse SAN notation to detect move types
+                val san = currentPosition.sanNotation ?: ""
+                val isCapture = san.contains('x')
+                val isPromotion = san.contains('=')
+                val isCheck = san.contains('+') && !san.contains('#')
+                val isCastling = san.startsWith("O-O")
+
+                // Detect if we're at the last move
+                val isLastMove = currentIndex == positions.lastIndex
+
+                // Detect checkmate - either from SAN notation or game termination
+                val isCheckmate = (san.contains('#') || (isLastMove && (
+                    gameTermination.contains("checkmate", ignoreCase = true) ||
+                    gameTermination.contains("mate", ignoreCase = true)
+                )))
+
+                // Detect game end without checkmate (resignation, timeout, draw, etc.)
+                val isGameEndNoCheckmate = isLastMove && !isCheckmate && (
+                    gameTermination.contains("resignation", ignoreCase = true) ||
+                    gameTermination.contains("timeout", ignoreCase = true) ||
+                    gameTermination.contains("draw", ignoreCase = true) ||
+                    gameTermination.contains("abandoned", ignoreCase = true) ||
+                    gameResult != "*"
+                )
+
+                // For non-checkmate game endings, only play game end sound (not the move sound)
+                if (isGameEndNoCheckmate) {
+                    soundManager.playGameEndSound()
+                } else {
+                    // Play normal move sound (which handles checkmate internally)
+                    soundManager.playMoveSound(
+                        isCapture = isCapture,
+                        isCheck = isCheck,
+                        isCheckmate = isCheckmate,
+                        isPromotion = isPromotion,
+                        isCastling = isCastling
+                    )
+                }
+            }
         }
     }
 

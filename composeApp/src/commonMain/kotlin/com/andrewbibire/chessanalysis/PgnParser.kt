@@ -62,11 +62,23 @@ private fun tryStandardParsing(pgn: String): List<Position> {
 
                 board.doMove(chessMove)
                 val playedMove = if (chessMove.promotion != null) {
-                    "${chessMove.from.toString().lowercase()}${chessMove.to.toString().lowercase()}${chessMove.promotion.toString().lowercase()}"
+                    // Convert promotion piece to single letter (e.g., "WHITE_QUEEN" -> "q")
+                    val promotionLetter = when (chessMove.promotion.toString().lowercase()) {
+                        "white_queen", "black_queen" -> "q"
+                        "white_rook", "black_rook" -> "r"
+                        "white_bishop", "black_bishop" -> "b"
+                        "white_knight", "black_knight" -> "n"
+                        else -> chessMove.promotion.toString().lowercase().last().toString()
+                    }
+                    "${chessMove.from.toString().lowercase()}${chessMove.to.toString().lowercase()}$promotionLetter"
                 } else {
                     "${chessMove.from.toString().lowercase()}${chessMove.to.toString().lowercase()}"
                 }
-                positions.add(Position(fenString = board.fen, playedMove = playedMove))
+
+                // Store the SAN notation for sound detection
+                val san = move.san ?: ""
+
+                positions.add(Position(fenString = board.fen, playedMove = playedMove, sanNotation = san))
             } catch (e: Exception) {
                 println("Failed to parse move ${move.san}: ${e.message}")
                 // If a move fails, we can't continue reliably
@@ -108,8 +120,21 @@ private fun tryCustomSanParsing(pgn: String): List<Position> {
                 }
 
                 board.doMove(move)
-                val playedMove = "${move.from.toString().lowercase()}${move.to.toString().lowercase()}"
-                positions.add(Position(fenString = board.fen, playedMove = playedMove))
+                val playedMove = if (move.promotion != null) {
+                    // Convert promotion piece to single letter (e.g., "WHITE_QUEEN" -> "q")
+                    val promotionLetter = when (move.promotion.toString().lowercase()) {
+                        "white_queen", "black_queen" -> "q"
+                        "white_rook", "black_rook" -> "r"
+                        "white_bishop", "black_bishop" -> "b"
+                        "white_knight", "black_knight" -> "n"
+                        else -> move.promotion.toString().lowercase().last().toString()
+                    }
+                    "${move.from.toString().lowercase()}${move.to.toString().lowercase()}$promotionLetter"
+                } else {
+                    "${move.from.toString().lowercase()}${move.to.toString().lowercase()}"
+                }
+
+                positions.add(Position(fenString = board.fen, playedMove = playedMove, sanNotation = sanMove))
             } catch (e: Exception) {
                 println("Error applying move $sanMove: ${e.message}")
                 break
