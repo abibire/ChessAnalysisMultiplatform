@@ -283,6 +283,7 @@ fun ChessAnalysisApp(context: Any?) {
     // State for drag-and-drop functionality
     data class DragState(val fromSquare: String, val piece: String)
     var draggedPiece by remember { mutableStateOf<DragState?>(null) }
+    var dragPosition by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
 
     // Safe index that's always within bounds - use this instead of currentIndex directly
     val safeCurrentIndex = if (positions.isEmpty()) 0 else currentIndex.coerceIn(0, positions.lastIndex)
@@ -458,6 +459,10 @@ fun ChessAnalysisApp(context: Any?) {
         }
     }
 
+    val onDrag: (androidx.compose.ui.geometry.Offset) -> Unit = { position ->
+        dragPosition = position
+    }
+
     val onDragEnd: (String?) -> Unit = onDragEnd@{ toSquare ->
         println("DRAG END: toSquare=$toSquare, draggedFrom=${draggedPiece?.fromSquare}, legalMoves=$legalMovesForSelected")
 
@@ -473,6 +478,7 @@ fun ChessAnalysisApp(context: Any?) {
         } finally {
             // ALWAYS clear state, even if there was an error
             draggedPiece = null
+            dragPosition = null
             legalMovesForSelected = emptyList()
             selectedSquare = null
         }
@@ -483,6 +489,7 @@ fun ChessAnalysisApp(context: Any?) {
         selectedSquare = null
         legalMovesForSelected = emptyList()
         draggedPiece = null
+        dragPosition = null
     }
 
     // Clear selection and drag state when board flips
@@ -490,6 +497,7 @@ fun ChessAnalysisApp(context: Any?) {
         selectedSquare = null
         legalMovesForSelected = emptyList()
         draggedPiece = null
+        dragPosition = null
     }
 
     // Clamp currentIndex to valid range when positions changes to prevent crashes
@@ -989,8 +997,11 @@ fun ChessAnalysisApp(context: Any?) {
                                 onSquareClick = onSquareClick,
                                 canStartDrag = canStartDrag,
                                 onDragStart = onDragStart,
+                                onDrag = onDrag,
                                 onDragEnd = onDragEnd,
                                 draggedFromSquare = draggedPiece?.fromSquare,
+                                draggedPiece = draggedPiece?.piece,
+                                dragPosition = dragPosition,
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
