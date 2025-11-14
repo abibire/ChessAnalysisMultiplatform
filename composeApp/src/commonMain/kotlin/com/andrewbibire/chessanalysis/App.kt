@@ -288,6 +288,45 @@ fun ChessAnalysisApp(context: Any?) {
     // Safe index that's always within bounds - use this instead of currentIndex directly
     val safeCurrentIndex = if (positions.isEmpty()) 0 else currentIndex.coerceIn(0, positions.lastIndex)
 
+    // Helper function to check game ending state
+    data class GameEndState(val isEnded: Boolean, val result: String, val description: String)
+
+    fun checkGameEnd(fen: String): GameEndState {
+        return try {
+            val board = Board()
+            board.loadFromFen(fen)
+
+            when {
+                board.isMated -> {
+                    // Checkmate - the side to move is checkmated
+                    val whiteToMove = isWhiteToMove(fen)
+                    val result = if (whiteToMove) "0-1" else "1-0"
+                    val description = if (whiteToMove) "Black wins by checkmate" else "White wins by checkmate"
+                    GameEndState(true, result, description)
+                }
+                board.isStaleMate -> {
+                    // Stalemate - draw
+                    GameEndState(true, "1/2-1/2", "Draw by stalemate")
+                }
+                board.isInsufficientMaterial -> {
+                    // Insufficient material - draw
+                    GameEndState(true, "1/2-1/2", "Draw by insufficient material")
+                }
+                board.isRepetition -> {
+                    // Threefold repetition - draw
+                    GameEndState(true, "1/2-1/2", "Draw by repetition")
+                }
+                else -> {
+                    // Game continues
+                    GameEndState(false, "*", "")
+                }
+            }
+        } catch (e: Exception) {
+            println("CHECK_GAME_END: Exception: ${e.message}")
+            GameEndState(false, "*", "")
+        }
+    }
+
     // Helper function to get legal moves for a piece at a square
     fun getLegalMovesForSquare(fen: String, fromSquare: String): List<String> {
         return try {
@@ -814,6 +853,15 @@ fun ChessAnalysisApp(context: Any?) {
     val currentScore = currentPosition?.score
     val currentClassification = currentPosition?.classification
 
+    // Check if current position is a game-ending state (for free moves) - computed once for reuse
+    val freeMoveGameEnd = remember(currentPosition?.fenString, isOnAlternatePath) {
+        if (isOnAlternatePath && currentPosition != null) {
+            checkGameEnd(currentPosition.fenString)
+        } else {
+            GameEndState(false, "*", "")
+        }
+    }
+
     val badgeUci = remember(currentIndex, currentPosition?.playedMove) {
         currentPosition?.playedMove
     }
@@ -918,11 +966,18 @@ fun ChessAnalysisApp(context: Any?) {
                         safeCurrentIndex == positions.lastIndex
                     }
 
+                    // Determine the game result for evaluation bar (using freeMoveGameEnd from higher scope)
+                    val effectiveGameResult = if (freeMoveGameEnd.isEnded) {
+                        freeMoveGameEnd.result
+                    } else {
+                        gameResult
+                    }
+
                     EvaluationBar(
                         score = if (isCurrentPositionAnalyzing) null else currentPosition.score,
                         fen = currentPosition.fenString,
-                        gameResult = gameResult,
-                        isLastMove = isLastOfOriginalGame,
+                        gameResult = effectiveGameResult,
+                        isLastMove = isLastOfOriginalGame || freeMoveGameEnd.isEnded,
                         modifier = Modifier.fillMaxWidth().height(24.dp)
                     )
                 } else {
@@ -1259,18 +1314,29 @@ fun ChessAnalysisApp(context: Any?) {
                                         )
                                     }
                                 } else {
-                                    val displayScore = normalizeScoreForDisplay(
-                                        currentScore,
-                                        currentPosition?.fenString ?: "",
-                                        isLastOfOriginalGame
-                                    )
+                                    // Check if free move ended the game (already computed above)
+                                    if (freeMoveGameEnd.isEnded) {
+                                        Text(
+                                            text = freeMoveGameEnd.description,
+                                            fontSize = bodyFontSize,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    } else {
+                                        val currentFen = currentPosition?.fenString ?: ""
+                                        val displayScore = normalizeScoreForDisplay(
+                                            currentScore,
+                                            currentFen,
+                                            isLastOfOriginalGame
+                                        )
 
-                                    Text(
-                                        text = "Evaluation: $displayScore",
-                                        fontSize = bodyFontSize,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                        Text(
+                                            text = "Evaluation: $displayScore",
+                                            fontSize = bodyFontSize,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
                                 }
 
                                 Spacer(modifier = Modifier.height(8.dp))
