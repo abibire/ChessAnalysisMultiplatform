@@ -276,6 +276,9 @@ fun ChessAnalysisApp(context: Any?) {
     // Track which positions (by FEN) are currently being analyzed in alternate path
     val analyzingFens = remember { mutableStateOf(setOf<String>()) }
 
+    // Revision counter to trigger re-analysis when positions are modified
+    var positionsRevision by remember { mutableIntStateOf(0) }
+
     // State for click-to-move functionality
     var selectedSquare by remember { mutableStateOf<String?>(null) }
     var legalMovesForSelected by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -407,6 +410,9 @@ fun ChessAnalysisApp(context: Any?) {
 
                 // Add the new position
                 positions.add(newPosition)
+
+                // Increment revision to trigger re-analysis
+                positionsRevision++
 
                 // Move to the new position
                 currentIndex++
@@ -690,7 +696,7 @@ fun ChessAnalysisApp(context: Any?) {
     }
 
     // Analyze alternate path positions in the background
-    LaunchedEffect(positions.size, isOnAlternatePath, stockfishEngine) {
+    LaunchedEffect(positions.size, isOnAlternatePath, positionsRevision, stockfishEngine) {
         if (isOnAlternatePath && positions.isNotEmpty()) {
             // Analyze positions that aren't in the cache yet
             for (i in (branchPointIndex + 1) until positions.size) {
