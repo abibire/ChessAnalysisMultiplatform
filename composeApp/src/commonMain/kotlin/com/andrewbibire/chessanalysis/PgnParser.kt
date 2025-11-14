@@ -89,7 +89,6 @@ private fun tryStandardParsing(pgn: String): List<Position> {
         println("Failed to parse PGN: ${e.message}")
         return emptyList()
     }
-
     return positions
 }
 
@@ -143,7 +142,6 @@ private fun tryCustomSanParsing(pgn: String): List<Position> {
     } catch (e: Exception) {
         println("Custom parsing failed: ${e.message}")
     }
-
     return positions
 }
 
@@ -184,7 +182,6 @@ private fun findMoveFromSan(board: Board, san: String): Move? {
             return move
         }
     }
-
     return null
 }
 
@@ -243,9 +240,7 @@ private fun matchesSan(move: Move, san: String, board: Board): Boolean {
                 return false
             }
         }
-
         return true
     }
-
     return false
 }

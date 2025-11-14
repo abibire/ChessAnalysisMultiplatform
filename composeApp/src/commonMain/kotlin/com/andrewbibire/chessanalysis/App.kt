@@ -261,6 +261,15 @@ fun ChessAnalysisApp(context: Any?) {
         pgn?.let { generateFensFromPgn(it) }?.toMutableList() ?: mutableListOf()
     }
 
+    // Store original analyzed positions to preserve analysis when user makes moves
+    var originalPositions by remember { mutableStateOf<List<Position>>(emptyList()) }
+
+    // Track where user branched off from the original analysis (null if no branching)
+    var branchPointIndex by remember { mutableIntStateOf(-1) }
+
+    // Derived state: are we currently on an alternate path?
+    val isOnAlternatePath = branchPointIndex >= 0
+
     // State for click-to-move functionality
     var selectedSquare by remember { mutableStateOf<String?>(null) }
     var legalMovesForSelected by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -331,7 +340,12 @@ fun ChessAnalysisApp(context: Any?) {
                     sanNotation = uciToSan("$fromSquare$toSquare", currentPosition.fenString)
                 )
 
-                // Remove all positions after current index (clearing any existing analysis moves)
+                // If not already on an alternate path and original analysis exists, mark branch point
+                if (!isOnAlternatePath && originalPositions.isNotEmpty()) {
+                    branchPointIndex = safeCurrentIndex
+                }
+
+                // Remove all positions after current index (creating the branch)
                 while (positions.size > safeCurrentIndex + 1) {
                     positions.removeAt(positions.size - 1)
                 }
@@ -471,6 +485,16 @@ fun ChessAnalysisApp(context: Any?) {
         isPlaying = false
     }
 
+    // Automatically restore original analysis when navigating back to or before branch point
+    LaunchedEffect(currentIndex, branchPointIndex) {
+        if (isOnAlternatePath && currentIndex <= branchPointIndex && originalPositions.isNotEmpty()) {
+            // User navigated back to the branch point, restore original analysis
+            positions.clear()
+            positions.addAll(originalPositions)
+            branchPointIndex = -1
+        }
+    }
+
     // Auto-flip board based on searched player's color
     // If they're playing Black, flip the board so Black is at the bottom
     LaunchedEffect(isSearchedPlayerWhite, pgn, isChessComGame, isLichessGame) {
@@ -490,12 +514,15 @@ fun ChessAnalysisApp(context: Any?) {
         val book: Int = 0
     )
 
-    // Calculate stats when analysis is completed
+    // Calculate stats when analysis is completed - ALWAYS use original analyzed positions
     val (whiteStats, blackStats) = remember(analysisCompleted) {
         val white = mutableMapOf<String, Int>()
         val black = mutableMapOf<String, Int>()
 
-        positions.forEachIndexed { index, position ->
+        // Use originalPositions for stats, not current positions (which may have user moves)
+        val positionsToAnalyze = if (originalPositions.isNotEmpty()) originalPositions else positions
+
+        positionsToAnalyze.forEachIndexed { index, position ->
             if (index > 0) { // Skip initial position
                 position.classification?.let { classification ->
                     // Determine who made the move: odd indices = white moves, even indices = black moves
@@ -570,6 +597,9 @@ fun ChessAnalysisApp(context: Any?) {
             isEvaluating = true
             currentIndex = 0
             analysisCompleted = 0
+            // Reset branch tracking when new game is loaded
+            branchPointIndex = -1
+            originalPositions = emptyList()
             delay(500)
             try {
                 withContext(Dispatchers.Default) {
@@ -586,6 +616,8 @@ fun ChessAnalysisApp(context: Any?) {
                 // Only classify if we completed the full analysis (not cancelled)
                 if (isActive) {
                     classifyPositions(positions)
+                    // Save the original analyzed positions
+                    originalPositions = positions.toList()
                     analysisCompleted++ // Trigger stats recalculation
                 }
             } catch (e: Exception) {
