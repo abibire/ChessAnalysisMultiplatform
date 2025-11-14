@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -266,7 +267,11 @@ fun ChessSquare(
                     }
                 )
             }
-            .clickable { onClick() },
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
         contentAlignment = Alignment.Center
     ) {
         if (piece.isNotEmpty()) {
@@ -289,15 +294,28 @@ fun ChessSquare(
             }
         }
 
-        // Draw dot for legal move squares
+        // Draw indicator for legal move squares (chess.com style)
         if (isLegalMove) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val radius = if (piece.isNotEmpty()) size.width * 0.15f else size.width * 0.25f
-                drawCircle(
-                    color = Color(0x60000000),  // Semi-transparent black
-                    radius = radius,
-                    center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
-                )
+                if (piece.isNotEmpty()) {
+                    // Capture: draw hollow ring around the edge
+                    val strokeWidth = size.width * 0.08f
+                    val radius = (size.width / 2) - (strokeWidth / 2)
+                    drawCircle(
+                        color = Color(0x60000000),  // Semi-transparent black
+                        radius = radius,
+                        center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+                    )
+                } else {
+                    // Empty square: draw small filled dot in center
+                    val radius = size.width * 0.15f
+                    drawCircle(
+                        color = Color(0x60000000),  // Semi-transparent black
+                        radius = radius,
+                        center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+                    )
+                }
             }
         }
     }

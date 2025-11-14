@@ -399,7 +399,8 @@ fun ChessAnalysisApp(context: Any?) {
 
     // Click handler for board squares
     val onSquareClick: (String) -> Unit = onSquareClick@{ clickedSquare ->
-        if (positions.isEmpty()) return@onSquareClick
+        // Don't allow interaction until initial PGN analysis is complete
+        if (isEvaluating || positions.isEmpty()) return@onSquareClick
 
         val currentPosition = positions[safeCurrentIndex]
 
@@ -431,14 +432,14 @@ fun ChessAnalysisApp(context: Any?) {
 
     // Drag handlers - returns true if drag should be allowed
     val canStartDrag: (String) -> Boolean = { fromSquare ->
-        if (positions.isNotEmpty()) {
+        // Don't allow dragging until initial PGN analysis is complete
+        if (isEvaluating || positions.isEmpty()) {
+            false
+        } else {
             val currentPosition = positions[safeCurrentIndex]
             val moves = getLegalMovesForSquare(currentPosition.fenString, fromSquare)
             println("CAN_START_DRAG: fromSquare=$fromSquare, fen=${currentPosition.fenString.take(50)}, moves=$moves, isEmpty=${moves.isEmpty()}")
             moves.isNotEmpty()
-        } else {
-            println("CAN_START_DRAG: positions is empty")
-            false
         }
     }
 
