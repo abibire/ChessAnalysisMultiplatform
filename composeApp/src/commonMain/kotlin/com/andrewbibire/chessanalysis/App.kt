@@ -100,6 +100,8 @@ fun ChessAnalysisApp(context: Any?) {
 
     var currentIndex by remember { mutableIntStateOf(0) }
     var isEvaluating by remember { mutableStateOf(false) }
+    var analysisProgress by remember { mutableIntStateOf(0) }
+    var analysisTotalMoves by remember { mutableIntStateOf(0) }
     var isPlaying by remember { mutableStateOf(false) }
     var isBoardFlipped by remember { mutableStateOf(false) }
     var analysisCompleted by remember { mutableStateOf(0) }
@@ -663,6 +665,8 @@ fun ChessAnalysisApp(context: Any?) {
             isEvaluating = true
             currentIndex = 0
             analysisCompleted = 0
+            analysisProgress = 0
+            analysisTotalMoves = positions.size
             // Reset branch tracking when new game is loaded
             branchPointIndex = -1
             originalPositions = emptyList()
@@ -670,13 +674,14 @@ fun ChessAnalysisApp(context: Any?) {
             delay(500)
             try {
                 withContext(Dispatchers.Default) {
-                    for (position in positions) {
+                    for ((index, position) in positions.withIndex()) {
                         // Check if coroutine is still active (allows cancellation)
                         if (!isActive) break
 
                         val result = stockfishEngine.evaluatePosition(position.fenString, depth = analysisDepth)
                         position.score = result.score
                         position.bestMove = result.bestMove
+                        analysisProgress = index + 1
                     }
                 }
 
@@ -692,6 +697,8 @@ fun ChessAnalysisApp(context: Any?) {
             } finally {
                 // Always reset evaluating state, even if cancelled or error
                 isEvaluating = false
+                analysisProgress = 0
+                analysisTotalMoves = 0
             }
         }
     }
@@ -1270,7 +1277,11 @@ fun ChessAnalysisApp(context: Any?) {
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = "Analyzing...",
+                                        text = if (isEvaluating && analysisTotalMoves > 0) {
+                                            "Analyzing... ($analysisProgress/$analysisTotalMoves moves)"
+                                        } else {
+                                            "Analyzing..."
+                                        },
                                         fontSize = bodyFontSize,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
