@@ -1969,6 +1969,7 @@ fun ChessAnalysisApp(context: Any?) {
                             text = "Higher values may lead to slower analysis",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
