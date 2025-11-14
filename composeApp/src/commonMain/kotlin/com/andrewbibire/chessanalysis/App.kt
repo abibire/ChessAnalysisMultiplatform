@@ -270,6 +270,12 @@ fun ChessAnalysisApp(context: Any?) {
     // Derived state: are we currently on an alternate path?
     val isOnAlternatePath = branchPointIndex >= 0
 
+    // Cache for analyzed alternate path positions (key = FEN, value = analyzed Position)
+    val alternatePathCache = remember { mutableMapOf<String, Position>() }
+
+    // Track which positions (by FEN) are currently being analyzed in alternate path
+    val analyzingFens = remember { mutableStateOf(setOf<String>()) }
+
     // State for click-to-move functionality
     var selectedSquare by remember { mutableStateOf<String?>(null) }
     var legalMovesForSelected by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -368,13 +374,11 @@ fun ChessAnalysisApp(context: Any?) {
                 // Use the EXACT SAME sound detection logic as the regular analysis flow
                 // Parse SAN notation to detect move types
                 val san = newPosition.sanNotation ?: ""
-                println("FREE MOVE: UCI=$uciMove, SAN=$san")
                 val isCapture = san.contains('x')
                 val isPromotion = san.contains('=')
                 val isCheck = san.contains('+') && !san.contains('#')
                 val isCastling = san.startsWith("O-O")
                 val isCheckmate = san.contains('#')
-                println("FREE MOVE SOUNDS: isCapture=$isCapture, isPromotion=$isPromotion, isCheck=$isCheck, isCastling=$isCastling, isCheckmate=$isCheckmate")
 
                 soundManager.playMoveSound(
                     isCapture = isCapture,
@@ -504,6 +508,8 @@ fun ChessAnalysisApp(context: Any?) {
             positions.clear()
             positions.addAll(originalPositions)
             branchPointIndex = -1
+            // Clear the alternate path cache when returning to original analysis
+            alternatePathCache.clear()
         }
     }
 
@@ -612,6 +618,7 @@ fun ChessAnalysisApp(context: Any?) {
             // Reset branch tracking when new game is loaded
             branchPointIndex = -1
             originalPositions = emptyList()
+            alternatePathCache.clear()
             delay(500)
             try {
                 withContext(Dispatchers.Default) {
@@ -647,6 +654,85 @@ fun ChessAnalysisApp(context: Any?) {
             currentIndex++
         } else if (currentIndex >= positions.lastIndex) {
             isPlaying = false
+        }
+    }
+
+    // Analyze alternate path positions in the background
+    LaunchedEffect(positions.size, isOnAlternatePath, stockfishEngine) {
+        if (isOnAlternatePath && positions.isNotEmpty()) {
+            // Analyze positions that aren't in the cache yet
+            for (i in (branchPointIndex + 1) until positions.size) {
+                val position = positions[i]
+
+                // Check if this position is already analyzed in cache
+                val cached = alternatePathCache[position.fenString]
+                if (cached != null) {
+                    // Use cached analysis instantly - replace the position to trigger recomposition
+                    positions[i] = cached.copy()
+                } else {
+                    // Mark this position as being analyzed
+                    analyzingFens.value = analyzingFens.value + position.fenString
+
+                    // Analyze this position (computation happens on Default dispatcher inside the engine)
+                    if (isActive) {
+                        val result = stockfishEngine.evaluatePosition(position.fenString, depth = 14)
+
+                        // Create a new position with analysis results
+                        var analyzedPosition = position.copy(
+                            score = result.score,
+                            bestMove = result.bestMove
+                        )
+
+                        // Classify the move if we have a previous position
+                        if (i > 0) {
+                            val prevPosition = positions[i - 1]
+
+                            // Check if it's a book move
+                            val boardFen = analyzedPosition.fenString.substringBefore(' ')
+                            val openingName = OpeningBook.lookupBoardFen(boardFen)
+                            if (openingName != null) {
+                                analyzedPosition = analyzedPosition.copy(
+                                    isBook = true,
+                                    openingName = openingName,
+                                    classification = "Book"
+                                )
+                            } else {
+                                // Check if it's a forced move
+                                val onlyMove = hasOnlyOneLegalMove(prevPosition.fenString)
+                                if (onlyMove) {
+                                    analyzedPosition = analyzedPosition.copy(
+                                        forced = true,
+                                        classification = "Forced"
+                                    )
+                                } else {
+                                    // Classify based on evaluation
+                                    val moveColour = if (isWhiteToMove(prevPosition.fenString)) MoveColour.WHITE else MoveColour.BLACK
+                                    val prevEval = parseEvaluationWhiteCentric(prevPosition.score, prevPosition.fenString)
+                                    val curEval = parseEvaluationWhiteCentric(analyzedPosition.score, analyzedPosition.fenString)
+                                    val classification = if (prevEval != null && curEval != null) {
+                                        classifyPointLoss(prevEval, curEval, moveColour, analyzedPosition.playedMove, prevPosition.bestMove)
+                                    } else {
+                                        null
+                                    }
+                                    analyzedPosition = analyzedPosition.copy(
+                                        forced = false,
+                                        classification = classification
+                                    )
+                                }
+                            }
+                        }
+
+                        // Cache this analyzed position
+                        alternatePathCache[analyzedPosition.fenString] = analyzedPosition
+
+                        // Replace the position in the list to trigger recomposition
+                        positions[i] = analyzedPosition
+
+                        // Clear the analyzing marker
+                        analyzingFens.value = analyzingFens.value - position.fenString
+                    }
+                }
+            }
         }
     }
 
@@ -708,11 +794,27 @@ fun ChessAnalysisApp(context: Any?) {
         }
     }
 
-    val badgeUci = remember(currentIndex, positions) {
-        positions.getOrNull(currentIndex)?.playedMove
+    // Determine if the current position is being analyzed
+    val isCurrentPositionAnalyzing = isEvaluating ||
+        (isOnAlternatePath && positions.getOrNull(safeCurrentIndex)?.let {
+            it.fenString in analyzingFens.value
+        } == true)
+
+    // Get current position and extract relevant data for reactive UI updates
+    val currentPosition = positions.getOrNull(safeCurrentIndex)
+    val currentScore = currentPosition?.score
+    val currentClassification = currentPosition?.classification
+
+    val badgeUci = remember(currentIndex, currentPosition?.playedMove) {
+        currentPosition?.playedMove
     }
-    val badgeDrawable = remember(currentIndex, positions) {
-        classificationBadge(positions.getOrNull(currentIndex)?.classification)
+    val badgeDrawable = remember(currentIndex, currentClassification, isCurrentPositionAnalyzing) {
+        // Don't show badge while analyzing (either original or alternate path)
+        if (isCurrentPositionAnalyzing) {
+            null
+        } else {
+            classificationBadge(currentClassification)
+        }
     }
 
     if (userProfile != null) {
@@ -798,11 +900,20 @@ fun ChessAnalysisApp(context: Any?) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (pgn != null && positions.isNotEmpty()) {
+                    val currentPosition = positions[safeCurrentIndex]
+
+                    // Only show game termination if at the last move of the ORIGINAL game
+                    val isLastOfOriginalGame = if (originalPositions.isNotEmpty()) {
+                        safeCurrentIndex == originalPositions.lastIndex && !isOnAlternatePath
+                    } else {
+                        safeCurrentIndex == positions.lastIndex
+                    }
+
                     EvaluationBar(
-                        score = if (isEvaluating) null else positions[safeCurrentIndex].score,
-                        fen = positions[safeCurrentIndex].fenString,
+                        score = if (isCurrentPositionAnalyzing) null else currentPosition.score,
+                        fen = currentPosition.fenString,
                         gameResult = gameResult,
-                        isLastMove = safeCurrentIndex == positions.lastIndex,
+                        isLastMove = isLastOfOriginalGame,
                         modifier = Modifier.fillMaxWidth().height(24.dp)
                     )
                 } else {
@@ -853,8 +964,16 @@ fun ChessAnalysisApp(context: Any?) {
                         contentAlignment = Alignment.Center
                     ) {
                         if (pgn != null && positions.isNotEmpty()) {
-                            val cls = positions[safeCurrentIndex].classification ?: ""
-                            val suppressArrow = cls == "Best" || cls == "Book" || cls == "Forced"
+                            // Suppress arrow when:
+                            // - Position is being analyzed
+                            // - Classification is Best, Book, or Forced
+                            // - On alternate path but classification not yet set (still analyzing)
+                            val suppressArrow = isCurrentPositionAnalyzing ||
+                                currentClassification == "Best" ||
+                                currentClassification == "Book" ||
+                                currentClassification == "Forced" ||
+                                (isOnAlternatePath && currentClassification == null)
+
                             val arrow = if (!suppressArrow && safeCurrentIndex > 0)
                                 positions[safeCurrentIndex - 1].bestMove?.takeIf { it.length >= 4 }?.substring(0, 4)
                             else null
@@ -1047,7 +1166,7 @@ fun ChessAnalysisApp(context: Any?) {
                             }
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            if (isEvaluating) {
+                            if (isCurrentPositionAnalyzing) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(32.dp),
                                     color = BoardDark
@@ -1059,8 +1178,14 @@ fun ChessAnalysisApp(context: Any?) {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             } else {
-                                val isLast = safeCurrentIndex == positions.lastIndex
-                                if (isLast) {
+                                // Only show game termination if at the last move of the ORIGINAL game
+                                val isLastOfOriginalGame = if (originalPositions.isNotEmpty()) {
+                                    safeCurrentIndex == originalPositions.lastIndex && !isOnAlternatePath
+                                } else {
+                                    safeCurrentIndex == positions.lastIndex
+                                }
+
+                                if (isLastOfOriginalGame) {
                                     Text(
                                         text = gameTermination,
                                         fontSize = bodyFontSize,
@@ -1123,9 +1248,9 @@ fun ChessAnalysisApp(context: Any?) {
                                     }
                                 } else {
                                     val displayScore = normalizeScoreForDisplay(
-                                        positions[safeCurrentIndex].score,
-                                        positions[safeCurrentIndex].fenString,
-                                        isLast
+                                        currentScore,
+                                        currentPosition?.fenString ?: "",
+                                        isLastOfOriginalGame
                                     )
 
                                     Text(
@@ -1138,9 +1263,9 @@ fun ChessAnalysisApp(context: Any?) {
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                positions[safeCurrentIndex].classification?.let { c ->
-                                    val playedMoveNotation = if (safeCurrentIndex > 0) {
-                                        positions[safeCurrentIndex].playedMove?.let { uci ->
+                                currentClassification?.let { c ->
+                                    val playedMoveNotation = if (safeCurrentIndex > 0 && currentPosition != null) {
+                                        currentPosition.playedMove?.let { uci ->
                                             uciToSan(uci, positions[safeCurrentIndex - 1].fenString)
                                         } ?: "This move"
                                     } else {
