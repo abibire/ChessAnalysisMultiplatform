@@ -835,7 +835,7 @@ fun ChessAnalysisApp(context: Any?) {
     // Determine if the current position is being analyzed
     val isCurrentPositionAnalyzing = isEvaluating ||
             (isOnAlternatePath && positions.getOrNull(safeCurrentIndex)?.let {
-                it.fenString in analyzingFens.value
+                it.fenString in analyzingFens.value || it.score == null
             } == true)
 
     // Get current position and extract relevant data for reactive UI updates
