@@ -330,14 +330,23 @@ fun ChessAnalysisApp(context: Any?) {
             }
 
             if (move != null) {
+                val isPromotionMove = move.promotion != com.github.bhlangonijr.chesslib.Piece.NONE
+
                 board.doMove(move)
                 val newFen = board.fen
+
+                // Build UCI notation with promotion piece if needed
+                val uciMove = if (isPromotionMove) {
+                    "$fromSquare$toSquare${move.promotion.fenSymbol.lowercase()}"
+                } else {
+                    "$fromSquare$toSquare"
+                }
 
                 // Create a new position with the updated FEN
                 val newPosition = Position(
                     fenString = newFen,
-                    playedMove = "$fromSquare$toSquare",
-                    sanNotation = uciToSan("$fromSquare$toSquare", currentPosition.fenString)
+                    playedMove = uciMove,
+                    sanNotation = uciToSan(uciMove, currentPosition.fenString)
                 )
 
                 // If not already on an alternate path and original analysis exists, mark branch point
@@ -356,13 +365,16 @@ fun ChessAnalysisApp(context: Any?) {
                 // Move to the new position
                 currentIndex++
 
-                // Play move sound
-                val sanNotation = newPosition.sanNotation ?: ""
-                val isCapture = sanNotation.contains('x')
-                val isPromotion = sanNotation.contains('=')
-                val isCheckmate = board.isMated
-                val isCheck = board.isKingAttacked && !isCheckmate
-                val isCastling = sanNotation.startsWith("O-O")
+                // Use the EXACT SAME sound detection logic as the regular analysis flow
+                // Parse SAN notation to detect move types
+                val san = newPosition.sanNotation ?: ""
+                println("FREE MOVE: UCI=$uciMove, SAN=$san")
+                val isCapture = san.contains('x')
+                val isPromotion = san.contains('=')
+                val isCheck = san.contains('+') && !san.contains('#')
+                val isCastling = san.startsWith("O-O")
+                val isCheckmate = san.contains('#')
+                println("FREE MOVE SOUNDS: isCapture=$isCapture, isPromotion=$isPromotion, isCheck=$isCheck, isCastling=$isCastling, isCheckmate=$isCheckmate")
 
                 soundManager.playMoveSound(
                     isCapture = isCapture,
@@ -656,17 +668,22 @@ fun ChessAnalysisApp(context: Any?) {
                 val isCheck = san.contains('+') && !san.contains('#')
                 val isCastling = san.startsWith("O-O")
 
-                // Detect if we're at the last move
-                val isLastMove = currentIndex == positions.lastIndex
+                // Detect if we're at the last move of the ORIGINAL game (not just at end of current positions)
+                val isLastMoveOfOriginalGame = if (originalPositions.isNotEmpty()) {
+                    currentIndex == originalPositions.lastIndex && !isOnAlternatePath
+                } else {
+                    currentIndex == positions.lastIndex
+                }
 
                 // Detect checkmate - either from SAN notation or game termination
-                val isCheckmate = (san.contains('#') || (isLastMove && (
+                val isCheckmate = (san.contains('#') || (isLastMoveOfOriginalGame && (
                     gameTermination.contains("checkmate", ignoreCase = true) ||
                     gameTermination.contains("mate", ignoreCase = true)
                 )))
 
                 // Detect game end without checkmate (resignation, timeout, draw, etc.)
-                val isGameEndNoCheckmate = isLastMove && !isCheckmate && (
+                // Only consider game ending if we're at the last move of the original game, not free moves
+                val isGameEndNoCheckmate = isLastMoveOfOriginalGame && !isCheckmate && (
                     gameTermination.contains("resignation", ignoreCase = true) ||
                     gameTermination.contains("timeout", ignoreCase = true) ||
                     gameTermination.contains("draw", ignoreCase = true) ||

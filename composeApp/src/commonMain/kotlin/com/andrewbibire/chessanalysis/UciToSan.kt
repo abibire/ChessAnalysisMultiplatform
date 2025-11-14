@@ -16,6 +16,13 @@ fun uciToSan(uci: String, fen: String): String {
         val from = Square.valueOf(cleanUci.substring(0, 2).uppercase())
         val to = Square.valueOf(cleanUci.substring(2, 4).uppercase())
 
+        val piece = board.getPiece(from)
+
+        // Detect castling from UCI notation (king moving to specific squares)
+        val isCastling = piece.pieceType?.name == "KING" && (
+            cleanUci == "e1g1" || cleanUci == "e1c1" || cleanUci == "e8g8" || cleanUci == "e8c8"
+        )
+
         // Only treat as promotion if length is exactly 5 and 5th char is a valid promotion piece
         val isPromotion = cleanUci.length == 5 && cleanUci[4].lowercaseChar() in listOf('q', 'r', 'b', 'n')
 
@@ -32,14 +39,13 @@ fun uciToSan(uci: String, fen: String): String {
             Move(from, to)
         }
 
-        val piece = board.getPiece(from)
         val captureNotation = if (board.getPiece(to) != Piece.NONE) "x" else ""
 
         board.doMove(move, true)
 
         val notation = when {
-            move.toString().contains("O-O-O") -> "O-O-O"
-            move.toString().contains("O-O") -> "O-O"
+            isCastling && (cleanUci.endsWith("c1") || cleanUci.endsWith("c8")) -> "O-O-O"
+            isCastling -> "O-O"
             piece.pieceType?.name == "PAWN" -> {
                 val file = from.toString()[0].lowercase()
                 val promotionSuffix = if (isPromotion) "=${cleanUci[4].uppercaseChar()}" else ""
