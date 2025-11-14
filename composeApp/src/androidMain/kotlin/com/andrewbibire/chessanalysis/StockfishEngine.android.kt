@@ -12,6 +12,7 @@ actual class StockfishEngine actual constructor(context: Any?) {
     private var reader: java.io.BufferedReader? = null
 
     actual suspend fun evaluatePosition(fen: String, depth: Int): EngineResult = withContext(Dispatchers.IO) {
+        println("ANDROID Stockfish: evaluatePosition($fen, depth=$depth)")
         initializeIfNeeded()
 
         writer?.write("position fen $fen\n")
@@ -37,6 +38,7 @@ actual class StockfishEngine actual constructor(context: Any?) {
             }
         }
 
+        println("ANDROID Stockfish: Evaluation complete - score=$lastScore, bestMove=$bestMove")
         EngineResult(lastScore ?: "0.00", bestMove)
     }
 

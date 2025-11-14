@@ -1,8 +1,13 @@
 package com.andrewbibire.chessanalysis
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -39,6 +44,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -101,6 +107,10 @@ fun ChessAnalysisApp(context: Any?) {
     var selectedPlatform by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.Platform?>(null) }
     var userProfile by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.UserProfile?>(null) }
     var isLoadingProfile by remember { mutableStateOf(false) }
+
+    // Depth settings
+    var showDepthDialog by remember { mutableStateOf(false) }
+    var analysisDepth by remember { mutableIntStateOf(com.andrewbibire.chessanalysis.online.UserPreferences.getAnalysisDepth()) }
 
     // Load last username when entering input mode
     LaunchedEffect(showUsernameInput) {
@@ -664,13 +674,13 @@ fun ChessAnalysisApp(context: Any?) {
                         // Check if coroutine is still active (allows cancellation)
                         if (!isActive) break
 
-                        val result = stockfishEngine.evaluatePosition(position.fenString, depth = 14)
+                        val result = stockfishEngine.evaluatePosition(position.fenString, depth = analysisDepth)
                         position.score = result.score
                         position.bestMove = result.bestMove
                     }
                 }
 
-                // Only classify if we completed the full analysis (not cancelled)
+                // Only classify if we completed the full analysis (nÏot cancelled)
                 if (isActive) {
                     classifyPositions(positions)
                     // Save the original analyzed positions
@@ -713,7 +723,7 @@ fun ChessAnalysisApp(context: Any?) {
 
                     // Analyze this position (computation happens on Default dispatcher inside the engine)
                     if (isActive) {
-                        val result = stockfishEngine.evaluatePosition(position.fenString, depth = 14)
+                        val result = stockfishEngine.evaluatePosition(position.fenString, depth = analysisDepth)
 
                         // Create a new position with analysis results
                         var analyzedPosition = position.copy(
@@ -1172,6 +1182,36 @@ fun ChessAnalysisApp(context: Any?) {
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Button(
+                                    onClick = { showDepthDialog = true },
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.7f)
+                                        .height(64.dp)
+                                        .shadow(
+                                            elevation = 4.dp,
+                                            shape = RoundedCornerShape(16.dp)
+                                        ),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF3d3d3d),
+                                        contentColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Settings,
+                                        contentDescription = "Depth Settings",
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = "Depth",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         } else {
                             Column(
@@ -1412,6 +1452,22 @@ fun ChessAnalysisApp(context: Any?) {
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                EvaluationButton(
+                                    onClick = { showDepthDialog = true },
+                                    enabled = true,
+                                    modifier = Modifier
+                                        .height(32.dp)
+                                        .width(64.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Settings,
+                                        contentDescription = "Depth Settings",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
                                 EvaluationButton(
                                     onClick = { showBottomSheet = true },
                                     enabled = true,
@@ -1808,6 +1864,118 @@ fun ChessAnalysisApp(context: Any?) {
                     }
                 }
             }
+        }
+
+        // Depth Settings Dialog
+        if (showDepthDialog) {
+            AlertDialog(
+                onDismissRequest = { showDepthDialog = false },
+                title = {
+                    Text(
+                        text = "Analysis Depth",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Depth value display
+                        Text(
+                            text = "$analysisDepth",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = BoardDark
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Slider with icons
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            // Lightning bolt icon (left side - quick analysis, min value)
+                            Icon(
+                                imageVector = Icons.Filled.Bolt,
+                                contentDescription = "Quick analysis",
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clickable { analysisDepth = 5 },
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            // Slider
+                            Slider(
+                                value = analysisDepth.toFloat(),
+                                onValueChange = { analysisDepth = it.roundToInt() },
+                                valueRange = 5f..20f,
+                                modifier = Modifier.weight(1f),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = BoardDark,
+                                    activeTrackColor = BoardDark,
+                                    inactiveTrackColor = BoardDark.copy(alpha = 0.3f)
+                                ),
+                                track = { sliderState ->
+                                    SliderDefaults.Track(
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = BoardDark,
+                                            activeTrackColor = BoardDark,
+                                            inactiveTrackColor = BoardDark.copy(alpha = 0.3f)
+                                        ),
+                                        sliderState = sliderState,
+                                        drawStopIndicator = null
+                                    )
+                                }
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            // Network Intelligence History icon (right side - thorough analysis, max value)
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clickable { analysisDepth = 20 }
+                            ) {
+                                MaterialSymbol(
+                                    name = "network_intelligence_history",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    sizeSp = 28f
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Disclaimer
+                        Text(
+                            text = "Higher values may lead to slower analysis",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            com.andrewbibire.chessanalysis.online.UserPreferences.saveAnalysisDepth(analysisDepth)
+                            showDepthDialog = false
+                        },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = BoardDark
+                        )
+                    ) {
+                        Text("OK")
+                    }
+                }
+            )
         }
     }
 }
