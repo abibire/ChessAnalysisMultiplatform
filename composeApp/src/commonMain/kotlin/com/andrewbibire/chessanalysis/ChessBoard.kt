@@ -3,15 +3,22 @@ package com.andrewbibire.chessanalysis
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.LocalPlatformContext
@@ -22,6 +29,9 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 
+// Data class to track square positions
+data class SquareBounds(val position: androidx.compose.ui.geometry.Offset, val size: IntSize)
+
 @Composable
 fun Chessboard(
     fen: String,
@@ -29,9 +39,43 @@ fun Chessboard(
     badgeUci: String? = null,
     badgeDrawable: DrawableResource? = null,
     flipped: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selectedSquare: String? = null,
+    legalMoves: List<String> = emptyList(),
+    onSquareClick: ((String) -> Unit)? = null,
+    canStartDrag: ((String) -> Boolean)? = null,
+    onDragStart: ((String, String) -> Unit)? = null,
+    onDragEnd: ((String?) -> Unit)? = null,
+    draggedFromSquare: String? = null
 ) {
     val board = parseFenToBoard(fen)
+
+    // Track all square positions
+    val squarePositions = remember { mutableStateMapOf<String, SquareBounds>() }
+
+    // Clear stale positions when board flips (UCI-to-position mapping changes)
+    LaunchedEffect(flipped) {
+        squarePositions.clear()
+    }
+
+    // Function to find which square contains a position
+    fun findSquareAt(position: androidx.compose.ui.geometry.Offset): String? {
+        println("FIND_SQUARE: Looking for square at position $position, flipped=$flipped")
+        println("FIND_SQUARE: Available squares: ${squarePositions.keys.sorted()}")
+        val result = squarePositions.entries.firstOrNull { (square, bounds) ->
+            val contains = position.x >= bounds.position.x &&
+                position.x < bounds.position.x + bounds.size.width &&
+                position.y >= bounds.position.y &&
+                position.y < bounds.position.y + bounds.size.height
+            if (contains) {
+                println("FIND_SQUARE: Found match - square=$square, bounds=[${bounds.position.x},${bounds.position.x + bounds.size.width}) x [${bounds.position.y},${bounds.position.y + bounds.size.height})")
+            }
+            contains
+        }?.key
+        println("FIND_SQUARE: Result = $result")
+        return result
+    }
+
     BoxWithConstraints(modifier = modifier) {
         val squareW: Dp = maxWidth / 8
         val squareH: Dp = maxHeight / 8
@@ -44,9 +88,28 @@ fun Chessboard(
                             val displayCol = if (flipped) 7 - col else col
                             val isLight = (row + col) % 2 == 0
                             val piece = board[displayRow][displayCol]
+                            val squareUci = coordsToUci(displayRow, displayCol)
+                            val isSelected = squareUci == selectedSquare
+                            val isLegalMove = legalMoves.contains(squareUci)
+                            val isDraggedFrom = squareUci == draggedFromSquare
+
                             ChessSquare(
                                 piece = piece,
                                 isLight = isLight,
+                                isSelected = isSelected,
+                                isLegalMove = isLegalMove,
+                                isDraggedFrom = isDraggedFrom,
+                                squareUci = squareUci,
+                                onClick = { onSquareClick?.invoke(squareUci) },
+                                canStartDrag = { canStartDrag?.invoke(squareUci) ?: true },
+                                onDragStart = { onDragStart?.invoke(squareUci, piece) },
+                                onDragEnd = { dropPosition ->
+                                    val targetSquare = findSquareAt(dropPosition)
+                                    onDragEnd?.invoke(targetSquare)
+                                },
+                                onPositionChanged = { position, size ->
+                                    squarePositions[squareUci] = SquareBounds(position, size)
+                                },
                                 modifier = Modifier.weight(1f).fillMaxHeight()
                             )
                         }
@@ -54,7 +117,13 @@ fun Chessboard(
                 }
             }
             if (arrowUci != null && arrowUci.length >= 4) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
+                Canvas(modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        // Ensure the canvas doesn't block touch events
+                        compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.ModulateAlpha
+                    }
+                ) {
                     val cw = size.width / 8f
                     val ch = size.height / 8f
                     val from = uciToCoords(arrowUci.substring(0, 2))
@@ -125,9 +194,79 @@ fun Chessboard(
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable
-fun ChessSquare(piece: String, isLight: Boolean, modifier: Modifier = Modifier) {
+fun ChessSquare(
+    piece: String,
+    isLight: Boolean,
+    isSelected: Boolean = false,
+    isLegalMove: Boolean = false,
+    isDraggedFrom: Boolean = false,
+    squareUci: String = "",
+    onClick: () -> Unit = {},
+    canStartDrag: () -> Boolean = { true },
+    onDragStart: () -> Unit = {},
+    onDragEnd: (androidx.compose.ui.geometry.Offset) -> Unit = {},
+    onPositionChanged: (androidx.compose.ui.geometry.Offset, IntSize) -> Unit = { _, _ -> },
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor = when {
+        isSelected -> Color(0xFFBBCA44)  // Highlight selected square
+        isLight -> Color(0xFFEEEED2)
+        else -> Color(0xFF769656)
+    }
+
+    var dragStartOffset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    var currentDragOffset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    var squarePosition by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+
     Box(
-        modifier = modifier.background(if (isLight) Color(0xFFEEEED2) else Color(0xFF769656)),
+        modifier = modifier
+            .background(backgroundColor)
+            .onGloballyPositioned { coordinates ->
+                val newPos = coordinates.positionInRoot()
+                val newSize = coordinates.size
+                squarePosition = newPos
+                onPositionChanged(newPos, newSize)
+            }
+            .pointerInput(squareUci, piece, canStartDrag, onDragStart, onDragEnd) {
+                detectDragGestures(
+                    onDragStart = { startOffset ->
+                        println("DRAG_START: square=$squareUci, piece='$piece', isEmpty=${piece.isEmpty()}")
+                        if (piece.isNotEmpty() && canStartDrag()) {
+                            dragStartOffset = startOffset
+                            currentDragOffset = androidx.compose.ui.geometry.Offset.Zero
+                            onDragStart()
+                            println("DRAG_START: Called onDragStart for $squareUci")
+                        } else {
+                            println("DRAG_START: Piece is empty or cannot start drag, not calling onDragStart")
+                        }
+                    },
+                    onDragEnd = {
+                        println("DRAG_END_CALLBACK: square=$squareUci")
+                        if (piece.isNotEmpty()) {
+                            // Calculate absolute drop position
+                            val dropPosition = squarePosition + dragStartOffset + currentDragOffset
+                            println("DRAG_END_CALC: square=$squareUci, squarePosition=$squarePosition, dragStartOffset=$dragStartOffset, currentDragOffset=$currentDragOffset, dropPosition=$dropPosition")
+                            onDragEnd(dropPosition)
+                        } else {
+                            // Even if piece is empty now, still clear state
+                            onDragEnd(androidx.compose.ui.geometry.Offset.Zero)
+                        }
+                        currentDragOffset = androidx.compose.ui.geometry.Offset.Zero
+                        dragStartOffset = androidx.compose.ui.geometry.Offset.Zero
+                    },
+                    onDragCancel = {
+                        println("DRAG_CANCEL: square=$squareUci")
+                        // Always call onDragEnd to clear state, even on cancel
+                        onDragEnd(androidx.compose.ui.geometry.Offset.Zero)
+                        currentDragOffset = androidx.compose.ui.geometry.Offset.Zero
+                        dragStartOffset = androidx.compose.ui.geometry.Offset.Zero
+                    },
+                    onDrag = { _, dragAmount ->
+                        currentDragOffset += dragAmount
+                    }
+                )
+            }
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         if (piece.isNotEmpty()) {
@@ -140,7 +279,24 @@ fun ChessSquare(piece: String, isLight: Boolean, modifier: Modifier = Modifier) 
                         .build(),
                     contentDescription = piece,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().padding(4.dp)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(4.dp)
+                        .graphicsLayer {
+                            alpha = if (isDraggedFrom) 0.3f else 1f
+                        }
+                )
+            }
+        }
+
+        // Draw dot for legal move squares
+        if (isLegalMove) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val radius = if (piece.isNotEmpty()) size.width * 0.15f else size.width * 0.25f
+                drawCircle(
+                    color = Color(0x60000000),  // Semi-transparent black
+                    radius = radius,
+                    center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
                 )
             }
         }
@@ -187,4 +343,11 @@ fun uciToCoords(sq: String): Pair<Int, Int> {
     val file = sq[0] - 'a'
     val rank = sq[1] - '1'
     return rank to file
+}
+
+fun coordsToUci(row: Int, col: Int): String {
+    // In FEN board array: row 0 = rank 8, row 7 = rank 1
+    val file = ('a' + col)
+    val rank = ('8' - row)
+    return "$file$rank"
 }

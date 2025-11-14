@@ -58,6 +58,9 @@ import com.andrewbibire.chessanalysis.online.getCountryCode
 import dev.carlsen.flagkit.FlagKit
 import com.andrewbibire.chessanalysis.audio.ChessSoundManager
 import com.andrewbibire.chessanalysis.audio.MoveAnalyzer
+import com.github.bhlangonijr.chesslib.Board
+import com.github.bhlangonijr.chesslib.Square
+import com.github.bhlangonijr.chesslib.Piece
 
 @Composable
 fun App(context: Any? = null) {
@@ -255,11 +258,208 @@ fun ChessAnalysisApp(context: Any?) {
     }
 
     val positions = remember(pgn) {
-        pgn?.let { generateFensFromPgn(it) } ?: emptyList()
+        pgn?.let { generateFensFromPgn(it) }?.toMutableList() ?: mutableListOf()
     }
+
+    // State for click-to-move functionality
+    var selectedSquare by remember { mutableStateOf<String?>(null) }
+    var legalMovesForSelected by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    // State for drag-and-drop functionality
+    data class DragState(val fromSquare: String, val piece: String)
+    var draggedPiece by remember { mutableStateOf<DragState?>(null) }
 
     // Safe index that's always within bounds - use this instead of currentIndex directly
     val safeCurrentIndex = if (positions.isEmpty()) 0 else currentIndex.coerceIn(0, positions.lastIndex)
+
+    // Helper function to get legal moves for a piece at a square
+    fun getLegalMovesForSquare(fen: String, fromSquare: String): List<String> {
+        return try {
+            val board = Board()
+            board.loadFromFen(fen)
+            val square = Square.valueOf(fromSquare.uppercase())
+            val piece = board.getPiece(square)
+
+            // Only return moves if there's a piece at the square and it's the right color to move
+            if (piece == Piece.NONE) {
+                println("GET_LEGAL_MOVES: No piece at $fromSquare")
+                return emptyList()
+            }
+
+            val whiteToMove = isWhiteToMove(fen)
+            val pieceIsWhite = piece.pieceSide == com.github.bhlangonijr.chesslib.Side.WHITE
+
+            if (whiteToMove != pieceIsWhite) {
+                println("GET_LEGAL_MOVES: Wrong turn. whiteToMove=$whiteToMove, pieceIsWhite=$pieceIsWhite")
+                return emptyList()
+            }
+
+            val legalMoves = board.legalMoves()
+                .filter { it.from.toString().lowercase() == fromSquare }
+                .map { it.to.toString().lowercase() }
+            println("GET_LEGAL_MOVES: Found ${legalMoves.size} legal moves for $fromSquare: $legalMoves")
+            legalMoves
+        } catch (e: Exception) {
+            println("GET_LEGAL_MOVES: Exception for $fromSquare: ${e.message}")
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    // Helper function to make a move
+    fun makeMove(fromSquare: String, toSquare: String) {
+        if (positions.isEmpty()) return
+
+        val currentPosition = positions[safeCurrentIndex]
+        val board = Board()
+        board.loadFromFen(currentPosition.fenString)
+
+        try {
+            val move = board.legalMoves().find {
+                it.from.toString().lowercase() == fromSquare &&
+                it.to.toString().lowercase() == toSquare
+            }
+
+            if (move != null) {
+                board.doMove(move)
+                val newFen = board.fen
+
+                // Create a new position with the updated FEN
+                val newPosition = Position(
+                    fenString = newFen,
+                    playedMove = "$fromSquare$toSquare",
+                    sanNotation = uciToSan("$fromSquare$toSquare", currentPosition.fenString)
+                )
+
+                // Remove all positions after current index (clearing any existing analysis moves)
+                while (positions.size > safeCurrentIndex + 1) {
+                    positions.removeAt(positions.size - 1)
+                }
+
+                // Add the new position
+                positions.add(newPosition)
+
+                // Move to the new position
+                currentIndex++
+
+                // Play move sound
+                val sanNotation = newPosition.sanNotation ?: ""
+                val isCapture = sanNotation.contains('x')
+                val isPromotion = sanNotation.contains('=')
+                val isCheckmate = board.isMated
+                val isCheck = board.isKingAttacked && !isCheckmate
+                val isCastling = sanNotation.startsWith("O-O")
+
+                soundManager.playMoveSound(
+                    isCapture = isCapture,
+                    isCheck = isCheck,
+                    isCheckmate = isCheckmate,
+                    isPromotion = isPromotion,
+                    isCastling = isCastling
+                )
+            }
+        } catch (e: Exception) {
+            // Silently handle errors
+        }
+
+        // Clear selection
+        selectedSquare = null
+        legalMovesForSelected = emptyList()
+    }
+
+    // Click handler for board squares
+    val onSquareClick: (String) -> Unit = onSquareClick@{ clickedSquare ->
+        if (positions.isEmpty()) return@onSquareClick
+
+        val currentPosition = positions[safeCurrentIndex]
+
+        if (selectedSquare == null) {
+            // No piece selected - try to select a piece
+            val moves = getLegalMovesForSquare(currentPosition.fenString, clickedSquare)
+            if (moves.isNotEmpty()) {
+                selectedSquare = clickedSquare
+                legalMovesForSelected = moves
+            }
+        } else {
+            // Piece already selected
+            if (legalMovesForSelected.contains(clickedSquare)) {
+                // Clicked on a legal move - make the move
+                makeMove(selectedSquare!!, clickedSquare)
+            } else {
+                // Clicked elsewhere - try to select new piece or deselect
+                val moves = getLegalMovesForSquare(currentPosition.fenString, clickedSquare)
+                if (moves.isNotEmpty()) {
+                    selectedSquare = clickedSquare
+                    legalMovesForSelected = moves
+                } else {
+                    selectedSquare = null
+                    legalMovesForSelected = emptyList()
+                }
+            }
+        }
+    }
+
+    // Drag handlers - returns true if drag should be allowed
+    val canStartDrag: (String) -> Boolean = { fromSquare ->
+        if (positions.isNotEmpty()) {
+            val currentPosition = positions[safeCurrentIndex]
+            val moves = getLegalMovesForSquare(currentPosition.fenString, fromSquare)
+            println("CAN_START_DRAG: fromSquare=$fromSquare, fen=${currentPosition.fenString.take(50)}, moves=$moves, isEmpty=${moves.isEmpty()}")
+            moves.isNotEmpty()
+        } else {
+            println("CAN_START_DRAG: positions is empty")
+            false
+        }
+    }
+
+    val onDragStart: (String, String) -> Unit = { fromSquare, piece ->
+        if (positions.isNotEmpty()) {
+            val currentPosition = positions[safeCurrentIndex]
+            val moves = getLegalMovesForSquare(currentPosition.fenString, fromSquare)
+            println("DRAG START: from=$fromSquare, piece=$piece, legalMoves=$moves")
+            if (moves.isNotEmpty()) {
+                draggedPiece = DragState(fromSquare, piece)
+                legalMovesForSelected = moves
+                selectedSquare = null // Clear click selection when dragging
+            } else {
+                println("DRAG START: No legal moves, drag will be blocked")
+            }
+        }
+    }
+
+    val onDragEnd: (String?) -> Unit = onDragEnd@{ toSquare ->
+        println("DRAG END: toSquare=$toSquare, draggedFrom=${draggedPiece?.fromSquare}, legalMoves=$legalMovesForSelected")
+
+        try {
+            draggedPiece?.let { drag ->
+                if (toSquare != null && legalMovesForSelected.contains(toSquare)) {
+                    println("DRAG END: Making move ${drag.fromSquare} -> $toSquare")
+                    makeMove(drag.fromSquare, toSquare)
+                } else {
+                    println("DRAG END: Move NOT in legal moves. toSquare=$toSquare, legal=$legalMovesForSelected")
+                }
+            }
+        } finally {
+            // ALWAYS clear state, even if there was an error
+            draggedPiece = null
+            legalMovesForSelected = emptyList()
+            selectedSquare = null
+        }
+    }
+
+    // Clear selection and drag state when position changes
+    LaunchedEffect(safeCurrentIndex) {
+        selectedSquare = null
+        legalMovesForSelected = emptyList()
+        draggedPiece = null
+    }
+
+    // Clear selection and drag state when board flips
+    LaunchedEffect(isBoardFlipped) {
+        selectedSquare = null
+        legalMovesForSelected = emptyList()
+        draggedPiece = null
+    }
 
     // Clamp currentIndex to valid range when positions changes to prevent crashes
     LaunchedEffect(positions.size) {
@@ -615,6 +815,13 @@ fun ChessAnalysisApp(context: Any?) {
                                 badgeUci = badgeUci,
                                 badgeDrawable = badgeDrawable,
                                 flipped = isBoardFlipped,
+                                selectedSquare = selectedSquare,
+                                legalMoves = legalMovesForSelected,
+                                onSquareClick = onSquareClick,
+                                canStartDrag = canStartDrag,
+                                onDragStart = onDragStart,
+                                onDragEnd = onDragEnd,
+                                draggedFromSquare = draggedPiece?.fromSquare,
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
