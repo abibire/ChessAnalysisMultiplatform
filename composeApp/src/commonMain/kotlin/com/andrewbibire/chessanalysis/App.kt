@@ -1353,21 +1353,36 @@ fun ChessAnalysisApp(context: Any?) {
                                             }
                                         } else null
 
-                                        Text(
-                                            text = classificationText + (bestMoveText ?: ""),
-                                            fontSize = smallFontSize,
-                                            color = when (c) {
-                                                "Best" -> BestColor
-                                                "Excellent" -> EvalGreen
-                                                "Good" -> GoodColor
-                                                "Inaccuracy" -> InaccuracyColor
-                                                "Mistake" -> MistakeColor
-                                                "Blunder" -> BlunderColor
-                                                "Book" -> BookColor
-                                                "Forced" -> MaterialTheme.colorScheme.onSurfaceVariant
-                                                else -> MaterialTheme.colorScheme.onSurface
+                                        val classificationColor = when (c) {
+                                            "Best" -> BestColor
+                                            "Excellent" -> EvalGreen
+                                            "Good" -> GoodColor
+                                            "Inaccuracy" -> InaccuracyColor
+                                            "Mistake" -> MistakeColor
+                                            "Blunder" -> BlunderColor
+                                            "Book" -> BookColor
+                                            "Forced" -> MaterialTheme.colorScheme.onSurfaceVariant
+                                            else -> MaterialTheme.colorScheme.onSurface
+                                        }
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Start
+                                        ) {
+                                            classificationBadge(c)?.let { badge ->
+                                                androidx.compose.foundation.Image(
+                                                    painter = org.jetbrains.compose.resources.painterResource(badge),
+                                                    contentDescription = c,
+                                                    modifier = Modifier.size(smallFontSize.value.dp * 1.2f)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
                                             }
-                                        )
+                                            Text(
+                                                text = classificationText + (bestMoveText ?: ""),
+                                                fontSize = smallFontSize,
+                                                color = classificationColor
+                                            )
+                                        }
                                         Spacer(modifier = Modifier.height(4.dp))
                                     }
 
