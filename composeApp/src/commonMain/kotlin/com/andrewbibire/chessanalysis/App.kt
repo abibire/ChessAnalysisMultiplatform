@@ -372,7 +372,7 @@ fun ChessAnalysisApp(context: Any?) {
         try {
             val move = board.legalMoves().find {
                 it.from.toString().lowercase() == fromSquare &&
-                it.to.toString().lowercase() == toSquare
+                        it.to.toString().lowercase() == toSquare
             }
 
             if (move != null) {
@@ -410,23 +410,7 @@ fun ChessAnalysisApp(context: Any?) {
 
                 // Move to the new position
                 currentIndex++
-
-                // Use the EXACT SAME sound detection logic as the regular analysis flow
-                // Parse SAN notation to detect move types
-                val san = newPosition.sanNotation ?: ""
-                val isCapture = san.contains('x')
-                val isPromotion = san.contains('=')
-                val isCheck = san.contains('+') && !san.contains('#')
-                val isCastling = san.startsWith("O-O")
-                val isCheckmate = san.contains('#')
-
-                soundManager.playMoveSound(
-                    isCapture = isCapture,
-                    isCheck = isCheck,
-                    isCheckmate = isCheckmate,
-                    isPromotion = isPromotion,
-                    isCastling = isCastling
-                )
+                // Note: Sound will be played by LaunchedEffect(currentIndex) to avoid duplicate sounds
             }
         } catch (e: Exception) {
             // Silently handle errors
@@ -811,19 +795,19 @@ fun ChessAnalysisApp(context: Any?) {
 
                 // Detect checkmate - either from SAN notation or game termination
                 val isCheckmate = (san.contains('#') || (isLastMoveOfOriginalGame && (
-                    gameTermination.contains("checkmate", ignoreCase = true) ||
-                    gameTermination.contains("mate", ignoreCase = true)
-                )))
+                        gameTermination.contains("checkmate", ignoreCase = true) ||
+                                gameTermination.contains("mate", ignoreCase = true)
+                        )))
 
                 // Detect game end without checkmate (resignation, timeout, draw, etc.)
                 // Only consider game ending if we're at the last move of the original game, not free moves
                 val isGameEndNoCheckmate = isLastMoveOfOriginalGame && !isCheckmate && (
-                    gameTermination.contains("resignation", ignoreCase = true) ||
-                    gameTermination.contains("timeout", ignoreCase = true) ||
-                    gameTermination.contains("draw", ignoreCase = true) ||
-                    gameTermination.contains("abandoned", ignoreCase = true) ||
-                    gameResult != "*"
-                )
+                        gameTermination.contains("resignation", ignoreCase = true) ||
+                                gameTermination.contains("timeout", ignoreCase = true) ||
+                                gameTermination.contains("draw", ignoreCase = true) ||
+                                gameTermination.contains("abandoned", ignoreCase = true) ||
+                                gameResult != "*"
+                        )
 
                 // For non-checkmate game endings, only play game end sound (not the move sound)
                 if (isGameEndNoCheckmate) {
@@ -844,9 +828,9 @@ fun ChessAnalysisApp(context: Any?) {
 
     // Determine if the current position is being analyzed
     val isCurrentPositionAnalyzing = isEvaluating ||
-        (isOnAlternatePath && positions.getOrNull(safeCurrentIndex)?.let {
-            it.fenString in analyzingFens.value
-        } == true)
+            (isOnAlternatePath && positions.getOrNull(safeCurrentIndex)?.let {
+                it.fenString in analyzingFens.value
+            } == true)
 
     // Get current position and extract relevant data for reactive UI updates
     val currentPosition = positions.getOrNull(safeCurrentIndex)
@@ -978,7 +962,6 @@ fun ChessAnalysisApp(context: Any?) {
                         fen = currentPosition.fenString,
                         gameResult = effectiveGameResult,
                         isLastMove = isLastOfOriginalGame || freeMoveGameEnd.isEnded,
-                        flipped = isBoardFlipped,
                         modifier = Modifier.fillMaxWidth().height(24.dp)
                     )
                 } else {
@@ -1034,10 +1017,10 @@ fun ChessAnalysisApp(context: Any?) {
                             // - Classification is Best, Book, or Forced
                             // - On alternate path but classification not yet set (still analyzing)
                             val suppressArrow = isCurrentPositionAnalyzing ||
-                                currentClassification == "Best" ||
-                                currentClassification == "Book" ||
-                                currentClassification == "Forced" ||
-                                (isOnAlternatePath && currentClassification == null)
+                                    currentClassification == "Best" ||
+                                    currentClassification == "Book" ||
+                                    currentClassification == "Forced" ||
+                                    (isOnAlternatePath && currentClassification == null)
 
                             val arrow = if (!suppressArrow && safeCurrentIndex > 0)
                                 positions[safeCurrentIndex - 1].bestMove?.takeIf { it.length >= 4 }?.substring(0, 4)
@@ -1148,665 +1131,665 @@ fun ChessAnalysisApp(context: Any?) {
                             .windowInsetsPadding(WindowInsets.navigationBars),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                    if (pgn == null) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Button(
-                                onClick = { showBottomSheet = true },
-                                modifier = Modifier
-                                    .fillMaxWidth(0.7f)
-                                    .height(64.dp)
-                                    .shadow(
-                                        elevation = 4.dp,
-                                        shape = RoundedCornerShape(16.dp)
-                                    ),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF3d3d3d),
-                                    contentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Search,
-                                    contentDescription = "Load Game",
-                                    modifier = Modifier.size(28.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Load Game",
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    } else {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            // Box with Move text and player profiles at same level
-                            Box(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                // Searched player profile (top left)
-                                PlayerProfile(
-                                    playerName = leftPlayer,
-                                    rating = leftElo,
-                                    color = leftColor,
-                                    avatarUrl = leftAvatar,
-                                    otherPlayerHasAvatar = rightAvatar != null,
-                                    isLeftSide = true,
-                                    countryCode = leftCountryCode,
-                                    avatarSize = avatarSize,
-                                    flagSize = flagSize,
-                                    fontSize = profileFontSize,
-                                    modifier = Modifier.align(Alignment.TopStart)
-                                )
-
-                                // Move text (center)
-                                Text(
-                                    text = "Move: ${currentIndex}",
-                                    fontSize = moveFontSize,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.align(Alignment.TopCenter)
-                                )
-
-                                // Opponent profile (top right)
-                                PlayerProfile(
-                                    playerName = rightPlayer,
-                                    rating = rightElo,
-                                    color = rightColor,
-                                    avatarUrl = rightAvatar,
-                                    otherPlayerHasAvatar = leftAvatar != null,
-                                    isLeftSide = false,
-                                    countryCode = rightCountryCode,
-                                    avatarSize = avatarSize,
-                                    flagSize = flagSize,
-                                    fontSize = profileFontSize,
-                                    modifier = Modifier.align(Alignment.TopEnd)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            if (isCurrentPositionAnalyzing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(32.dp),
-                                    color = BoardDark
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Analyzing...",
-                                    fontSize = bodyFontSize,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            } else {
-                                // Only show game termination if at the last move of the ORIGINAL game
-                                val isLastOfOriginalGame = if (originalPositions.isNotEmpty()) {
-                                    safeCurrentIndex == originalPositions.lastIndex && !isOnAlternatePath
-                                } else {
-                                    safeCurrentIndex == positions.lastIndex
-                                }
-
-                                if (isLastOfOriginalGame) {
-                                    Text(
-                                        text = gameTermination,
-                                        fontSize = bodyFontSize,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                } else if (safeCurrentIndex == 0) {
-                                    // Show classification statistics at starting position
-                                    // Determine left and right stats based on player colors
-                                    val leftStats = if (isSearchedPlayerWhite) whiteStats else blackStats
-                                    val rightStats = if (isSearchedPlayerWhite) blackStats else whiteStats
-
-                                    // Check if there are any stats to show
-                                    val hasStats = (leftStats.best + leftStats.excellent + leftStats.good +
-                                            leftStats.inaccuracy + leftStats.mistake + leftStats.blunder +
-                                            rightStats.best + rightStats.excellent + rightStats.good +
-                                            rightStats.inaccuracy + rightStats.mistake + rightStats.blunder) > 0
-
-                                    if (hasStats) {
-                                        Text(
-                                            text = "Game Statistics",
-                                            fontSize = bodyFontSize,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-
-                                        // Display in a 3-column grid with 2 items each
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceEvenly
-                                        ) {
-                                            Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                ClassificationStatItem("Best", leftStats.best, rightStats.best, statIconSize, smallFontSize)
-                                                ClassificationStatItem("Excellent", leftStats.excellent, rightStats.excellent, statIconSize, smallFontSize)
-                                            }
-                                            Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                ClassificationStatItem("Good", leftStats.good, rightStats.good, statIconSize, smallFontSize)
-                                                ClassificationStatItem("Inaccuracy", leftStats.inaccuracy, rightStats.inaccuracy, statIconSize, smallFontSize)
-                                            }
-                                            Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                ClassificationStatItem("Mistake", leftStats.mistake, rightStats.mistake, statIconSize, smallFontSize)
-                                                ClassificationStatItem("Blunder", leftStats.blunder, rightStats.blunder, statIconSize, smallFontSize)
-                                            }
-                                        }
-                                    } else {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(32.dp),
-                                            color = BoardDark
-                                        )
-                                    }
-                                } else {
-                                    // Check if free move ended the game (already computed above)
-                                    if (freeMoveGameEnd.isEnded) {
-                                        Text(
-                                            text = freeMoveGameEnd.description,
-                                            fontSize = bodyFontSize,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    } else {
-                                        val currentFen = currentPosition?.fenString ?: ""
-                                        val displayScore = normalizeScoreForDisplay(
-                                            currentScore,
-                                            currentFen,
-                                            isLastOfOriginalGame
-                                        )
-
-                                        Text(
-                                            text = "Evaluation: $displayScore",
-                                            fontSize = bodyFontSize,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                currentClassification?.let { c ->
-                                    val playedMoveNotation = if (safeCurrentIndex > 0 && currentPosition != null) {
-                                        currentPosition.playedMove?.let { uci ->
-                                            uciToSan(uci, positions[safeCurrentIndex - 1].fenString)
-                                        } ?: "This move"
-                                    } else {
-                                        "This move"
-                                    }
-
-                                    val classificationText = when (c) {
-                                        "Best" -> "$playedMoveNotation is $c."
-                                        "Excellent" -> "$playedMoveNotation is $c"
-                                        "Good" -> "$playedMoveNotation is $c"
-                                        "Inaccuracy" -> "$playedMoveNotation is an $c"
-                                        "Mistake" -> "$playedMoveNotation is a $c"
-                                        "Blunder" -> "$playedMoveNotation is a $c"
-                                        "Book" -> "$playedMoveNotation is a $c Move."
-                                        "Forced" -> "$playedMoveNotation is $c."
-                                        else -> "$playedMoveNotation is $c."
-                                    }
-
-                                    val bestMoveText = if (safeCurrentIndex > 0 && c != "Best" && c != "Book" && c != "Forced") {
-                                        positions[safeCurrentIndex - 1].bestMove?.let { bm ->
-                                            val notation = uciToSan(bm, positions[safeCurrentIndex - 1].fenString)
-                                            ", $notation is Best."
-                                        }
-                                    } else null
-
-                                    Text(
-                                        text = classificationText + (bestMoveText ?: ""),
-                                        fontSize = smallFontSize,
-                                        color = when (c) {
-                                            "Best" -> BestColor
-                                            "Excellent" -> EvalGreen
-                                            "Good" -> GoodColor
-                                            "Inaccuracy" -> InaccuracyColor
-                                            "Mistake" -> MistakeColor
-                                            "Blunder" -> BlunderColor
-                                            "Book" -> BookColor
-                                            "Forced" -> MaterialTheme.colorScheme.onSurfaceVariant
-                                            else -> MaterialTheme.colorScheme.onSurface
-                                        }
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                }
-
-                                positions[safeCurrentIndex].openingName?.let { name ->
-                                    Text(
-                                        text = name,
-                                        fontSize = smallFontSize * 0.9f,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            EvaluationButton(
-                                onClick = { showBottomSheet = true },
-                                enabled = true,
-                                modifier = Modifier
-                                    .height(32.dp)
-                                    .width(64.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Add,
-                                    contentDescription = "Load PGN",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            EvaluationButton(
-                                onClick = { isBoardFlipped = !isBoardFlipped },
-                                enabled = true,
-                                modifier = Modifier
-                                    .height(32.dp)
-                                    .width(64.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.SwapVert,
-                                    contentDescription = "Flip board",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            EvaluationButton(
-                                onClick = { currentIndex = 0 },
-                                enabled = currentIndex > 0 && !isEvaluating,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.SkipPrevious,
-                                    contentDescription = "First move",
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            EvaluationButton(
-                                onClick = { if (currentIndex > 0) currentIndex-- },
-                                enabled = currentIndex > 0 && !isEvaluating,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.NavigateBefore,
-                                    contentDescription = "Previous move",
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            EvaluationButton(
-                                onClick = { isPlaying = !isPlaying },
-                                enabled = currentIndex < positions.lastIndex && !isEvaluating,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                    contentDescription = if (isPlaying) "Pause" else "Play",
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            EvaluationButton(
-                                onClick = { if (currentIndex < positions.lastIndex) currentIndex++ },
-                                enabled = currentIndex < positions.lastIndex && !isEvaluating,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.NavigateNext,
-                                    contentDescription = "Next move",
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            EvaluationButton(
-                                onClick = { currentIndex = positions.lastIndex },
-                                enabled = currentIndex < positions.lastIndex && !isEvaluating,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.SkipNext,
-                                    contentDescription = "Last move",
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-                }
-            }
-
-            // Snackbar overlay at top of app
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                SnackbarHost(
-                    hostState = sheetSnackbarHostState,
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                ) { data ->
-                    Snackbar(
-                        snackbarData = data,
-                        containerColor = Color(0xFFD32F2F),
-                        contentColor = Color.White,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            }
-
-            if (showBottomSheet) {
-                val sheetState = rememberModalBottomSheetState(
-                    skipPartiallyExpanded = true
-                )
-                ModalBottomSheet(
-                    onDismissRequest = { showBottomSheet = false },
-                    sheetState = sheetState,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrimColor = Color.Transparent  // No overlay to avoid darkening snackbar
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .padding(top = 16.dp)
-                            .windowInsetsPadding(WindowInsets.navigationBars)
-                            .padding(bottom = 16.dp),
-                        horizontalAlignment = Alignment.Start
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f, fill = false)
-                                .verticalScroll(rememberScrollState()),
-                            horizontalAlignment = Alignment.Start
-                        ) {
-                            // Header with back arrow when in input mode
-                            Row(
+                        if (pgn == null) {
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
-                                if (showUsernameInput) {
-                                    IconButton(
-                                        onClick = {
-                                            showUsernameInput = false
-                                            usernameTextFieldValue = TextFieldValue()
-                                            isPrefilledUsername = false
-                                            selectedPlatform = null
-                                            isLoadingProfile = false
-                                        },
-                                        modifier = Modifier.size(40.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                            contentDescription = "Back",
-                                            tint = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                Button(
+                                    onClick = { showBottomSheet = true },
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.7f)
+                                        .height(64.dp)
+                                        .shadow(
+                                            elevation = 4.dp,
+                                            shape = RoundedCornerShape(16.dp)
+                                        ),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF3d3d3d),
+                                        contentColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Search,
+                                        contentDescription = "Load Game",
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = "Load Game",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
-                                Text(
-                                    text = if (showUsernameInput) {
-                                        when (selectedPlatform) {
-                                            com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> "Chess.com Username"
-                                            com.andrewbibire.chessanalysis.online.Platform.LICHESS -> "Lichess Username"
-                                            else -> "Enter Username"
-                                        }
-                                    } else "Import Games",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
                             }
+                        } else {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                // Box with Move text and player profiles at same level
+                                Box(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    // Searched player profile (top left)
+                                    PlayerProfile(
+                                        playerName = leftPlayer,
+                                        rating = leftElo,
+                                        color = leftColor,
+                                        avatarUrl = leftAvatar,
+                                        otherPlayerHasAvatar = rightAvatar != null,
+                                        isLeftSide = true,
+                                        countryCode = leftCountryCode,
+                                        avatarSize = avatarSize,
+                                        flagSize = flagSize,
+                                        fontSize = profileFontSize,
+                                        modifier = Modifier.align(Alignment.TopStart)
+                                    )
 
-                            Spacer(modifier = Modifier.height(8.dp))
+                                    // Move text (center)
+                                    Text(
+                                        text = "Move: ${currentIndex}",
+                                        fontSize = moveFontSize,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.align(Alignment.TopCenter)
+                                    )
 
-                            if (showUsernameInput) {
-                                // Username input mode
-                                val loadGamesAction: () -> Unit = {
-                                    coroutineScope.launch {
-                                        try {
-                                            isLoadingProfile = true
+                                    // Opponent profile (top right)
+                                    PlayerProfile(
+                                        playerName = rightPlayer,
+                                        rating = rightElo,
+                                        color = rightColor,
+                                        avatarUrl = rightAvatar,
+                                        otherPlayerHasAvatar = leftAvatar != null,
+                                        isLeftSide = false,
+                                        countryCode = rightCountryCode,
+                                        avatarSize = avatarSize,
+                                        flagSize = flagSize,
+                                        fontSize = profileFontSize,
+                                        modifier = Modifier.align(Alignment.TopEnd)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
 
-                                            val result = when (selectedPlatform) {
-                                                com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> {
-                                                    com.andrewbibire.chessanalysis.online.ChessComService.getUserProfile(usernameTextFieldValue.text)
+                                if (isCurrentPositionAnalyzing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = BoardDark
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Analyzing...",
+                                        fontSize = bodyFontSize,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } else {
+                                    // Only show game termination if at the last move of the ORIGINAL game
+                                    val isLastOfOriginalGame = if (originalPositions.isNotEmpty()) {
+                                        safeCurrentIndex == originalPositions.lastIndex && !isOnAlternatePath
+                                    } else {
+                                        safeCurrentIndex == positions.lastIndex
+                                    }
+
+                                    if (isLastOfOriginalGame) {
+                                        Text(
+                                            text = gameTermination,
+                                            fontSize = bodyFontSize,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    } else if (safeCurrentIndex == 0) {
+                                        // Show classification statistics at starting position
+                                        // Determine left and right stats based on player colors
+                                        val leftStats = if (isSearchedPlayerWhite) whiteStats else blackStats
+                                        val rightStats = if (isSearchedPlayerWhite) blackStats else whiteStats
+
+                                        // Check if there are any stats to show
+                                        val hasStats = (leftStats.best + leftStats.excellent + leftStats.good +
+                                                leftStats.inaccuracy + leftStats.mistake + leftStats.blunder +
+                                                rightStats.best + rightStats.excellent + rightStats.good +
+                                                rightStats.inaccuracy + rightStats.mistake + rightStats.blunder) > 0
+
+                                        if (hasStats) {
+                                            Text(
+                                                text = "Game Statistics",
+                                                fontSize = bodyFontSize,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                            // Display in a 3-column grid with 2 items each
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceEvenly
+                                            ) {
+                                                Column(
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    ClassificationStatItem("Best", leftStats.best, rightStats.best, statIconSize, smallFontSize)
+                                                    ClassificationStatItem("Excellent", leftStats.excellent, rightStats.excellent, statIconSize, smallFontSize)
                                                 }
-                                                com.andrewbibire.chessanalysis.online.Platform.LICHESS -> {
-                                                    com.andrewbibire.chessanalysis.online.LichessService.getUserProfile(usernameTextFieldValue.text)
+                                                Column(
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    ClassificationStatItem("Good", leftStats.good, rightStats.good, statIconSize, smallFontSize)
+                                                    ClassificationStatItem("Inaccuracy", leftStats.inaccuracy, rightStats.inaccuracy, statIconSize, smallFontSize)
                                                 }
-                                                else -> com.andrewbibire.chessanalysis.network.NetworkResult.Error(
-                                                    Exception("Unknown platform"),
-                                                    "Unknown platform"
-                                                )
+                                                Column(
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    ClassificationStatItem("Mistake", leftStats.mistake, rightStats.mistake, statIconSize, smallFontSize)
+                                                    ClassificationStatItem("Blunder", leftStats.blunder, rightStats.blunder, statIconSize, smallFontSize)
+                                                }
                                             }
+                                        } else {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(32.dp),
+                                                color = BoardDark
+                                            )
+                                        }
+                                    } else {
+                                        // Check if free move ended the game (already computed above)
+                                        if (freeMoveGameEnd.isEnded) {
+                                            Text(
+                                                text = freeMoveGameEnd.description,
+                                                fontSize = bodyFontSize,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        } else {
+                                            val currentFen = currentPosition?.fenString ?: ""
+                                            val displayScore = normalizeScoreForDisplay(
+                                                currentScore,
+                                                currentFen,
+                                                isLastOfOriginalGame
+                                            )
 
-                                            when (result) {
-                                                is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
-                                                    isLoadingProfile = false
-                                                    // Save username for next time
-                                                    com.andrewbibire.chessanalysis.online.UserPreferences.saveLastUsername(usernameTextFieldValue.text)
-                                                    userProfile = result.data
-                                                    showBottomSheet = false
-                                                }
-                                                is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
-                                                    isLoadingProfile = false
-                                                    // Determine error message based on exception type and message
-                                                    val errorMessage = when {
-                                                        // Check if it's a network connectivity error (no internet)
-                                                        result.exception.message?.contains("Unable to resolve host", ignoreCase = true) == true ||
-                                                                result.exception.message?.contains("timeout", ignoreCase = true) == true ||
-                                                                result.exception.message?.contains("Failed to connect", ignoreCase = true) == true ||
-                                                                result.exception.message?.contains("Connection refused", ignoreCase = true) == true -> {
-                                                            "No internet connection. Please check your network and try again."
-                                                        }
-                                                        // For all other API failures, show user-friendly message
-                                                        else -> "Unable to find an account with that username"
-                                                    }
-                                                    sheetSnackbarHostState.showSnackbar(
-                                                        message = errorMessage,
-                                                        duration = SnackbarDuration.Short
-                                                    )
-                                                }
-                                            }
-                                        } catch (e: Exception) {
-                                            isLoadingProfile = false
-                                            // Handle any unexpected errors
-                                            sheetSnackbarHostState.showSnackbar(
-                                                message = "An error occurred: ${e.message}",
-                                                duration = SnackbarDuration.Short
+                                            Text(
+                                                text = "Evaluation: $displayScore",
+                                                fontSize = bodyFontSize,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
                                         }
                                     }
-                                }
 
-                                OutlinedTextField(
-                                    value = usernameTextFieldValue,
-                                    onValueChange = { newValue ->
-                                        // If text is prefilled and user makes ANY change
-                                        if (isPrefilledUsername) {
-                                            // Check if text was deleted (backspace) - clear the field completely
-                                            if (newValue.text.length < usernameTextFieldValue.text.length) {
-                                                usernameTextFieldValue = TextFieldValue(text = "", selection = TextRange(0))
-                                                isPrefilledUsername = false
-                                            } else {
-                                                // Text was added - extract only the newly typed characters
-                                                // by removing the old prefilled text and keeping what was added
-                                                val oldText = usernameTextFieldValue.text
-                                                val newText = newValue.text
+                                    Spacer(modifier = Modifier.height(8.dp))
 
-                                                // Find what was actually typed (the difference)
-                                                val addedText = if (newText.startsWith(oldText)) {
-                                                    newText.removePrefix(oldText)
-                                                } else if (newText.endsWith(oldText)) {
-                                                    newText.removeSuffix(oldText)
-                                                } else {
-                                                    // Character inserted in middle or text replaced - use new text
-                                                    newText
-                                                }
-
-                                                val filteredText = addedText.replace(" ", "")
-                                                usernameTextFieldValue = TextFieldValue(text = filteredText, selection = TextRange(filteredText.length))
-                                                isPrefilledUsername = false
-                                            }
+                                    currentClassification?.let { c ->
+                                        val playedMoveNotation = if (safeCurrentIndex > 0 && currentPosition != null) {
+                                            currentPosition.playedMove?.let { uci ->
+                                                uciToSan(uci, positions[safeCurrentIndex - 1].fenString)
+                                            } ?: "This move"
                                         } else {
-                                            // Filter out spaces
-                                            val filteredText = newValue.text.replace(" ", "")
-                                            usernameTextFieldValue = newValue.copy(text = filteredText)
+                                            "This move"
                                         }
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    label = { Text("Username") },
-                                    enabled = !isLoadingProfile,
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(
-                                        imeAction = ImeAction.Done
-                                    ),
-                                    keyboardActions = KeyboardActions(
-                                        onDone = {
-                                            if (usernameTextFieldValue.text.isNotBlank() && !isLoadingProfile) {
-                                                loadGamesAction()
+
+                                        val classificationText = when (c) {
+                                            "Best" -> "$playedMoveNotation is $c."
+                                            "Excellent" -> "$playedMoveNotation is $c"
+                                            "Good" -> "$playedMoveNotation is $c"
+                                            "Inaccuracy" -> "$playedMoveNotation is an $c"
+                                            "Mistake" -> "$playedMoveNotation is a $c"
+                                            "Blunder" -> "$playedMoveNotation is a $c"
+                                            "Book" -> "$playedMoveNotation is a $c Move."
+                                            "Forced" -> "$playedMoveNotation is $c."
+                                            else -> "$playedMoveNotation is $c."
+                                        }
+
+                                        val bestMoveText = if (safeCurrentIndex > 0 && c != "Best" && c != "Book" && c != "Forced") {
+                                            positions[safeCurrentIndex - 1].bestMove?.let { bm ->
+                                                val notation = uciToSan(bm, positions[safeCurrentIndex - 1].fenString)
+                                                ", $notation is Best."
                                             }
-                                        }
-                                    ),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = MaterialTheme.colorScheme.onSurface,
-                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                        focusedLabelColor = MaterialTheme.colorScheme.onSurface,
-                                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        focusedTextColor = if (isPrefilledUsername) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                                        unfocusedTextColor = if (isPrefilledUsername) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
+                                        } else null
 
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Button(
-                                    onClick = loadGamesAction,
-                                    enabled = usernameTextFieldValue.text.isNotBlank() && !isLoadingProfile,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(56.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = BoardDark,
-                                        contentColor = Color.White,
-                                        disabledContainerColor = Color(0xFF3d3d3d),
-                                        disabledContentColor = Color(0xFF888888)
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    if (isLoadingProfile) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(24.dp),
-                                            color = Color.White
-                                        )
-                                    } else {
                                         Text(
-                                            text = "Load Games",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.SemiBold
+                                            text = classificationText + (bestMoveText ?: ""),
+                                            fontSize = smallFontSize,
+                                            color = when (c) {
+                                                "Best" -> BestColor
+                                                "Excellent" -> EvalGreen
+                                                "Good" -> GoodColor
+                                                "Inaccuracy" -> InaccuracyColor
+                                                "Mistake" -> MistakeColor
+                                                "Blunder" -> BlunderColor
+                                                "Book" -> BookColor
+                                                "Forced" -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                else -> MaterialTheme.colorScheme.onSurface
+                                            }
                                         )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                    }
+
+                                    positions[safeCurrentIndex].openingName?.let { name ->
+                                        Text(
+                                            text = name,
+                                            fontSize = smallFontSize * 0.9f,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
                                     }
                                 }
-                            } else {
-                                // Button mode
-                                ImportOption(
-                                    iconContent = {
-                                        MaterialSymbol(name = "chess_pawn_2", tint = Color(0xFF80b64d), fill = 1f)
-                                    },
-                                    title = "Chess.com",
-                                    description = "Import from Chess.com",
-                                    onClick = {
-                                        selectedPlatform = com.andrewbibire.chessanalysis.online.Platform.CHESS_COM
-                                        showUsernameInput = true
-                                    }
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                ImportOption(
-                                    iconContent = {
-                                        MaterialSymbol(name = "chess_knight", tint = Color.White, fill = 0f, flipHorizontally = true)
-                                    },
-                                    title = "Lichess",
-                                    description = "Import from Lichess",
-                                    onClick = {
-                                        selectedPlatform = com.andrewbibire.chessanalysis.online.Platform.LICHESS
-                                        showUsernameInput = true
-                                    }
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                ImportOption(
-                                    icon = Icons.Filled.ContentPaste,
-                                    title = "Paste from Clipboard",
-                                    description = "Import a PGN from your clipboard",
-                                    iconTint = BookColor,
-                                    onClick = {
-                                        coroutineScope.launch {
-                                            val clipboardText = readClipboard()
-                                            if (isValidPgn(clipboardText)) {
-                                                pgn = clipboardText
-                                                showBottomSheet = false
-                                            } else {
-                                                sheetSnackbarHostState.showSnackbar(
-                                                    message = "Invalid or empty PGN in clipboard",
-                                                    duration = SnackbarDuration.Short
-                                                )
-                                            }
-                                        }
-                                    }
-                                )
+                            }
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                EvaluationButton(
+                                    onClick = { showBottomSheet = true },
+                                    enabled = true,
+                                    modifier = Modifier
+                                        .height(32.dp)
+                                        .width(64.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Add,
+                                        contentDescription = "Load PGN",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                EvaluationButton(
+                                    onClick = { isBoardFlipped = !isBoardFlipped },
+                                    enabled = true,
+                                    modifier = Modifier
+                                        .height(32.dp)
+                                        .width(64.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.SwapVert,
+                                        contentDescription = "Flip board",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                EvaluationButton(
+                                    onClick = { currentIndex = 0 },
+                                    enabled = currentIndex > 0 && !isEvaluating,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.SkipPrevious,
+                                        contentDescription = "First move",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                EvaluationButton(
+                                    onClick = { if (currentIndex > 0) currentIndex-- },
+                                    enabled = currentIndex > 0 && !isEvaluating,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.NavigateBefore,
+                                        contentDescription = "Previous move",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                EvaluationButton(
+                                    onClick = { isPlaying = !isPlaying },
+                                    enabled = currentIndex < positions.lastIndex && !isEvaluating,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                        contentDescription = if (isPlaying) "Pause" else "Play",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                EvaluationButton(
+                                    onClick = { if (currentIndex < positions.lastIndex) currentIndex++ },
+                                    enabled = currentIndex < positions.lastIndex && !isEvaluating,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.NavigateNext,
+                                        contentDescription = "Next move",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                EvaluationButton(
+                                    onClick = { currentIndex = positions.lastIndex },
+                                    enabled = currentIndex < positions.lastIndex && !isEvaluating,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.SkipNext,
+                                        contentDescription = "Last move",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
+
+        // Snackbar overlay at top of app
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            SnackbarHost(
+                hostState = sheetSnackbarHostState,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+            ) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = Color(0xFFD32F2F),
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        }
+
+        if (showBottomSheet) {
+            val sheetState = rememberModalBottomSheetState(
+                skipPartiallyExpanded = true
+            )
+            ModalBottomSheet(
+                onDismissRequest = { showBottomSheet = false },
+                sheetState = sheetState,
+                containerColor = MaterialTheme.colorScheme.surface,
+                scrimColor = Color.Transparent  // No overlay to avoid darkening snackbar
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 16.dp)
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(bottom = 16.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        // Header with back arrow when in input mode
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (showUsernameInput) {
+                                IconButton(
+                                    onClick = {
+                                        showUsernameInput = false
+                                        usernameTextFieldValue = TextFieldValue()
+                                        isPrefilledUsername = false
+                                        selectedPlatform = null
+                                        isLoadingProfile = false
+                                    },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
+                            Text(
+                                text = if (showUsernameInput) {
+                                    when (selectedPlatform) {
+                                        com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> "Chess.com Username"
+                                        com.andrewbibire.chessanalysis.online.Platform.LICHESS -> "Lichess Username"
+                                        else -> "Enter Username"
+                                    }
+                                } else "Import Games",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        if (showUsernameInput) {
+                            // Username input mode
+                            val loadGamesAction: () -> Unit = {
+                                coroutineScope.launch {
+                                    try {
+                                        isLoadingProfile = true
+
+                                        val result = when (selectedPlatform) {
+                                            com.andrewbibire.chessanalysis.online.Platform.CHESS_COM -> {
+                                                com.andrewbibire.chessanalysis.online.ChessComService.getUserProfile(usernameTextFieldValue.text)
+                                            }
+                                            com.andrewbibire.chessanalysis.online.Platform.LICHESS -> {
+                                                com.andrewbibire.chessanalysis.online.LichessService.getUserProfile(usernameTextFieldValue.text)
+                                            }
+                                            else -> com.andrewbibire.chessanalysis.network.NetworkResult.Error(
+                                                Exception("Unknown platform"),
+                                                "Unknown platform"
+                                            )
+                                        }
+
+                                        when (result) {
+                                            is com.andrewbibire.chessanalysis.network.NetworkResult.Success -> {
+                                                isLoadingProfile = false
+                                                // Save username for next time
+                                                com.andrewbibire.chessanalysis.online.UserPreferences.saveLastUsername(usernameTextFieldValue.text)
+                                                userProfile = result.data
+                                                showBottomSheet = false
+                                            }
+                                            is com.andrewbibire.chessanalysis.network.NetworkResult.Error -> {
+                                                isLoadingProfile = false
+                                                // Determine error message based on exception type and message
+                                                val errorMessage = when {
+                                                    // Check if it's a network connectivity error (no internet)
+                                                    result.exception.message?.contains("Unable to resolve host", ignoreCase = true) == true ||
+                                                            result.exception.message?.contains("timeout", ignoreCase = true) == true ||
+                                                            result.exception.message?.contains("Failed to connect", ignoreCase = true) == true ||
+                                                            result.exception.message?.contains("Connection refused", ignoreCase = true) == true -> {
+                                                        "No internet connection. Please check your network and try again."
+                                                    }
+                                                    // For all other API failures, show user-friendly message
+                                                    else -> "Unable to find an account with that username"
+                                                }
+                                                sheetSnackbarHostState.showSnackbar(
+                                                    message = errorMessage,
+                                                    duration = SnackbarDuration.Short
+                                                )
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        isLoadingProfile = false
+                                        // Handle any unexpected errors
+                                        sheetSnackbarHostState.showSnackbar(
+                                            message = "An error occurred: ${e.message}",
+                                            duration = SnackbarDuration.Short
+                                        )
+                                    }
+                                }
+                            }
+
+                            OutlinedTextField(
+                                value = usernameTextFieldValue,
+                                onValueChange = { newValue ->
+                                    // If text is prefilled and user makes ANY change
+                                    if (isPrefilledUsername) {
+                                        // Check if text was deleted (backspace) - clear the field completely
+                                        if (newValue.text.length < usernameTextFieldValue.text.length) {
+                                            usernameTextFieldValue = TextFieldValue(text = "", selection = TextRange(0))
+                                            isPrefilledUsername = false
+                                        } else {
+                                            // Text was added - extract only the newly typed characters
+                                            // by removing the old prefilled text and keeping what was added
+                                            val oldText = usernameTextFieldValue.text
+                                            val newText = newValue.text
+
+                                            // Find what was actually typed (the difference)
+                                            val addedText = if (newText.startsWith(oldText)) {
+                                                newText.removePrefix(oldText)
+                                            } else if (newText.endsWith(oldText)) {
+                                                newText.removeSuffix(oldText)
+                                            } else {
+                                                // Character inserted in middle or text replaced - use new text
+                                                newText
+                                            }
+
+                                            val filteredText = addedText.replace(" ", "")
+                                            usernameTextFieldValue = TextFieldValue(text = filteredText, selection = TextRange(filteredText.length))
+                                            isPrefilledUsername = false
+                                        }
+                                    } else {
+                                        // Filter out spaces
+                                        val filteredText = newValue.text.replace(" ", "")
+                                        usernameTextFieldValue = newValue.copy(text = filteredText)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Username") },
+                                enabled = !isLoadingProfile,
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        if (usernameTextFieldValue.text.isNotBlank() && !isLoadingProfile) {
+                                            loadGamesAction()
+                                        }
+                                    }
+                                ),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedTextColor = if (isPrefilledUsername) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = if (isPrefilledUsername) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Button(
+                                onClick = loadGamesAction,
+                                enabled = usernameTextFieldValue.text.isNotBlank() && !isLoadingProfile,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = BoardDark,
+                                    contentColor = Color.White,
+                                    disabledContainerColor = Color(0xFF3d3d3d),
+                                    disabledContentColor = Color(0xFF888888)
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                if (isLoadingProfile) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = Color.White
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Load Games",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        } else {
+                            // Button mode
+                            ImportOption(
+                                iconContent = {
+                                    MaterialSymbol(name = "chess_pawn_2", tint = Color(0xFF80b64d), fill = 1f)
+                                },
+                                title = "Chess.com",
+                                description = "Import from Chess.com",
+                                onClick = {
+                                    selectedPlatform = com.andrewbibire.chessanalysis.online.Platform.CHESS_COM
+                                    showUsernameInput = true
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ImportOption(
+                                iconContent = {
+                                    MaterialSymbol(name = "chess_knight", tint = Color.White, fill = 0f, flipHorizontally = true)
+                                },
+                                title = "Lichess",
+                                description = "Import from Lichess",
+                                onClick = {
+                                    selectedPlatform = com.andrewbibire.chessanalysis.online.Platform.LICHESS
+                                    showUsernameInput = true
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ImportOption(
+                                icon = Icons.Filled.ContentPaste,
+                                title = "Paste from Clipboard",
+                                description = "Import a PGN from your clipboard",
+                                iconTint = BookColor,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        val clipboardText = readClipboard()
+                                        if (isValidPgn(clipboardText)) {
+                                            pgn = clipboardText
+                                            showBottomSheet = false
+                                        } else {
+                                            sheetSnackbarHostState.showSnackbar(
+                                                message = "Invalid or empty PGN in clipboard",
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
+}
 
 @Composable
 fun EvaluationButton(
@@ -1866,7 +1849,6 @@ fun EvaluationBar(
     fen: String,
     gameResult: String,
     isLastMove: Boolean,
-    flipped: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val evaluation = parseEvaluationWhiteCentric(score, fen)
@@ -1935,15 +1917,6 @@ fun EvaluationBar(
         else -> null to null
     }
 
-    // When flipped, swap the score positions to match board orientation
-    // Flipped: black at bottom (left), white at top (right)
-    // Normal: white at bottom (left), black at top (right)
-    val (leftScore, rightScore) = if (flipped) {
-        blackScore to whiteScore
-    } else {
-        whiteScore to blackScore
-    }
-
     Box(modifier = modifier.background(Color(0xFF3a3a3a))) {
         Box(
             modifier = Modifier
@@ -1959,9 +1932,9 @@ fun EvaluationBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (leftScore != null) {
+            if (whiteScore != null) {
                 Text(
-                    text = leftScore,
+                    text = whiteScore,
                     style = MaterialTheme.typography.labelSmall,
                     color = leftTextColor,
                     fontWeight = FontWeight.Bold
@@ -1970,9 +1943,9 @@ fun EvaluationBar(
                 Spacer(modifier = Modifier.width(1.dp))
             }
 
-            if (rightScore != null) {
+            if (blackScore != null) {
                 Text(
-                    text = rightScore,
+                    text = blackScore,
                     style = MaterialTheme.typography.labelSmall,
                     color = rightTextColor,
                     fontWeight = FontWeight.Bold
