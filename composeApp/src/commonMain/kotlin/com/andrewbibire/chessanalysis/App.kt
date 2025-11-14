@@ -2201,7 +2201,8 @@ fun PlayerProfile(
                 text = rating,
                 fontSize = fontSize * 0.9f,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
+                maxLines = 1,
+                modifier = Modifier.offset(y = (-8).dp)
             )
         }
     }
