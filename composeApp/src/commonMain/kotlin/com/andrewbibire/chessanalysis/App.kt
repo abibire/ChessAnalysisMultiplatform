@@ -978,6 +978,7 @@ fun ChessAnalysisApp(context: Any?) {
                         fen = currentPosition.fenString,
                         gameResult = effectiveGameResult,
                         isLastMove = isLastOfOriginalGame || freeMoveGameEnd.isEnded,
+                        flipped = isBoardFlipped,
                         modifier = Modifier.fillMaxWidth().height(24.dp)
                     )
                 } else {
@@ -1865,6 +1866,7 @@ fun EvaluationBar(
     fen: String,
     gameResult: String,
     isLastMove: Boolean,
+    flipped: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val evaluation = parseEvaluationWhiteCentric(score, fen)
@@ -1933,6 +1935,15 @@ fun EvaluationBar(
         else -> null to null
     }
 
+    // When flipped, swap the score positions to match board orientation
+    // Flipped: black at bottom (left), white at top (right)
+    // Normal: white at bottom (left), black at top (right)
+    val (leftScore, rightScore) = if (flipped) {
+        blackScore to whiteScore
+    } else {
+        whiteScore to blackScore
+    }
+
     Box(modifier = modifier.background(Color(0xFF3a3a3a))) {
         Box(
             modifier = Modifier
@@ -1948,9 +1959,9 @@ fun EvaluationBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (whiteScore != null) {
+            if (leftScore != null) {
                 Text(
-                    text = whiteScore,
+                    text = leftScore,
                     style = MaterialTheme.typography.labelSmall,
                     color = leftTextColor,
                     fontWeight = FontWeight.Bold
@@ -1959,9 +1970,9 @@ fun EvaluationBar(
                 Spacer(modifier = Modifier.width(1.dp))
             }
 
-            if (blackScore != null) {
+            if (rightScore != null) {
                 Text(
-                    text = blackScore,
+                    text = rightScore,
                     style = MaterialTheme.typography.labelSmall,
                     color = rightTextColor,
                     fontWeight = FontWeight.Bold
