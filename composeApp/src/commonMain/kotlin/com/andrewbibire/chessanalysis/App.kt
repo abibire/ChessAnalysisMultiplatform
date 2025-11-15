@@ -111,6 +111,12 @@ fun ChessAnalysisApp(context: Any?) {
     var userProfile by remember { mutableStateOf<com.andrewbibire.chessanalysis.online.UserProfile?>(null) }
     var isLoadingProfile by remember { mutableStateOf(false) }
 
+    // Promotion dialog state
+    var showPromotionDialog by remember { mutableStateOf(false) }
+    var promotionIsWhite by remember { mutableStateOf(true) }
+    var promotionFromSquare by remember { mutableStateOf<String?>(null) }
+    var promotionToSquare by remember { mutableStateOf<String?>(null) }
+
     // Depth settings
     var showDepthDialog by remember { mutableStateOf(false) }
     var analysisDepth by remember { mutableIntStateOf(com.andrewbibire.chessanalysis.online.UserPreferences.getAnalysisDepth()) }
@@ -378,7 +384,7 @@ fun ChessAnalysisApp(context: Any?) {
     }
 
     // Helper function to make a move
-    fun makeMove(fromSquare: String, toSquare: String) {
+    fun completeMoveWithPromotion(fromSquare: String, toSquare: String, promotionPiece: String?) {
         if (positions.isEmpty()) return
 
         val currentPosition = positions[safeCurrentIndex]
@@ -386,9 +392,27 @@ fun ChessAnalysisApp(context: Any?) {
         board.loadFromFen(currentPosition.fenString)
 
         try {
-            val move = board.legalMoves().find {
-                it.from.toString().lowercase() == fromSquare &&
-                        it.to.toString().lowercase() == toSquare
+            val move = if (promotionPiece != null) {
+                // Find the specific promotion move
+                val targetPromotion = when (promotionPiece.uppercase()) {
+                    "Q" -> if (promotionPiece == "Q") com.github.bhlangonijr.chesslib.Piece.WHITE_QUEEN else com.github.bhlangonijr.chesslib.Piece.BLACK_QUEEN
+                    "R" -> if (promotionPiece == "R") com.github.bhlangonijr.chesslib.Piece.WHITE_ROOK else com.github.bhlangonijr.chesslib.Piece.BLACK_ROOK
+                    "B" -> if (promotionPiece == "B") com.github.bhlangonijr.chesslib.Piece.WHITE_BISHOP else com.github.bhlangonijr.chesslib.Piece.BLACK_BISHOP
+                    "N" -> if (promotionPiece == "N") com.github.bhlangonijr.chesslib.Piece.WHITE_KNIGHT else com.github.bhlangonijr.chesslib.Piece.BLACK_KNIGHT
+                    else -> null
+                }
+                board.legalMoves().find {
+                    it.from.toString().lowercase() == fromSquare &&
+                            it.to.toString().lowercase() == toSquare &&
+                            it.promotion == targetPromotion
+                }
+            } else {
+                // Find any non-promotion move
+                board.legalMoves().find {
+                    it.from.toString().lowercase() == fromSquare &&
+                            it.to.toString().lowercase() == toSquare &&
+                            it.promotion == com.github.bhlangonijr.chesslib.Piece.NONE
+                }
             }
 
             if (move != null) {
@@ -438,6 +462,40 @@ fun ChessAnalysisApp(context: Any?) {
         // Clear selection
         selectedSquare = null
         legalMovesForSelected = emptyList()
+    }
+
+    fun makeMove(fromSquare: String, toSquare: String) {
+        if (positions.isEmpty()) return
+
+        val currentPosition = positions[safeCurrentIndex]
+        val board = Board()
+        board.loadFromFen(currentPosition.fenString)
+
+        try {
+            // Check if any legal move from this square to target is a promotion
+            val hasPromotionMove = board.legalMoves().any {
+                it.from.toString().lowercase() == fromSquare &&
+                        it.to.toString().lowercase() == toSquare &&
+                        it.promotion != com.github.bhlangonijr.chesslib.Piece.NONE
+            }
+
+            if (hasPromotionMove) {
+                // Show promotion dialog
+                val isWhiteTurn = isWhiteToMove(currentPosition.fenString)
+                promotionIsWhite = isWhiteTurn
+                promotionFromSquare = fromSquare
+                promotionToSquare = toSquare
+                showPromotionDialog = true
+                return
+            }
+
+            // Not a promotion, complete the move normally
+            completeMoveWithPromotion(fromSquare, toSquare, null)
+        } catch (e: Exception) {
+            // Silently handle errors
+            selectedSquare = null
+            legalMovesForSelected = emptyList()
+        }
     }
 
     // Click handler for board squares
@@ -1998,6 +2056,30 @@ fun ChessAnalysisApp(context: Any?) {
                     ) {
                         Text("OK")
                     }
+                }
+            )
+        }
+
+        // Promotion Dialog
+        if (showPromotionDialog) {
+            PromotionDialog(
+                isWhite = promotionIsWhite,
+                onPieceSelected = { piece ->
+                    showPromotionDialog = false
+                    promotionFromSquare?.let { from ->
+                        promotionToSquare?.let { to ->
+                            completeMoveWithPromotion(from, to, piece)
+                        }
+                    }
+                    promotionFromSquare = null
+                    promotionToSquare = null
+                },
+                onDismiss = {
+                    showPromotionDialog = false
+                    promotionFromSquare = null
+                    promotionToSquare = null
+                    selectedSquare = null
+                    legalMovesForSelected = emptyList()
                 }
             )
         }

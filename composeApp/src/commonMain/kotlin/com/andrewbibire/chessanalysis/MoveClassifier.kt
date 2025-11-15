@@ -77,8 +77,6 @@ fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour, pla
             bestMove
         }
 
-        println("DEBUG: Comparing moves - playedMove='$playedMove' -> '$processedPlayedMove', bestMove='$bestMove' -> '$processedBestMove', equal=${processedPlayedMove == processedBestMove}")
-
         if (processedPlayedMove == processedBestMove) {
             return "Best"
         }
