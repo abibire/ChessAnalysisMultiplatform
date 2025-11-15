@@ -27,44 +27,50 @@ fun PromotionDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
-                .width(320.dp)
+                .width(200.dp)
                 .wrapContentHeight(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFEEEED2)
+                containerColor = Color(0xFF2b2b2b)  // DarkSurface
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Queen
-                PromotionPieceSquare(
-                    piece = if (isWhite) "Q" else "q",
-                    onClick = { onPieceSelected(if (isWhite) "Q" else "q") }
-                )
+                // First row: Queen and Rook
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
+                ) {
+                    PromotionPieceSquare(
+                        piece = if (isWhite) "Q" else "q",
+                        onClick = { onPieceSelected(if (isWhite) "Q" else "q") }
+                    )
+                    PromotionPieceSquare(
+                        piece = if (isWhite) "R" else "r",
+                        onClick = { onPieceSelected(if (isWhite) "R" else "r") }
+                    )
+                }
 
-                // Rook
-                PromotionPieceSquare(
-                    piece = if (isWhite) "R" else "r",
-                    onClick = { onPieceSelected(if (isWhite) "R" else "r") }
-                )
-
-                // Bishop
-                PromotionPieceSquare(
-                    piece = if (isWhite) "B" else "b",
-                    onClick = { onPieceSelected(if (isWhite) "B" else "b") }
-                )
-
-                // Knight
-                PromotionPieceSquare(
-                    piece = if (isWhite) "N" else "n",
-                    onClick = { onPieceSelected(if (isWhite) "N" else "n") }
-                )
+                // Second row: Bishop and Knight
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
+                ) {
+                    PromotionPieceSquare(
+                        piece = if (isWhite) "B" else "b",
+                        onClick = { onPieceSelected(if (isWhite) "B" else "b") }
+                    )
+                    PromotionPieceSquare(
+                        piece = if (isWhite) "N" else "n",
+                        onClick = { onPieceSelected(if (isWhite) "N" else "n") }
+                    )
+                }
             }
         }
     }
@@ -77,10 +83,10 @@ fun PromotionPieceSquare(
 ) {
     Box(
         modifier = Modifier
-            .size(64.dp)
-            .background(Color(0xFF769656), shape = RoundedCornerShape(8.dp))
+            .size(80.dp)
+            .background(Color(0xFF3d3d3d), shape = RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(8.dp),
+            .padding(12.dp),
         contentAlignment = Alignment.Center
     ) {
         val pieceFileName = getPieceSvgFileName(piece)
