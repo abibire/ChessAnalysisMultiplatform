@@ -1916,7 +1916,10 @@ fun ChessAnalysisApp(context: Any?) {
                                 contentDescription = "Quick analysis",
                                 modifier = Modifier
                                     .size(24.dp)
-                                    .clickable { analysisDepth = 5 },
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }
+                                    ) { analysisDepth = 5 },
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
@@ -1952,7 +1955,10 @@ fun ChessAnalysisApp(context: Any?) {
                             Box(
                                 modifier = Modifier
                                     .size(32.dp)
-                                    .clickable { analysisDepth = 20 }
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }
+                                    ) { analysisDepth = 20 }
                             ) {
                                 MaterialSymbol(
                                     name = "network_intelligence_history",
