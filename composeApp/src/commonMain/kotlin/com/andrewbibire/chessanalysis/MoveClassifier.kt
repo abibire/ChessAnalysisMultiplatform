@@ -67,10 +67,18 @@ fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour, pla
             playedMove
         }
         val processedBestMove = if (bestMove.length > 4) {
-            "${bestMove.take(4)}${bestMove.substring(4).lowercase()}"
+            val promotion = bestMove.substring(4).lowercase()
+            if (promotion == "none") {
+                bestMove.take(4)
+            } else {
+                "${bestMove.take(4)}$promotion"
+            }
         } else {
             bestMove
         }
+
+        println("DEBUG: Comparing moves - playedMove='$playedMove' -> '$processedPlayedMove', bestMove='$bestMove' -> '$processedBestMove', equal=${processedPlayedMove == processedBestMove}")
+
         if (processedPlayedMove == processedBestMove) {
             return "Best"
         }

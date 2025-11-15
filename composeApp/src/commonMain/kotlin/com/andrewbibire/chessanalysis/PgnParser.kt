@@ -61,7 +61,7 @@ private fun tryStandardParsing(pgn: String): List<Position> {
                 val chessMove = Move(move.from, move.to, move.promotion)
 
                 board.doMove(chessMove)
-                val playedMove = if (chessMove.promotion != null) {
+                val playedMove = if (chessMove.promotion != null && chessMove.promotion != com.github.bhlangonijr.chesslib.Piece.NONE) {
                     // Convert promotion piece to single letter (e.g., "WHITE_QUEEN" -> "q")
                     val promotionLetter = when (chessMove.promotion.toString().lowercase()) {
                         "white_queen", "black_queen" -> "q"
@@ -119,7 +119,7 @@ private fun tryCustomSanParsing(pgn: String): List<Position> {
                 }
 
                 board.doMove(move)
-                val playedMove = if (move.promotion != null) {
+                val playedMove = if (move.promotion != null && move.promotion != com.github.bhlangonijr.chesslib.Piece.NONE) {
                     // Convert promotion piece to single letter (e.g., "WHITE_QUEEN" -> "q")
                     val promotionLetter = when (move.promotion.toString().lowercase()) {
                         "white_queen", "black_queen" -> "q"
