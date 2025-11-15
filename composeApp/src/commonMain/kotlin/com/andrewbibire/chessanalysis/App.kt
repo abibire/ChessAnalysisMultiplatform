@@ -102,6 +102,7 @@ fun ChessAnalysisApp(context: Any?) {
     var isEvaluating by remember { mutableStateOf(false) }
     var analysisProgress by remember { mutableIntStateOf(0) }
     var analysisTotalMoves by remember { mutableIntStateOf(0) }
+    var analysisRevision by remember { mutableIntStateOf(0) }
     var isPlaying by remember { mutableStateOf(false) }
     var isBoardFlipped by remember { mutableStateOf(false) }
     var analysisCompleted by remember { mutableStateOf(0) }
@@ -662,6 +663,10 @@ fun ChessAnalysisApp(context: Any?) {
 
     LaunchedEffect(pgn, stockfishEngine) {
         if (pgn != null && positions.isNotEmpty()) {
+            // Increment revision to track this analysis session
+            analysisRevision++
+            val currentRevision = analysisRevision
+
             isEvaluating = true
             currentIndex = 0
             analysisCompleted = 0
@@ -695,10 +700,12 @@ fun ChessAnalysisApp(context: Any?) {
             } catch (e: Exception) {
                 println("KOTLIN: Analysis error: ${e.message}")
             } finally {
-                // Always reset evaluating state, even if cancelled or error
-                isEvaluating = false
-                analysisProgress = 0
-                analysisTotalMoves = 0
+                // Only reset counters if we're still the current analysis (no new one started)
+                if (currentRevision == analysisRevision) {
+                    isEvaluating = false
+                    analysisProgress = 0
+                    analysisTotalMoves = 0
+                }
             }
         }
     }
@@ -1418,8 +1425,7 @@ fun ChessAnalysisApp(context: Any?) {
                                             "Mistake" -> MistakeColor
                                             "Blunder" -> BlunderColor
                                             "Book" -> BookColor
-                                            "Forced" -> MaterialTheme.colorScheme.onSurfaceVariant
-                                            else -> MaterialTheme.colorScheme.onSurface
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
                                         }
 
                                         Row(
