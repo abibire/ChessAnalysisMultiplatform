@@ -805,7 +805,19 @@ fun ChessAnalysisApp(context: Any?) {
 
                         // Classify the move if we have a previous position
                         if (i > 0) {
-                            val prevPosition = positions[i - 1]
+                            var prevPosition = positions[i - 1]
+
+                            // Ensure previous position is analyzed (might not be if it's a free move branch point)
+                            if (prevPosition.score == null || prevPosition.bestMove == null) {
+                                val prevResult = stockfishEngine.evaluatePosition(prevPosition.fenString, depth = analysisDepth)
+                                prevPosition = prevPosition.copy(
+                                    score = prevResult.score,
+                                    bestMove = prevResult.bestMove
+                                )
+                                // Update in the list and cache
+                                positions[i - 1] = prevPosition
+                                alternatePathCache[prevPosition.fenString] = prevPosition
+                            }
 
                             // Check if it's a book move
                             val boardFen = analyzedPosition.fenString.substringBefore(' ')
