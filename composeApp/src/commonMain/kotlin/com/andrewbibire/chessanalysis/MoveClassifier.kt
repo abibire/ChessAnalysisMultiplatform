@@ -54,6 +54,37 @@ fun getExpectedPointsLoss(previous: Eval, current: Eval, moveColour: MoveColour)
     return max(0.0, (prevEp - curEp) * if (moveColour == MoveColour.WHITE) 1.0 else -1.0)
 }
 
+fun getMoveAccuracy(previous: Eval, current: Eval, moveColour: MoveColour): Double {
+    val pointLoss = getExpectedPointsLoss(previous, current, moveColour)
+    return 103.16 * exp(-4.0 * pointLoss) - 3.17
+}
+
+data class GameAccuracy(
+    val white: Double?,
+    val black: Double?
+)
+
+fun getGameAccuracy(positions: List<Position>): GameAccuracy {
+    val whiteMoves = positions.filter { position ->
+        position.accuracy != null &&
+        position.fenString.split(" ").getOrNull(1) == "b" // White just moved
+    }
+    val blackMoves = positions.filter { position ->
+        position.accuracy != null &&
+        position.fenString.split(" ").getOrNull(1) == "w" // Black just moved
+    }
+
+    val whiteAccuracy = if (whiteMoves.isNotEmpty()) {
+        whiteMoves.mapNotNull { it.accuracy }.average()
+    } else null
+
+    val blackAccuracy = if (blackMoves.isNotEmpty()) {
+        blackMoves.mapNotNull { it.accuracy }.average()
+    } else null
+
+    return GameAccuracy(whiteAccuracy, blackAccuracy)
+}
+
 fun classifyPointLoss(previous: Eval, current: Eval, moveColour: MoveColour, playedMove: String? = null, bestMove: String? = null): String {
     if (playedMove != null && bestMove != null) {
         val processedPlayedMove = if (playedMove.length > 4) {
@@ -188,10 +219,12 @@ fun classifyPositions(positions: List<Position>) {
             val moveColour = if (isWhiteToMove(prev.fenString)) MoveColour.WHITE else MoveColour.BLACK
             val prevEval = parseEvaluationWhiteCentric(prev.score, prev.fenString)
             val curEval = parseEvaluationWhiteCentric(cur.score, cur.fenString)
-            cur.classification = if (prevEval != null && curEval != null) {
-                classifyPointLoss(prevEval, curEval, moveColour, cur.playedMove, prev.bestMove)
+            if (prevEval != null && curEval != null) {
+                cur.classification = classifyPointLoss(prevEval, curEval, moveColour, cur.playedMove, prev.bestMove)
+                cur.accuracy = getMoveAccuracy(prevEval, curEval, moveColour)
             } else {
-                null
+                cur.classification = null
+                cur.accuracy = null
             }
         }
     }

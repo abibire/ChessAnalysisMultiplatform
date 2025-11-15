@@ -9,5 +9,6 @@ data class Position(
     var openingName: String? = null,
     var bestMove: String? = null,
     var playedMove: String? = null,
-    var sanNotation: String? = null
+    var sanNotation: String? = null,
+    var accuracy: Double? = null
 )

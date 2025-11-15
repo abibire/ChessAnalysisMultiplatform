@@ -641,7 +641,7 @@ fun ChessAnalysisApp(context: Any?) {
         val book: Int = 0
     )
 
-    // Calculate stats when analysis is completed - ALWAYS use original analyzed positions
+    // Calculate stats and accuracy when analysis is completed - ALWAYS use original analyzed positions
     val (whiteStats, blackStats) = remember(analysisCompleted) {
         val white = mutableMapOf<String, Int>()
         val black = mutableMapOf<String, Int>()
@@ -682,6 +682,12 @@ fun ChessAnalysisApp(context: Any?) {
         println("DEBUG: Analysis completed=$analysisCompleted, Black stats: $blackStats")
 
         Pair(whiteStats, blackStats)
+    }
+
+    // Calculate game accuracy
+    val gameAccuracy = remember(analysisCompleted) {
+        val positionsToAnalyze = if (originalPositions.isNotEmpty()) originalPositions else positions
+        getGameAccuracy(positionsToAnalyze)
     }
 
     // Show error if PGN failed to parse
@@ -841,15 +847,21 @@ fun ChessAnalysisApp(context: Any?) {
                                     val moveColour = if (isWhiteToMove(prevPosition.fenString)) MoveColour.WHITE else MoveColour.BLACK
                                     val prevEval = parseEvaluationWhiteCentric(prevPosition.score, prevPosition.fenString)
                                     val curEval = parseEvaluationWhiteCentric(analyzedPosition.score, analyzedPosition.fenString)
-                                    val classification = if (prevEval != null && curEval != null) {
-                                        classifyPointLoss(prevEval, curEval, moveColour, analyzedPosition.playedMove, prevPosition.bestMove)
+                                    if (prevEval != null && curEval != null) {
+                                        val classification = classifyPointLoss(prevEval, curEval, moveColour, analyzedPosition.playedMove, prevPosition.bestMove)
+                                        val accuracy = getMoveAccuracy(prevEval, curEval, moveColour)
+                                        analyzedPosition = analyzedPosition.copy(
+                                            forced = false,
+                                            classification = classification,
+                                            accuracy = accuracy
+                                        )
                                     } else {
-                                        null
+                                        analyzedPosition = analyzedPosition.copy(
+                                            forced = false,
+                                            classification = null,
+                                            accuracy = null
+                                        )
                                     }
-                                    analyzedPosition = analyzedPosition.copy(
-                                        forced = false,
-                                        classification = classification
-                                    )
                                 }
                             }
                         }
@@ -1382,6 +1394,8 @@ fun ChessAnalysisApp(context: Any?) {
                                         // Determine left and right stats based on player colors
                                         val leftStats = if (isSearchedPlayerWhite) whiteStats else blackStats
                                         val rightStats = if (isSearchedPlayerWhite) blackStats else whiteStats
+                                        val leftAccuracy = if (isSearchedPlayerWhite) gameAccuracy.white else gameAccuracy.black
+                                        val rightAccuracy = if (isSearchedPlayerWhite) gameAccuracy.black else gameAccuracy.white
 
                                         // Check if there are any stats to show
                                         val hasStats = (leftStats.best + leftStats.excellent + leftStats.good +
@@ -1390,12 +1404,40 @@ fun ChessAnalysisApp(context: Any?) {
                                                 rightStats.inaccuracy + rightStats.mistake + rightStats.blunder) > 0
 
                                         if (hasStats) {
-                                            Text(
-                                                text = "Game Statistics",
-                                                fontSize = bodyFontSize,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
+                                            // Show accuracy percentages
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                // Left player accuracy
+                                                leftAccuracy?.let { acc ->
+                                                    val rounded = (acc * 10.0).roundToInt() / 10.0
+                                                    Text(
+                                                        text = "$rounded%",
+                                                        fontSize = bodyFontSize * 1.2f,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+
+                                                Text(
+                                                    text = "Game Statistics",
+                                                    fontSize = bodyFontSize,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+
+                                                // Right player accuracy
+                                                rightAccuracy?.let { acc ->
+                                                    val rounded = (acc * 10.0).roundToInt() / 10.0
+                                                    Text(
+                                                        text = "$rounded%",
+                                                        fontSize = bodyFontSize * 1.2f,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+                                            }
                                             Spacer(modifier = Modifier.height(6.dp))
 
                                             // Display in a 3-column grid with 2 items each
