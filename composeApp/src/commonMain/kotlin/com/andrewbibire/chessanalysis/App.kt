@@ -2525,12 +2525,15 @@ fun PlayerProfile(
 
         // Rating - only show if available
         if (rating != null && rating != "?" && rating.isNotBlank()) {
+            // Scale offset inversely - smaller negative on large screens, larger negative on small screens
+            // fontSize 14sp (small phone) -> -8dp, fontSize 18sp (tablet) -> -4dp
+            val offsetY = (fontSize.value - 22).dp
             Text(
                 text = rating,
                 fontSize = fontSize * 0.9f,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                modifier = Modifier.offset(y = (-8).dp)
+                modifier = Modifier.offset(y = offsetY)
             )
         }
     }
