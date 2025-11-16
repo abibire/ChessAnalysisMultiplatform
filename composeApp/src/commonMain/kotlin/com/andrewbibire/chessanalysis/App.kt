@@ -2509,11 +2509,13 @@ fun PlayerProfile(
                 }
 
                 Text(
-                    text = playerName.take(15),
-                    fontSize = fontSize,
+                    text = playerName,
+                    fontSize = fontSize * 0.9f,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 120.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 // Color indicator - same as GamesListScreen
