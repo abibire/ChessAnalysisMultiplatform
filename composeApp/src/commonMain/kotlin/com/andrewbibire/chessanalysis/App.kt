@@ -1326,6 +1326,7 @@ fun ChessAnalysisApp(context: Any?) {
                                         avatarUrl = leftAvatar,
                                         otherPlayerHasAvatar = rightAvatar != null,
                                         isLeftSide = true,
+                                        fen = currentPosition?.fenString,
                                         countryCode = leftCountryCode,
                                         avatarSize = avatarSize,
                                         flagSize = flagSize,
@@ -1350,6 +1351,7 @@ fun ChessAnalysisApp(context: Any?) {
                                         avatarUrl = rightAvatar,
                                         otherPlayerHasAvatar = leftAvatar != null,
                                         isLeftSide = false,
+                                        fen = currentPosition?.fenString,
                                         countryCode = rightCountryCode,
                                         avatarSize = avatarSize,
                                         flagSize = flagSize,
@@ -2447,6 +2449,7 @@ fun PlayerProfile(
     avatarUrl: String?,
     otherPlayerHasAvatar: Boolean,
     isLeftSide: Boolean,
+    fen: String? = null,
     countryCode: String? = null,
     avatarSize: androidx.compose.ui.unit.Dp = 32.dp,
     flagSize: androidx.compose.ui.unit.Dp = 16.dp,
@@ -2523,18 +2526,129 @@ fun PlayerProfile(
             }
         }
 
-        // Rating - only show if available
-        if (rating != null && rating != "?" && rating.isNotBlank()) {
-            // Scale offset inversely - smaller negative on large screens, larger negative on small screens
-            // fontSize 14sp (small phone) -> -8dp, fontSize 18sp (tablet) -> -4dp
-            val offsetY = (fontSize.value - 22).dp
+        // Rating and captured material
+        val hasRating = rating != null && rating != "?" && rating.isNotBlank()
+        val offsetY = (fontSize.value - 22).dp
+
+        if (hasRating && fen != null) {
+            // Show rating and material inline
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (isLeftSide) Arrangement.Start else Arrangement.End,
+                modifier = Modifier.offset(y = offsetY)
+            ) {
+                if (isLeftSide) {
+                    // Left side: rating first, then material
+                    Text(
+                        text = rating!!,
+                        fontSize = fontSize * 0.9f,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    CapturedMaterial(
+                        fen = fen,
+                        isWhite = color == "white",
+                        fontSize = fontSize,
+                        isLeftSide = true
+                    )
+                } else {
+                    // Right side: material first, then rating
+                    CapturedMaterial(
+                        fen = fen,
+                        isWhite = color == "white",
+                        fontSize = fontSize,
+                        isLeftSide = false
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = rating!!,
+                        fontSize = fontSize * 0.9f,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+            }
+        } else if (hasRating) {
+            // Show only rating
             Text(
-                text = rating,
+                text = rating!!,
                 fontSize = fontSize * 0.9f,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 modifier = Modifier.offset(y = offsetY)
             )
+        } else if (fen != null) {
+            // Show only material (in place of rating)
+            CapturedMaterial(
+                fen = fen,
+                isWhite = color == "white",
+                fontSize = fontSize,
+                isLeftSide = isLeftSide
+            )
+        }
+    }
+}
+
+@Composable
+fun CapturedMaterial(
+    fen: String,
+    isWhite: Boolean,
+    fontSize: androidx.compose.ui.unit.TextUnit = 14.sp,
+    isLeftSide: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    val materialInfo = remember(fen) { calculateMaterial(fen) }
+    val capturedPieces = if (isWhite) materialInfo.whiteCaptured else materialInfo.blackCaptured
+    val hasAdvantage = if (isWhite) materialInfo.whiteAdvantage > 0 else materialInfo.whiteAdvantage < 0
+    val advantageValue = if (isWhite) materialInfo.whiteAdvantage else -materialInfo.whiteAdvantage
+
+    if (capturedPieces.isNotEmpty() || hasAdvantage) {
+        Row(
+            modifier = modifier,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            // Show material advantage before pieces for right side (opponent)
+            if (!isLeftSide && hasAdvantage && advantageValue > 0) {
+                Text(
+                    text = "+$advantageValue",
+                    fontSize = fontSize * 0.85f,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Display captured pieces in order: queen, rook, bishop, knight, pawn
+            val pieceOrder = listOf('q', 'r', 'b', 'n', 'p')
+            pieceOrder.forEach { pieceChar ->
+                val count = capturedPieces[pieceChar] ?: 0
+                repeat(count) {
+                    val pieceFen = if (isWhite) pieceChar.uppercaseChar().toString() else pieceChar.toString()
+                    val pieceFileName = getPieceSvgFileName(pieceFen)
+                    if (pieceFileName != null) {
+                        val context = coil3.compose.LocalPlatformContext.current
+                        coil3.compose.SubcomposeAsyncImage(
+                            model = coil3.request.ImageRequest.Builder(context)
+                                .data(chessanalysis.composeapp.generated.resources.Res.getUri("drawable/$pieceFileName"))
+                                .build(),
+                            contentDescription = pieceFen,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                            modifier = Modifier.size(fontSize.value.dp * 1.15f)
+                        )
+                    }
+                }
+            }
+
+            // Show material advantage after pieces for left side (player)
+            if (isLeftSide && hasAdvantage && advantageValue > 0) {
+                Text(
+                    text = "+$advantageValue",
+                    fontSize = fontSize * 0.85f,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
