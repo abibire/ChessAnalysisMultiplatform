@@ -39,7 +39,11 @@ fun uciToSan(uci: String, fen: String): String {
             Move(from, to)
         }
 
-        val captureNotation = if (board.getPiece(to) != Piece.NONE) "x" else ""
+        // Check if it's a capture (includes en passant)
+        // En passant: pawn moves diagonally to empty square
+        val isPawnMovingDiagonally = piece.pieceType?.name == "PAWN" && from.file != to.file
+        val isNormalCapture = board.getPiece(to) != Piece.NONE
+        val captureNotation = if (isNormalCapture || isPawnMovingDiagonally) "x" else ""
 
         board.doMove(move, true)
 
