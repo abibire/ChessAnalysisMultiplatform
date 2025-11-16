@@ -42,6 +42,56 @@ actual class StockfishEngine actual constructor(context: Any?) {
         EngineResult(lastScore ?: "0.00", bestMove)
     }
 
+    actual suspend fun evaluateWithMultiPV(fen: String, depth: Int, numLines: Int): EngineResult = withContext(Dispatchers.IO) {
+        println("ANDROID Stockfish: evaluateWithMultiPV($fen, depth=$depth, numLines=$numLines)")
+        initializeIfNeeded()
+
+        writer?.write("setoption name MultiPV value $numLines\n")
+        writer?.write("position fen $fen\n")
+        writer?.write("go depth $depth\n")
+        writer?.flush()
+
+        val pvLines = mutableMapOf<Int, PVLine>()
+        var lastScore: String? = null
+        var bestMove: String? = null
+
+        while (true) {
+            val line = reader?.readLine() ?: break
+
+            if (line.startsWith("info depth") && line.contains("score") && line.contains("multipv")) {
+                val multipvIndex = parseMultiPVIndex(line)
+                val score = parseScoreFromInfo(line)
+                val move = parseFirstMove(line)
+                val pv = parsePV(line)
+
+                pvLines[multipvIndex] = PVLine(score, move, pv)
+
+                if (multipvIndex == 1) {
+                    lastScore = score
+                }
+            }
+
+            if (line.startsWith("bestmove")) {
+                val parts = line.split(" ")
+                if (parts.size > 1) {
+                    bestMove = parts[1]
+                }
+                break
+            }
+        }
+
+        // Reset MultiPV to 1 for future single-line evaluations
+        writer?.write("setoption name MultiPV value 1\n")
+        writer?.flush()
+
+        val alternativeLines = pvLines.values.sortedBy {
+            pvLines.entries.find { entry -> entry.value == it }?.key ?: Int.MAX_VALUE
+        }
+
+        println("ANDROID Stockfish: Multi-PV evaluation complete - ${alternativeLines.size} lines")
+        EngineResult(lastScore ?: "0.00", bestMove, alternativeLines)
+    }
+
     private fun initializeIfNeeded() {
         if (process == null) {
             val stockfishFile = File(context.applicationInfo.nativeLibraryDir, "libstockfish.so")
@@ -85,6 +135,33 @@ actual class StockfishEngine actual constructor(context: Any?) {
             else -> {
                 "0.00"
             }
+        }
+    }
+
+    private fun parseMultiPVIndex(line: String): Int {
+        return if (line.contains("multipv")) {
+            val after = line.substringAfter("multipv").trim()
+            after.split(" ")[0].toIntOrNull() ?: 1
+        } else {
+            1
+        }
+    }
+
+    private fun parseFirstMove(line: String): String? {
+        return if (line.contains(" pv ")) {
+            val after = line.substringAfter(" pv ").trim()
+            after.split(" ").firstOrNull()
+        } else {
+            null
+        }
+    }
+
+    private fun parsePV(line: String): List<String> {
+        return if (line.contains(" pv ")) {
+            val after = line.substringAfter(" pv ").trim()
+            after.split(" ").filter { it.isNotEmpty() }
+        } else {
+            emptyList()
         }
     }
 

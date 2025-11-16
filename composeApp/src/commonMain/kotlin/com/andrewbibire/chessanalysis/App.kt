@@ -121,6 +121,11 @@ fun ChessAnalysisApp(context: Any?) {
     var showDepthDialog by remember { mutableStateOf(false) }
     var analysisDepth by remember { mutableIntStateOf(com.andrewbibire.chessanalysis.online.UserPreferences.getAnalysisDepth()) }
 
+    // Alternative lines dialog
+    var showAlternativeLinesDialog by remember { mutableStateOf(false) }
+    var alternativeLines by remember { mutableStateOf<List<PVLine>>(emptyList()) }
+    var isLoadingAlternatives by remember { mutableStateOf(false) }
+
     // Load last username when entering input mode
     LaunchedEffect(showUsernameInput) {
         if (showUsernameInput && usernameTextFieldValue.text.isEmpty()) {
@@ -1616,6 +1621,45 @@ fun ChessAnalysisApp(context: Any?) {
                                 Spacer(modifier = Modifier.width(8.dp))
 
                                 EvaluationButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            currentPosition?.fenString?.let { fen ->
+                                                isLoadingAlternatives = true
+                                                try {
+                                                    val result = stockfishEngine.evaluateWithMultiPV(fen, analysisDepth, 2)
+                                                    alternativeLines = result.alternativeLines
+                                                    showAlternativeLinesDialog = true
+                                                } catch (e: Exception) {
+                                                    println("Error evaluating alternatives: ${e.message}")
+                                                } finally {
+                                                    isLoadingAlternatives = false
+                                                }
+                                            }
+                                        }
+                                    },
+                                    enabled = !isLoadingAlternatives && currentPosition != null,
+                                    modifier = Modifier
+                                        .height(32.dp)
+                                        .width(64.dp)
+                                ) {
+                                    if (isLoadingAlternatives) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Filled.List,
+                                            contentDescription = "Alternative Lines",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                EvaluationButton(
                                     onClick = { isBoardFlipped = !isBoardFlipped },
                                     enabled = true,
                                     modifier = Modifier
@@ -2111,6 +2155,108 @@ fun ChessAnalysisApp(context: Any?) {
                         )
                     ) {
                         Text("OK")
+                    }
+                }
+            )
+        }
+
+        // Alternative Lines Dialog
+        if (showAlternativeLinesDialog) {
+            AlertDialog(
+                onDismissRequest = { showAlternativeLinesDialog = false },
+                title = {
+                    Text(
+                        text = "Alternative Lines",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column(
+                        horizontalAlignment = Alignment.Start,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (alternativeLines.isEmpty()) {
+                            Text(
+                                text = "No alternative lines available",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            alternativeLines.forEachIndexed { index, line ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Line ${index + 1}",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = BoardDark
+                                            )
+
+                                            val scoreColor = when {
+                                                line.score.startsWith("mate") -> {
+                                                    val mateIn = line.score.substringAfter("mate").trim().toIntOrNull() ?: 0
+                                                    if (mateIn > 0) Color(0xFF4CAF50) else Color(0xFFE53935)
+                                                }
+                                                else -> {
+                                                    val scoreValue = line.score.toDoubleOrNull() ?: 0.0
+                                                    when {
+                                                        scoreValue > 0 -> Color(0xFF4CAF50)
+                                                        scoreValue < 0 -> Color(0xFFE53935)
+                                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                    }
+                                                }
+                                            }
+
+                                            Text(
+                                                text = line.score,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = scoreColor
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        if (line.pv.isNotEmpty()) {
+                                            Text(
+                                                text = line.pv.take(5).joinToString(" "),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { showAlternativeLinesDialog = false },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = BoardDark
+                        )
+                    ) {
+                        Text("Close")
                     }
                 }
             )

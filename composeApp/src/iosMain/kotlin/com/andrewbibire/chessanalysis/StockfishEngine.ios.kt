@@ -25,6 +25,53 @@ actual class StockfishEngine actual constructor(context: Any?) {
         return EngineResult(score, bestMove)
     }
 
+    actual suspend fun evaluateWithMultiPV(fen: String, depth: Int, numLines: Int): EngineResult {
+        println("KOTLIN[iOS]: evaluateWithMultiPV($fen, depth=$depth, numLines=$numLines)")
+        val resultPtr = stockfish_evaluate_multipv(fen, depth, numLines)
+        val resultStr = resultPtr?.toKString() ?: "0.00||"
+        println("KOTLIN[iOS]: multi-PV result <- $resultStr")
+
+        // Format: score|bestMove||line1Score:line1Move:pv1,pv2,pv3|line2Score:line2Move:pv1,pv2,pv3|...
+        val mainParts = resultStr.split("||", limit = 2)
+        val basicParts = mainParts[0].split("|")
+        val score = basicParts.getOrNull(0) ?: "0.00"
+        val bestMove = basicParts.getOrNull(1)?.takeIf { it.isNotEmpty() }
+
+        val alternativeLines = try {
+            if (mainParts.size > 1 && mainParts[1].isNotEmpty()) {
+                mainParts[1].split("|").mapNotNull { lineStr ->
+                    if (lineStr.isEmpty() || lineStr.isBlank()) return@mapNotNull null
+
+                    try {
+                        val lineParts = lineStr.split(":", limit = 3)
+                        if (lineParts.isEmpty()) return@mapNotNull null
+
+                        val lineScore = lineParts.getOrNull(0)?.takeIf { it.isNotEmpty() } ?: "0.00"
+                        val lineMove = lineParts.getOrNull(1)?.takeIf { it.isNotEmpty() }
+                        val pv = if (lineParts.size > 2 && lineParts[2].isNotEmpty()) {
+                            lineParts[2].split(",").filter { it.isNotEmpty() && it.isNotBlank() }
+                        } else {
+                            emptyList()
+                        }
+
+                        PVLine(lineScore, lineMove, pv)
+                    } catch (e: Exception) {
+                        println("KOTLIN[iOS]: Error parsing line '$lineStr': ${e.message}")
+                        null
+                    }
+                }
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            println("KOTLIN[iOS]: Error parsing multi-PV result: ${e.message}")
+            emptyList()
+        }
+
+        println("KOTLIN[iOS]: Parsed ${alternativeLines.size} alternative lines")
+        return EngineResult(score, bestMove, alternativeLines)
+    }
+
     actual fun close() {
         println("KOTLIN[iOS]: close() -> stockfish_cleanup()")
         stockfish_cleanup()
