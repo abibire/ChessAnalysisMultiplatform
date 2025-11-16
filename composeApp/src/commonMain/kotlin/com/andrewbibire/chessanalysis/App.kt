@@ -2529,63 +2529,71 @@ fun PlayerProfile(
         // Rating and captured material
         val hasRating = rating != null && rating != "?" && rating.isNotBlank()
         val offsetY = (fontSize.value - 22).dp
+        // Fixed height to accommodate material pieces (1.15x fontSize) plus offset
+        val fixedHeight = fontSize.value.dp * 1.5f
 
-        if (hasRating && fen != null) {
-            // Show rating and material inline
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (isLeftSide) Arrangement.Start else Arrangement.End,
-                modifier = Modifier.offset(y = offsetY)
-            ) {
-                if (isLeftSide) {
-                    // Left side: rating first, then material
-                    Text(
-                        text = rating!!,
-                        fontSize = fontSize * 0.9f,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    CapturedMaterial(
-                        fen = fen,
-                        isWhite = color == "white",
-                        fontSize = fontSize,
-                        isLeftSide = true
-                    )
-                } else {
-                    // Right side: material first, then rating
-                    CapturedMaterial(
-                        fen = fen,
-                        isWhite = color == "white",
-                        fontSize = fontSize,
-                        isLeftSide = false
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = rating!!,
-                        fontSize = fontSize * 0.9f,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
+        Box(
+            modifier = Modifier.height(fixedHeight),
+            contentAlignment = if (isLeftSide) Alignment.CenterStart else Alignment.CenterEnd
+        ) {
+            if (hasRating && fen != null) {
+                // Show rating and material inline
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = if (isLeftSide) Arrangement.Start else Arrangement.End,
+                    modifier = Modifier.offset(y = offsetY)
+                ) {
+                    if (isLeftSide) {
+                        // Left side: rating first, then material
+                        Text(
+                            text = rating!!,
+                            fontSize = fontSize * 0.9f,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        CapturedMaterial(
+                            fen = fen,
+                            isWhite = color == "white",
+                            fontSize = fontSize,
+                            isLeftSide = true
+                        )
+                    } else {
+                        // Right side: material first, then rating
+                        CapturedMaterial(
+                            fen = fen,
+                            isWhite = color == "white",
+                            fontSize = fontSize,
+                            isLeftSide = false
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = rating!!,
+                            fontSize = fontSize * 0.9f,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
                 }
+            } else if (hasRating) {
+                // Show only rating
+                Text(
+                    text = rating!!,
+                    fontSize = fontSize * 0.9f,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.offset(y = offsetY)
+                )
+            } else if (fen != null) {
+                // Show only material (in place of rating)
+                CapturedMaterial(
+                    fen = fen,
+                    isWhite = color == "white",
+                    fontSize = fontSize,
+                    isLeftSide = isLeftSide,
+                    modifier = Modifier.offset(y = offsetY)
+                )
             }
-        } else if (hasRating) {
-            // Show only rating
-            Text(
-                text = rating!!,
-                fontSize = fontSize * 0.9f,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                modifier = Modifier.offset(y = offsetY)
-            )
-        } else if (fen != null) {
-            // Show only material (in place of rating)
-            CapturedMaterial(
-                fen = fen,
-                isWhite = color == "white",
-                fontSize = fontSize,
-                isLeftSide = isLeftSide
-            )
         }
     }
 }
@@ -2615,7 +2623,8 @@ fun CapturedMaterial(
                     text = "+$advantageValue",
                     fontSize = fontSize * 0.85f,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 2.dp)
                 )
             }
 
@@ -2623,19 +2632,51 @@ fun CapturedMaterial(
             val pieceOrder = listOf('q', 'r', 'b', 'n', 'p')
             pieceOrder.forEach { pieceChar ->
                 val count = capturedPieces[pieceChar] ?: 0
-                repeat(count) {
+                if (count > 0) {
                     val pieceFen = if (isWhite) pieceChar.uppercaseChar().toString() else pieceChar.toString()
                     val pieceFileName = getPieceSvgFileName(pieceFen)
-                    if (pieceFileName != null) {
-                        val context = coil3.compose.LocalPlatformContext.current
-                        coil3.compose.SubcomposeAsyncImage(
-                            model = coil3.request.ImageRequest.Builder(context)
-                                .data(chessanalysis.composeapp.generated.resources.Res.getUri("drawable/$pieceFileName"))
-                                .build(),
-                            contentDescription = pieceFen,
-                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                            modifier = Modifier.size(fontSize.value.dp * 1.15f)
-                        )
+
+                    // For pawns, show count with number; for other pieces, show individual pieces
+                    if (pieceChar == 'p') {
+                        // Show one pawn with count
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            if (pieceFileName != null) {
+                                val context = coil3.compose.LocalPlatformContext.current
+                                coil3.compose.SubcomposeAsyncImage(
+                                    model = coil3.request.ImageRequest.Builder(context)
+                                        .data(chessanalysis.composeapp.generated.resources.Res.getUri("drawable/$pieceFileName"))
+                                        .build(),
+                                    contentDescription = pieceFen,
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                                    modifier = Modifier.size(fontSize.value.dp * 1.15f)
+                                )
+                            }
+                            if (count > 1) {
+                                Text(
+                                    text = "×$count",
+                                    fontSize = fontSize * 0.75f,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else {
+                        // Show individual pieces for Q, R, B, N
+                        repeat(count) {
+                            if (pieceFileName != null) {
+                                val context = coil3.compose.LocalPlatformContext.current
+                                coil3.compose.SubcomposeAsyncImage(
+                                    model = coil3.request.ImageRequest.Builder(context)
+                                        .data(chessanalysis.composeapp.generated.resources.Res.getUri("drawable/$pieceFileName"))
+                                        .build(),
+                                    contentDescription = pieceFen,
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                                    modifier = Modifier.size(fontSize.value.dp * 1.15f)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -2646,7 +2687,8 @@ fun CapturedMaterial(
                     text = "+$advantageValue",
                     fontSize = fontSize * 0.85f,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 2.dp)
                 )
             }
         }
