@@ -3,7 +3,7 @@
 A compose multiplatform chess game analyzer with Stockfish engine integration and move classification.
 Available on iOS, Android, Windows, MacOS, and Linux
 
-![Screenshot placeholder - Add app screenshots here]
+![Preview](./multiplatform.png)
 
 > Analyze your games with professional-grade analysis powered by Stockfish, available on all your devices.
 
