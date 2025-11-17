@@ -75,4 +75,4 @@ This is a Kotlin Multiplatform project built with Compose Multiplatform.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](license) file for details.
+This project is licensed under the GPL 3 License - see the [LICENSE](license) file for details.
