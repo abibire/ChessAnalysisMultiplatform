@@ -71,6 +71,8 @@ import com.github.bhlangonijr.chesslib.Piece
 
 @Composable
 fun App(context: Any? = null) {
+    val platform = getCurrentPlatform()
+
     MaterialTheme(
         colorScheme = ChessAnalysisDarkColorScheme
     ) {
@@ -80,7 +82,11 @@ fun App(context: Any? = null) {
                 .background(MaterialTheme.colorScheme.background),
             color = MaterialTheme.colorScheme.background
         ) {
-            ChessAnalysisApp(context)
+            // Use desktop-optimized UI for JVM platform, mobile UI for Android/iOS
+            when (platform) {
+                PlatformType.JVM_DESKTOP -> DesktopChessAnalysisApp(context)
+                PlatformType.ANDROID, PlatformType.IOS -> ChessAnalysisApp(context)
+            }
         }
     }
 }
