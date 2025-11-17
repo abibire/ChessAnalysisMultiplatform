@@ -1,6 +1,6 @@
 # Chess Analysis ♟️
 
-A compose multiplatform chess game analyzer with Stockfish engine integration and move classification.
+Chess Analysis is a compose multiplatform chess game analyzer with Stockfish engine integration and move classification.
 Available on iOS, Android, Windows, MacOS, and Linux
 
 ![Preview](./multiplatform_aligned_baseline.png)
