@@ -524,6 +524,9 @@ fun DesktopChessAnalysisApp(context: Any?) {
         currentIndex = positions.size - 1
         positionsRevision++
         isExploringAlternativeLine = true
+
+        // Request focus back to main keyboard handler
+        focusRequester.requestFocus()
     }
 
     // Click handler for board squares
@@ -1959,10 +1962,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
-                                        .clickable {
-                                            exploreAlternativeLine(line.pv, 0)
-                                        },
+                                        .padding(vertical = 4.dp),
                                     colors = CardDefaults.cardColors(
                                         containerColor = if (index == 0) DarkSurfaceVariant.copy(alpha = 1.2f)
                                         else DarkSurfaceVariant
@@ -1991,16 +1991,36 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                                 )
                                             }
                                         }
-                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        // Display moves as clickable chips
                                         val sanMoves = alternativeLinesFen?.let { fen ->
                                             convertPvToSan(line.pv.take(5), fen)
                                         } ?: emptyList()
-                                        Text(
-                                            text = sanMoves.joinToString(" "),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 2
-                                        )
+
+                                        androidx.compose.foundation.layout.FlowRow(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            sanMoves.forEachIndexed { moveIdx, move ->
+                                                Surface(
+                                                    modifier = Modifier.clickable {
+                                                        exploreAlternativeLine(line.pv, moveIdx)
+                                                    },
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                                                ) {
+                                                    Text(
+                                                        text = move,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
