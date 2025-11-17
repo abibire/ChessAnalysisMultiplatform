@@ -119,6 +119,14 @@ fun DesktopChessAnalysisApp(context: Any?) {
         alternativeLinesFen = null
     }
 
+    // Delay showing board slightly to allow images to render
+    var imagesLoaded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(200) // Small delay to allow image rendering
+        imagesLoaded = true
+    }
+
     val gameResult = remember(pgn) {
         pgn?.let { Regex("""\[Result\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) } ?: "*"
     }
@@ -1137,6 +1145,20 @@ fun DesktopChessAnalysisApp(context: Any?) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Flip board button (only show when game is loaded)
+                    if (pgn != null) {
+                        OutlinedButton(
+                            onClick = { isBoardFlipped = !isBoardFlipped },
+                            modifier = Modifier.fillMaxWidth().height(40.dp)
+                        ) {
+                            Icon(Icons.Filled.SwapVert, "Flip board", modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Flip Board")
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
                     // Import game section
                     Text(
                         text = "Import Game",
@@ -1437,81 +1459,104 @@ fun DesktopChessAnalysisApp(context: Any?) {
                     .background(MaterialTheme.colorScheme.background),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                val currentPosition = if (pgn != null && positions.isNotEmpty()) {
+                    positions[safeCurrentIndex]
+                } else {
+                    null
+                }
+
+                val isLastOfOriginalGame = if (originalPositions.isNotEmpty()) {
+                    safeCurrentIndex == originalPositions.lastIndex && !isOnAlternatePath
+                } else {
+                    safeCurrentIndex == positions.lastIndex
+                }
+
+                val effectiveGameResult = if (freeMoveGameEnd.isEnded) {
+                    freeMoveGameEnd.result
+                } else {
+                    gameResult
+                }
+
+                // Chess board with vertical evaluation bar - centered and scaled appropriately
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val maxBoardSize = minOf(maxWidth * 0.75f, maxHeight * 0.9f, 700.dp)
+
+                    if (imagesLoaded || pgn != null) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.wrapContentSize()
+                        ) {
+                            // Row with eval bar and board
+                            Row(
+                                modifier = Modifier.wrapContentSize(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Vertical evaluation bar to the left (only show when game loaded)
+                                if (currentPosition != null) {
+                                    VerticalEvaluationBar(
+                                        score = if (isCurrentPositionAnalyzing) null else currentPosition.score,
+                                        fen = currentPosition.fenString,
+                                        gameResult = effectiveGameResult,
+                                        isLastMove = isLastOfOriginalGame || freeMoveGameEnd.isEnded,
+                                        modifier = Modifier.width(40.dp).height(maxBoardSize)
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier.size(maxBoardSize),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val suppressArrow = isCurrentPositionAnalyzing ||
+                                            currentClassification == "Best" ||
+                                            currentClassification == "Book" ||
+                                            currentClassification == "Forced" ||
+                                            (isOnAlternatePath && currentClassification == null)
+
+                                    val arrow = if (!suppressArrow && safeCurrentIndex > 0 && positions.isNotEmpty())
+                                        positions[safeCurrentIndex - 1].bestMove?.takeIf { it.length >= 4 }?.substring(0, 4)
+                                    else null
+
+                                    Chessboard(
+                                        fen = currentPosition?.fenString ?: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                                        arrowUci = arrow,
+                                        badgeUci = badgeUci,
+                                        badgeDrawable = badgeDrawable,
+                                        flipped = isBoardFlipped,
+                                        selectedSquare = if (currentPosition != null) selectedSquare else null,
+                                        legalMoves = if (currentPosition != null) legalMovesForSelected else emptyList(),
+                                        onSquareClick = if (currentPosition != null) onSquareClick else null,
+                                        canStartDrag = if (currentPosition != null) canStartDrag else null,
+                                        onDragStart = if (currentPosition != null) onDragStart else null,
+                                        onDrag = if (currentPosition != null) onDrag else null,
+                                        onDragEnd = if (currentPosition != null) onDragEnd else null,
+                                        draggedFromSquare = draggedPiece?.fromSquare,
+                                        draggedPiece = draggedPiece?.piece,
+                                        dragPosition = dragPosition,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            }
+
+                            // Message when no game loaded (directly below board)
+                            if (pgn == null) {
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Text(
+                                    text = "Import a game to start analysis",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Player info (only show when game loaded)
                 if (pgn != null && positions.isNotEmpty()) {
-                    val currentPosition = positions[safeCurrentIndex]
-
-                    val isLastOfOriginalGame = if (originalPositions.isNotEmpty()) {
-                        safeCurrentIndex == originalPositions.lastIndex && !isOnAlternatePath
-                    } else {
-                        safeCurrentIndex == positions.lastIndex
-                    }
-
-                    val effectiveGameResult = if (freeMoveGameEnd.isEnded) {
-                        freeMoveGameEnd.result
-                    } else {
-                        gameResult
-                    }
-
-                    // Chess board with vertical evaluation bar - centered and scaled appropriately
-                    BoxWithConstraints(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val maxBoardSize = minOf(maxWidth * 0.75f, maxHeight * 0.9f, 700.dp)
-
-                        // Row with eval bar and board
-                        Row(
-                            modifier = Modifier.wrapContentSize(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Vertical evaluation bar to the left
-                            VerticalEvaluationBar(
-                                score = if (isCurrentPositionAnalyzing) null else currentPosition.score,
-                                fen = currentPosition.fenString,
-                                gameResult = effectiveGameResult,
-                                isLastMove = isLastOfOriginalGame || freeMoveGameEnd.isEnded,
-                                modifier = Modifier.width(40.dp).height(maxBoardSize)
-                            )
-
-                        Box(
-                            modifier = Modifier.size(maxBoardSize),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val suppressArrow = isCurrentPositionAnalyzing ||
-                                    currentClassification == "Best" ||
-                                    currentClassification == "Book" ||
-                                    currentClassification == "Forced" ||
-                                    (isOnAlternatePath && currentClassification == null)
-
-                            val arrow = if (!suppressArrow && safeCurrentIndex > 0)
-                                positions[safeCurrentIndex - 1].bestMove?.takeIf { it.length >= 4 }?.substring(0, 4)
-                            else null
-
-                            Chessboard(
-                                fen = positions[safeCurrentIndex].fenString,
-                                arrowUci = arrow,
-                                badgeUci = badgeUci,
-                                badgeDrawable = badgeDrawable,
-                                flipped = isBoardFlipped,
-                                selectedSquare = selectedSquare,
-                                legalMoves = legalMovesForSelected,
-                                onSquareClick = onSquareClick,
-                                canStartDrag = canStartDrag,
-                                onDragStart = onDragStart,
-                                onDrag = onDrag,
-                                onDragEnd = onDragEnd,
-                                draggedFromSquare = draggedPiece?.fromSquare,
-                                draggedPiece = draggedPiece?.piece,
-                                dragPosition = dragPosition,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        }
-                    }
-
-                    // Player info
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1624,84 +1669,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
                         }
                     }
 
-                    // Additional controls
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 32.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        OutlinedButton(
-                            onClick = { isBoardFlipped = !isBoardFlipped },
-                            modifier = Modifier.height(40.dp)
-                        ) {
-                            Icon(Icons.Filled.SwapVert, "Flip board", modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Flip Board")
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        OutlinedButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    currentPosition?.fenString?.let { fen ->
-                                        isLoadingAlternatives = true
-                                        try {
-                                            val result = stockfishEngine.evaluateWithMultiPV(fen, analysisDepth, 3)
-                                            alternativeLines = result.alternativeLines
-                                            alternativeLinesFen = fen
-                                        } catch (e: Exception) {
-                                            println("Error evaluating alternatives: ${e.message}")
-                                        } finally {
-                                            isLoadingAlternatives = false
-                                        }
-                                    }
-                                }
-                            },
-                            enabled = !isLoadingAlternatives && currentPosition != null,
-                            modifier = Modifier.height(40.dp)
-                        ) {
-                            if (isLoadingAlternatives) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = BoardDark
-                                )
-                            } else {
-                                Icon(Icons.Filled.List, "Alternative Lines", modifier = Modifier.size(20.dp))
-                            }
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Compute Alternatives")
-                        }
-                    }
-
                     Spacer(modifier = Modifier.height(16.dp))
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            val boardSize = 500.dp
-                            Box(modifier = Modifier.size(boardSize)) {
-                                Chessboard(
-                                    fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-                                    arrowUci = null,
-                                    badgeUci = null,
-                                    badgeDrawable = null,
-                                    flipped = false,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Text(
-                                text = "Import a game to start analysis",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
                 }
             }
 
@@ -1839,6 +1807,42 @@ fun DesktopChessAnalysisApp(context: Any?) {
 
                             Spacer(modifier = Modifier.height(12.dp))
                         }
+
+                        // Compute alternatives button
+                        OutlinedButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    currentPosition?.fenString?.let { fen ->
+                                        isLoadingAlternatives = true
+                                        try {
+                                            val result = stockfishEngine.evaluateWithMultiPV(fen, analysisDepth, 3)
+                                            alternativeLines = result.alternativeLines
+                                            alternativeLinesFen = fen
+                                        } catch (e: Exception) {
+                                            println("Error evaluating alternatives: ${e.message}")
+                                        } finally {
+                                            isLoadingAlternatives = false
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isLoadingAlternatives && currentPosition != null,
+                            modifier = Modifier.fillMaxWidth().height(40.dp)
+                        ) {
+                            if (isLoadingAlternatives) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = BoardDark
+                                )
+                            } else {
+                                Icon(Icons.Filled.List, "Alternative Lines", modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Compute Alternatives")
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         // Move classification
                         if (!isCurrentPositionAnalyzing && currentClassification != null) {
