@@ -107,6 +107,18 @@ fun DesktopChessAnalysisApp(context: Any?) {
         }
     }
 
+    // Clear alternative lines when game changes
+    LaunchedEffect(pgn) {
+        alternativeLines = emptyList()
+        alternativeLinesFen = null
+    }
+
+    // Clear alternative lines when user navigates
+    LaunchedEffect(currentIndex) {
+        alternativeLines = emptyList()
+        alternativeLinesFen = null
+    }
+
     val gameResult = remember(pgn) {
         pgn?.let { Regex("""\[Result\s+"([^"]+)"\]""").find(it)?.groupValues?.get(1) } ?: "*"
     }
@@ -1068,7 +1080,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                         imageVector = Icons.Filled.Bolt,
                                         contentDescription = "Quick (5)",
                                         modifier = Modifier.size(16.dp),
-                                        tint = if (analysisDepth == 5) BoardDark else TextSecondary
+                                        tint = TextSecondary
                                     )
                                 }
 
@@ -1115,7 +1127,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                 ) {
                                     MaterialSymbol(
                                         name = "network_intelligence_history",
-                                        tint = if (analysisDepth == 20) BoardDark else TextSecondary,
+                                        tint = TextSecondary,
                                         sizeSp = 18f
                                     )
                                 }
@@ -1210,9 +1222,8 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                 IconButton(
                                     onClick = {
                                         selectedPlatform = null
-                                        usernameTextFieldValue = TextFieldValue()
-                                        isPrefilledUsername = false
                                         isLoadingProfile = false
+                                        userProfile = null
                                     }
                                 ) {
                                     Icon(Icons.Filled.ArrowBack, "Back")
@@ -1464,8 +1475,6 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                 modifier = Modifier.width(40.dp).height(maxBoardSize)
                             )
 
-                            Spacer(modifier = Modifier.width(12.dp))
-
                         Box(
                             modifier = Modifier.size(maxBoardSize),
                             contentAlignment = Alignment.Center
@@ -1502,7 +1511,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
                         }
                     }
 
-                    // Player info and move counter
+                    // Player info
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1523,13 +1532,6 @@ fun DesktopChessAnalysisApp(context: Any?) {
                             flagSize = 20.dp,
                             fontSize = 16.sp,
                             modifier = Modifier
-                        )
-
-                        Text(
-                            text = "Move: $currentIndex",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
                         )
 
                         PlayerProfile(
@@ -1663,7 +1665,8 @@ fun DesktopChessAnalysisApp(context: Any?) {
                             if (isLoadingAlternatives) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
+                                    strokeWidth = 2.dp,
+                                    color = BoardDark
                                 )
                             } else {
                                 Icon(Icons.Filled.List, "Alternative Lines", modifier = Modifier.size(20.dp))
@@ -1756,6 +1759,30 @@ fun DesktopChessAnalysisApp(context: Any?) {
                             }
                             Spacer(modifier = Modifier.height(16.dp))
                         }
+
+                        // Move counter
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = DarkSurfaceVariant
+                            )
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Move: $currentIndex",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         // Current position evaluation (hide when analyzing)
                         if (!isCurrentPositionAnalyzing) {
@@ -1871,9 +1898,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
 
                                     if (safeCurrentIndex > 0 && currentClassification != "Best" && currentClassification != "Book" && currentClassification != "Forced") {
                                         positions[safeCurrentIndex - 1].bestMove?.let { bm ->
-                                            Spacer(modifier = Modifier.height(8.dp))
-                                            HorizontalDivider()
-                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Spacer(modifier = Modifier.height(12.dp))
                                             Text(
                                                 text = "Best move:",
                                                 style = MaterialTheme.typography.labelMedium,
