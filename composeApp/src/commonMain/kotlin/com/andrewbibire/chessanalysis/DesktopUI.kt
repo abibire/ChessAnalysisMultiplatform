@@ -1044,124 +1044,6 @@ fun DesktopChessAnalysisApp(context: Any?) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Depth settings - Desktop-optimized compact design
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = DarkSurfaceVariant
-                        )
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            // Header row with label and value
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Analysis Depth",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimary
-                                )
-                                Text(
-                                    text = "$analysisDepth",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BoardDark
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // Compact slider with icons
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                // Quick preset button
-                                IconButton(
-                                    onClick = {
-                                        analysisDepth = 5
-                                        UserPreferences.saveAnalysisDepth(analysisDepth)
-                                    },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Bolt,
-                                        contentDescription = "Quick (5)",
-                                        modifier = Modifier.size(16.dp),
-                                        tint = TextSecondary
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(4.dp))
-
-                                // Slider - more compact, no end tick
-                                Slider(
-                                    value = analysisDepth.toFloat(),
-                                    onValueChange = { newValue ->
-                                        analysisDepth = newValue.toInt()
-                                    },
-                                    onValueChangeFinished = {
-                                        UserPreferences.saveAnalysisDepth(analysisDepth)
-                                    },
-                                    valueRange = 5f..20f,
-                                    modifier = Modifier.weight(1f),
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = BoardDark,
-                                        activeTrackColor = BoardDark,
-                                        inactiveTrackColor = BoardDark.copy(alpha = 0.3f)
-                                    ),
-                                    track = { sliderState ->
-                                        SliderDefaults.Track(
-                                            colors = SliderDefaults.colors(
-                                                thumbColor = BoardDark,
-                                                activeTrackColor = BoardDark,
-                                                inactiveTrackColor = BoardDark.copy(alpha = 0.3f)
-                                            ),
-                                            sliderState = sliderState,
-                                            drawStopIndicator = null
-                                        )
-                                    }
-                                )
-
-                                Spacer(modifier = Modifier.width(4.dp))
-
-                                // Deep preset button
-                                IconButton(
-                                    onClick = {
-                                        analysisDepth = 20
-                                        UserPreferences.saveAnalysisDepth(analysisDepth)
-                                    },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    MaterialSymbol(
-                                        name = "network_intelligence_history",
-                                        tint = TextSecondary,
-                                        sizeSp = 18f
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Flip board button (only show when game is loaded)
-                    if (pgn != null) {
-                        OutlinedButton(
-                            onClick = { isBoardFlipped = !isBoardFlipped },
-                            modifier = Modifier.fillMaxWidth().height(40.dp)
-                        ) {
-                            Icon(Icons.Filled.SwapVert, "Flip board", modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Flip Board")
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
                     // Import game section
                     Text(
                         text = "Import Game",
@@ -1449,6 +1331,124 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                     Text("Close Game")
                                 }
                             }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Depth settings - Desktop-optimized compact design
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = DarkSurfaceVariant
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            // Header row with label and value
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Analysis Depth",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = "$analysisDepth",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BoardDark
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Compact slider with icons
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                // Quick preset button
+                                IconButton(
+                                    onClick = {
+                                        analysisDepth = 5
+                                        UserPreferences.saveAnalysisDepth(analysisDepth)
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Bolt,
+                                        contentDescription = "Quick (5)",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = TextSecondary
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(4.dp))
+
+                                // Slider - more compact, no end tick
+                                Slider(
+                                    value = analysisDepth.toFloat(),
+                                    onValueChange = { newValue ->
+                                        analysisDepth = newValue.toInt()
+                                    },
+                                    onValueChangeFinished = {
+                                        UserPreferences.saveAnalysisDepth(analysisDepth)
+                                    },
+                                    valueRange = 5f..20f,
+                                    modifier = Modifier.weight(1f),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = BoardDark,
+                                        activeTrackColor = BoardDark,
+                                        inactiveTrackColor = BoardDark.copy(alpha = 0.3f)
+                                    ),
+                                    track = { sliderState ->
+                                        SliderDefaults.Track(
+                                            colors = SliderDefaults.colors(
+                                                thumbColor = BoardDark,
+                                                activeTrackColor = BoardDark,
+                                                inactiveTrackColor = BoardDark.copy(alpha = 0.3f)
+                                            ),
+                                            sliderState = sliderState,
+                                            drawStopIndicator = null
+                                        )
+                                    }
+                                )
+
+                                Spacer(modifier = Modifier.width(4.dp))
+
+                                // Deep preset button
+                                IconButton(
+                                    onClick = {
+                                        analysisDepth = 20
+                                        UserPreferences.saveAnalysisDepth(analysisDepth)
+                                    },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    MaterialSymbol(
+                                        name = "network_intelligence_history",
+                                        tint = TextSecondary,
+                                        sizeSp = 18f
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Flip board button at bottom (only show when game is loaded)
+                    if (pgn != null) {
+                        OutlinedButton(
+                            onClick = { isBoardFlipped = !isBoardFlipped },
+                            modifier = Modifier.fillMaxWidth().height(40.dp)
+                        ) {
+                            Icon(Icons.Filled.SwapVert, "Flip board", modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Flip Board")
                         }
                     }
                 }
@@ -1812,42 +1812,6 @@ fun DesktopChessAnalysisApp(context: Any?) {
                             Spacer(modifier = Modifier.height(12.dp))
                         }
 
-                        // Compute alternatives button
-                        OutlinedButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    currentPosition?.fenString?.let { fen ->
-                                        isLoadingAlternatives = true
-                                        try {
-                                            val result = stockfishEngine.evaluateWithMultiPV(fen, analysisDepth, 3)
-                                            alternativeLines = result.alternativeLines
-                                            alternativeLinesFen = fen
-                                        } catch (e: Exception) {
-                                            println("Error evaluating alternatives: ${e.message}")
-                                        } finally {
-                                            isLoadingAlternatives = false
-                                        }
-                                    }
-                                }
-                            },
-                            enabled = !isLoadingAlternatives && currentPosition != null,
-                            modifier = Modifier.fillMaxWidth().height(40.dp)
-                        ) {
-                            if (isLoadingAlternatives) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = BoardDark
-                                )
-                            } else {
-                                Icon(Icons.Filled.List, "Alternative Lines", modifier = Modifier.size(20.dp))
-                            }
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Compute Alternatives")
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
                         // Move classification
                         if (!isCurrentPositionAnalyzing && currentClassification != null) {
                             Card(
@@ -1947,85 +1911,6 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-
-                        // Alternative lines (if loaded)
-                        if (alternativeLines.isNotEmpty()) {
-                            Text(
-                                text = "Alternative Lines",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            alternativeLines.forEachIndexed { index, line ->
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (index == 0) DarkSurfaceVariant.copy(alpha = 1.2f)
-                                        else DarkSurfaceVariant
-                                    )
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "Line ${index + 1}",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            alternativeLinesFen?.let { fen ->
-                                                val displayScore = normalizeScoreForDisplay(
-                                                    line.score,
-                                                    fen,
-                                                    false
-                                                )
-                                                Text(
-                                                    text = displayScore,
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.height(8.dp))
-
-                                        // Display moves as clickable chips
-                                        val sanMoves = alternativeLinesFen?.let { fen ->
-                                            convertPvToSan(line.pv.take(5), fen)
-                                        } ?: emptyList()
-
-                                        androidx.compose.foundation.layout.FlowRow(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            sanMoves.forEachIndexed { moveIdx, move ->
-                                                Surface(
-                                                    modifier = Modifier.clickable {
-                                                        exploreAlternativeLine(line.pv, moveIdx)
-                                                    },
-                                                    shape = RoundedCornerShape(4.dp),
-                                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
-                                                ) {
-                                                    Text(
-                                                        text = move,
-                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
                             Spacer(modifier = Modifier.height(12.dp))
                         }
 
@@ -2165,6 +2050,125 @@ fun DesktopChessAnalysisApp(context: Any?) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Compute alternatives button
+                    if (pgn != null && positions.isNotEmpty()) {
+                        val currentPosition = positions[safeCurrentIndex]
+
+                        OutlinedButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    currentPosition?.fenString?.let { fen ->
+                                        isLoadingAlternatives = true
+                                        try {
+                                            val result = stockfishEngine.evaluateWithMultiPV(fen, analysisDepth, 3)
+                                            alternativeLines = result.alternativeLines
+                                            alternativeLinesFen = fen
+                                        } catch (e: Exception) {
+                                            println("Error evaluating alternatives: ${e.message}")
+                                        } finally {
+                                            isLoadingAlternatives = false
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isLoadingAlternatives && currentPosition != null,
+                            modifier = Modifier.fillMaxWidth().height(40.dp)
+                        ) {
+                            if (isLoadingAlternatives) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = BoardDark
+                                )
+                            } else {
+                                Icon(Icons.Filled.List, "Alternative Lines", modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Compute Alternatives")
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Alternative lines (if loaded) - displayed below button
+                        if (alternativeLines.isNotEmpty()) {
+                            Text(
+                                text = "Alternative Lines",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            alternativeLines.forEachIndexed { index, line ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (index == 0) DarkSurfaceVariant.copy(alpha = 1.2f)
+                                        else DarkSurfaceVariant
+                                    )
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = "Line ${index + 1}",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            alternativeLinesFen?.let { fen ->
+                                                val displayScore = normalizeScoreForDisplay(
+                                                    line.score,
+                                                    fen,
+                                                    false
+                                                )
+                                                Text(
+                                                    text = displayScore,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        // Display moves as clickable chips
+                                        val sanMoves = alternativeLinesFen?.let { fen ->
+                                            convertPvToSan(line.pv.take(5), fen)
+                                        } ?: emptyList()
+
+                                        androidx.compose.foundation.layout.FlowRow(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            sanMoves.forEachIndexed { moveIdx, move ->
+                                                Surface(
+                                                    modifier = Modifier.clickable {
+                                                        exploreAlternativeLine(line.pv, moveIdx)
+                                                    },
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                                                ) {
+                                                    Text(
+                                                        text = move,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
