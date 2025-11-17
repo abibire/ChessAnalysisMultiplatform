@@ -7,7 +7,7 @@ Available on iOS, Android, Windows, MacOS, and Linux
 
 > Analyze your games with professional-grade analysis powered by Stockfish, available on all your devices.
 
-## 📂 Project
+## Project
 
 This is a Kotlin Multiplatform project built with Compose Multiplatform.
 
@@ -21,7 +21,7 @@ This is a Kotlin Multiplatform project built with Compose Multiplatform.
 
 - **`/iosApp`** - iOS application entry point with SwiftUI integration
 
-## ✨ Features
+## Features
 
 - **Stockfish Analysis** - Deep position analysis with the world's strongest chess engine
 - **Move Classification** - Automatic move quality ratings (Best, Excellent, Good, Inaccuracy, Mistake, Blunder)
@@ -31,7 +31,7 @@ This is a Kotlin Multiplatform project built with Compose Multiplatform.
 - **Game Statistics** - Accuracy calculation and detailed move breakdowns
 - **Cross-Platform** - Native experience on mobile and desktop
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -56,14 +56,14 @@ This is a Kotlin Multiplatform project built with Compose Multiplatform.
 # Open iosApp/ in Xcode and run
 ```
 
-## 🎮 Usage
+## Usage
 
 1. **Import a game** - Paste PGN or search for a player on Chess.com/Lichess
 2. **Analyze** - Click "Analyze Game" and wait for Stockfish analysis
 3. **Navigate** - Use arrow keys (desktop) or swipe (mobile) to review moves
 4. **Explore alternatives** - Click "Compute Alternatives" to see engine variations
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Kotlin Multiplatform** - Shared code across all platforms
 - **Compose Multiplatform** - Unified UI framework
@@ -71,6 +71,6 @@ This is a Kotlin Multiplatform project built with Compose Multiplatform.
 - **KChessLib** - Chess logic and validation
 - **Ktor** - Network client for online game fetching
 
-## 📄 License
+## License
 
 This project is licensed under the GPL 3 License
