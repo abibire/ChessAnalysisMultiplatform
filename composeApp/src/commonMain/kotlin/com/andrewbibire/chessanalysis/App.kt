@@ -128,6 +128,11 @@ fun ChessAnalysisApp(context: Any?) {
     var alternativeLinesFen by remember { mutableStateOf<String?>(null) }
     var isLoadingAlternatives by remember { mutableStateOf(false) }
 
+    // Alternative line exploration state
+    var isExploringAlternativeLine by remember { mutableStateOf(false) }
+    var alternativeLineReturnIndex by remember { mutableIntStateOf(0) }
+    var alternativeLineReturnPositionCount by remember { mutableIntStateOf(0) }
+
     // Load last username when entering input mode
     LaunchedEffect(showUsernameInput) {
         if (showUsernameInput && usernameTextFieldValue.text.isEmpty()) {
@@ -503,6 +508,120 @@ fun ChessAnalysisApp(context: Any?) {
             selectedSquare = null
             legalMovesForSelected = emptyList()
         }
+    }
+
+    // Helper function to convert a list of UCI PV moves to SAN notation for display
+    fun convertPvToSan(uciMoves: List<String>, startingFen: String): List<String> {
+        if (uciMoves.isEmpty()) return emptyList()
+
+        val sanMoves = mutableListOf<String>()
+        var currentFen = startingFen
+        val board = Board()
+
+        for (uciMove in uciMoves) {
+            try {
+                // Convert this move to SAN using the current position
+                val san = uciToSan(uciMove, currentFen)
+                sanMoves.add(san)
+
+                // Make the move to update the position for the next conversion
+                board.loadFromFen(currentFen)
+                val fromSquare = uciMove.substring(0, 2)
+                val toSquare = uciMove.substring(2, 4)
+                val promotionPiece = if (uciMove.length > 4) uciMove[4].toString() else null
+
+                val move = board.legalMoves().find {
+                    it.from.toString().lowercase() == fromSquare &&
+                            it.to.toString().lowercase() == toSquare &&
+                            (promotionPiece == null || it.promotion.fenSymbol.lowercase() == promotionPiece)
+                }
+
+                if (move != null) {
+                    board.doMove(move)
+                    currentFen = board.fen
+                } else {
+                    // If move can't be parsed, just add remaining UCI moves
+                    sanMoves.addAll(uciMoves.subList(sanMoves.size, uciMoves.size))
+                    break
+                }
+            } catch (e: Exception) {
+                // If conversion fails, just add remaining UCI moves
+                sanMoves.addAll(uciMoves.subList(sanMoves.size, uciMoves.size))
+                break
+            }
+        }
+
+        return sanMoves
+    }
+
+    fun exploreAlternativeLine(pvMoves: List<String>, moveIndex: Int) {
+        if (positions.isEmpty() || alternativeLinesFen == null) return
+
+        // Store current state to return to later
+        alternativeLineReturnIndex = currentIndex
+        alternativeLineReturnPositionCount = positions.size
+
+        // Remove all positions after current index
+        while (positions.size > safeCurrentIndex + 1) {
+            positions.removeAt(positions.size - 1)
+        }
+
+        // Mark as alternate path to trigger analysis
+        // Set branch point to current position if not already on an alternate path
+        if (branchPointIndex < 0) {
+            branchPointIndex = safeCurrentIndex
+        }
+
+        // Play out the moves up to and including the clicked move
+        var currentFen = alternativeLinesFen!!
+        val board = Board()
+
+        for (i in 0..moveIndex) {
+            val uciMove = pvMoves[i]
+            board.loadFromFen(currentFen)
+
+            try {
+                val fromSquare = uciMove.substring(0, 2)
+                val toSquare = uciMove.substring(2, 4)
+                val promotionPiece = if (uciMove.length > 4) uciMove[4].toString() else null
+
+                val move = board.legalMoves().find {
+                    it.from.toString().lowercase() == fromSquare &&
+                            it.to.toString().lowercase() == toSquare &&
+                            (promotionPiece == null || it.promotion.fenSymbol.lowercase() == promotionPiece)
+                }
+
+                if (move != null) {
+                    // Store FEN before the move for SAN conversion
+                    val fenBeforeMove = currentFen
+
+                    board.doMove(move)
+                    currentFen = board.fen
+
+                    val newPosition = Position(
+                        fenString = currentFen,
+                        playedMove = uciMove,
+                        sanNotation = uciToSan(uciMove, fenBeforeMove)
+                    )
+
+                    positions.add(newPosition)
+                } else {
+                    println("Could not find legal move for UCI: $uciMove")
+                    break
+                }
+            } catch (e: Exception) {
+                println("Error playing move $uciMove: ${e.message}")
+                break
+            }
+        }
+
+        // Move to the last position
+        currentIndex = positions.size - 1
+        positionsRevision++
+        isExploringAlternativeLine = true
+
+        // Close the dialog
+        showAlternativeLinesDialog = false
     }
 
     // Click handler for board squares
@@ -1009,7 +1128,18 @@ fun ChessAnalysisApp(context: Any?) {
                         Key.DirectionLeft -> {
                             // Left arrow: move backward
                             if (currentIndex > 0) {
-                                currentIndex--
+                                // Check if we should exit alternative line exploration
+                                if (isExploringAlternativeLine && currentIndex == alternativeLineReturnIndex) {
+                                    // Remove all alternative line positions
+                                    while (positions.size > alternativeLineReturnPositionCount) {
+                                        positions.removeAt(positions.size - 1)
+                                    }
+                                    currentIndex = alternativeLineReturnIndex
+                                    isExploringAlternativeLine = false
+                                    positionsRevision++
+                                } else {
+                                    currentIndex--
+                                }
                                 true
                             } else {
                                 false
@@ -1697,7 +1827,22 @@ fun ChessAnalysisApp(context: Any?) {
                                 Spacer(modifier = Modifier.width(8.dp))
 
                                 EvaluationButton(
-                                    onClick = { if (currentIndex > 0) currentIndex-- },
+                                    onClick = {
+                                        if (currentIndex > 0) {
+                                            // Check if we should exit alternative line exploration
+                                            if (isExploringAlternativeLine && currentIndex == alternativeLineReturnIndex) {
+                                                // Remove all alternative line positions
+                                                while (positions.size > alternativeLineReturnPositionCount) {
+                                                    positions.removeAt(positions.size - 1)
+                                                }
+                                                currentIndex = alternativeLineReturnIndex
+                                                isExploringAlternativeLine = false
+                                                positionsRevision++
+                                            } else {
+                                                currentIndex--
+                                            }
+                                        }
+                                    },
                                     enabled = currentIndex > 0 && !isEvaluating,
                                     modifier = Modifier.weight(1f)
                                 ) {
@@ -2245,12 +2390,37 @@ fun ChessAnalysisApp(context: Any?) {
                                         Spacer(modifier = Modifier.height(8.dp))
 
                                         if (line.pv.isNotEmpty()) {
-                                            Text(
-                                                text = line.pv.take(5).joinToString(" "),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                                            )
+                                            // Convert UCI PV moves to SAN notation for display
+                                            val sanMoves = remember(line.pv, alternativeLinesFen) {
+                                                alternativeLinesFen?.let { fen ->
+                                                    convertPvToSan(line.pv.take(5), fen)
+                                                } ?: line.pv.take(5)
+                                            }
+
+                                            // Display PV moves as clickable chips
+                                            androidx.compose.foundation.layout.FlowRow(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                sanMoves.forEachIndexed { moveIdx, move ->
+                                                    Surface(
+                                                        modifier = Modifier.clickable {
+                                                            exploreAlternativeLine(line.pv, moveIdx)
+                                                        },
+                                                        shape = RoundedCornerShape(4.dp),
+                                                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                                                    ) {
+                                                        Text(
+                                                            text = move,
+                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
