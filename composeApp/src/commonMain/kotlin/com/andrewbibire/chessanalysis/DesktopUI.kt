@@ -1021,14 +1021,15 @@ fun DesktopChessAnalysisApp(context: Any?) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Depth settings - Slider
+                    // Depth settings - Desktop-optimized compact design
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = PrimaryBlueDark
+                            containerColor = DarkSurfaceVariant
                         )
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
+                            // Header row with label and value
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1036,41 +1037,88 @@ fun DesktopChessAnalysisApp(context: Any?) {
                             ) {
                                 Text(
                                     text = "Analysis Depth",
-                                    style = MaterialTheme.typography.labelLarge,
+                                    style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold,
                                     color = TextPrimary
                                 )
                                 Text(
                                     text = "$analysisDepth",
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
+                                    color = BoardDark
                                 )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Slider(
-                                value = analysisDepth.toFloat(),
-                                onValueChange = { newValue ->
-                                    analysisDepth = newValue.toInt()
-                                },
-                                onValueChangeFinished = {
-                                    UserPreferences.saveAnalysisDepth(analysisDepth)
-                                },
-                                valueRange = 5f..30f,
-                                steps = 24,
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = SliderDefaults.colors(
-                                    thumbColor = PrimaryBlue,
-                                    activeTrackColor = PrimaryBlue,
-                                    inactiveTrackColor = Color(0xFF4a4a4a)
-                                )
-                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Compact slider with icons
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("5", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-                                Text("30", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                                // Quick preset button
+                                IconButton(
+                                    onClick = {
+                                        analysisDepth = 5
+                                        UserPreferences.saveAnalysisDepth(analysisDepth)
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Bolt,
+                                        contentDescription = "Quick (5)",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = if (analysisDepth == 5) BoardDark else TextSecondary
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(4.dp))
+
+                                // Slider - more compact, no end tick
+                                Slider(
+                                    value = analysisDepth.toFloat(),
+                                    onValueChange = { newValue ->
+                                        analysisDepth = newValue.toInt()
+                                    },
+                                    onValueChangeFinished = {
+                                        UserPreferences.saveAnalysisDepth(analysisDepth)
+                                    },
+                                    valueRange = 5f..20f,
+                                    modifier = Modifier.weight(1f),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = BoardDark,
+                                        activeTrackColor = BoardDark,
+                                        inactiveTrackColor = BoardDark.copy(alpha = 0.3f)
+                                    ),
+                                    track = { sliderState ->
+                                        SliderDefaults.Track(
+                                            colors = SliderDefaults.colors(
+                                                thumbColor = BoardDark,
+                                                activeTrackColor = BoardDark,
+                                                inactiveTrackColor = BoardDark.copy(alpha = 0.3f)
+                                            ),
+                                            sliderState = sliderState,
+                                            drawStopIndicator = null
+                                        )
+                                    }
+                                )
+
+                                Spacer(modifier = Modifier.width(4.dp))
+
+                                // Deep preset button
+                                IconButton(
+                                    onClick = {
+                                        analysisDepth = 20
+                                        UserPreferences.saveAnalysisDepth(analysisDepth)
+                                    },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    MaterialSymbol(
+                                        name = "network_intelligence_history",
+                                        tint = if (analysisDepth == 20) BoardDark else TextSecondary,
+                                        sizeSp = 18f
+                                    )
+                                }
                             }
                         }
                     }
@@ -1086,14 +1134,27 @@ fun DesktopChessAnalysisApp(context: Any?) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Platform selection (if no platform selected)
+                    // Platform selection (if no platform selected) - with icons
                     AnimatedVisibility(visible = selectedPlatform == null) {
                         Column {
                             Button(
                                 onClick = { selectedPlatform = com.andrewbibire.chessanalysis.online.Platform.CHESS_COM },
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF80b64d))
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = DarkSurfaceVariant,
+                                    contentColor = TextPrimary
+                                )
                             ) {
+                                // Chess pawn icon for Chess.com (green, matching mobile)
+                                Box(modifier = Modifier.size(20.dp)) {
+                                    MaterialSymbol(
+                                        name = "chess_pawn_2",
+                                        tint = Color(0xFF80b64d),
+                                        fill = 1f,
+                                        sizeSp = 20f
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text("Chess.com", fontWeight = FontWeight.SemiBold)
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -1102,6 +1163,17 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)
                             ) {
+                                // Chess knight icon for Lichess
+                                Box(modifier = Modifier.size(20.dp)) {
+                                    MaterialSymbol(
+                                        name = "chess_knight",
+                                        tint = Color.Black,
+                                        fill = 0f,
+                                        flipHorizontally = true,
+                                        sizeSp = 20f
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text("Lichess", fontWeight = FontWeight.SemiBold)
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -1248,6 +1320,14 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                             loadGamesAction()
                                         }
                                     }
+                                ),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedTextColor = if (isPrefilledUsername) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = if (isPrefilledUsername) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
                                 )
                             )
 
@@ -1256,7 +1336,11 @@ fun DesktopChessAnalysisApp(context: Any?) {
                             Button(
                                 onClick = loadGamesAction,
                                 enabled = usernameTextFieldValue.text.isNotBlank() && !isLoadingProfile,
-                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = BoardDark,
+                                    contentColor = Color.White
+                                )
                             ) {
                                 if (isLoadingProfile) {
                                     CircularProgressIndicator(
@@ -1287,7 +1371,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
-                                containerColor = PrimaryBlueDark
+                                containerColor = DarkSurfaceVariant
                             )
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
@@ -1320,7 +1404,8 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error
+                                        containerColor = DarkSurfaceVariant,
+                                        contentColor = TextPrimary
                                     )
                                 ) {
                                     Icon(Icons.Filled.Close, "Close game", modifier = Modifier.size(18.dp))
@@ -1584,7 +1669,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                 Icon(Icons.Filled.List, "Alternative Lines", modifier = Modifier.size(20.dp))
                             }
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Show Alternatives")
+                            Text("Compute Alternatives")
                         }
                     }
 
@@ -1648,7 +1733,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                    containerColor = DarkSurfaceVariant
                                 )
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
@@ -1656,45 +1741,39 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text("Analyzing...", style = MaterialTheme.typography.labelLarge)
-                                        Text("$analysisProgress / $analysisTotalMoves", style = MaterialTheme.typography.labelLarge)
+                                        Text("Analyzing...", style = MaterialTheme.typography.labelLarge, color = TextPrimary)
+                                        Text("$analysisProgress / $analysisTotalMoves", style = MaterialTheme.typography.labelLarge, color = TextPrimary)
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
                                     LinearProgressIndicator(
                                         progress = { analysisProgress.toFloat() / analysisTotalMoves.toFloat() },
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = BoardDark,
+                                        trackColor = BoardDark.copy(alpha = 0.3f),
+                                        drawStopIndicator = {}
                                     )
                                 }
                             }
                             Spacer(modifier = Modifier.height(16.dp))
                         }
 
-                        // Current position evaluation
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = PrimaryBlueDark
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = "Position Evaluation",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimary
+                        // Current position evaluation (hide when analyzing)
+                        if (!isCurrentPositionAnalyzing) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = DarkSurfaceVariant
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = "Position Evaluation",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
 
-                                if (isCurrentPositionAnalyzing) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            strokeWidth = 2.dp
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Analyzing...", style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
-                                    }
-                                } else {
                                     val isLastOfOriginalGame = if (originalPositions.isNotEmpty()) {
                                         safeCurrentIndex == originalPositions.lastIndex && !isOnAlternatePath
                                     } else {
@@ -1730,9 +1809,9 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                     }
                                 }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
 
                         // Move classification
                         if (!isCurrentPositionAnalyzing && currentClassification != null) {
@@ -1856,8 +1935,8 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                             exploreAlternativeLine(line.pv, 0)
                                         },
                                     colors = CardDefaults.cardColors(
-                                        containerColor = if (index == 0) MaterialTheme.colorScheme.primaryContainer
-                                        else MaterialTheme.colorScheme.surfaceVariant
+                                        containerColor = if (index == 0) DarkSurfaceVariant.copy(alpha = 1.2f)
+                                        else DarkSurfaceVariant
                                     )
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
