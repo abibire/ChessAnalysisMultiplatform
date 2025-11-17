@@ -2950,8 +2950,7 @@ fun CapturedMaterial(
             if (!isLeftSide && hasAdvantage && advantageValue > 0) {
                 Text(
                     text = "+$advantageValue",
-                    fontSize = fontSize * 0.85f,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    fontSize = fontSize * 0.75f,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(end = 2.dp)
                 )
@@ -3014,8 +3013,7 @@ fun CapturedMaterial(
             if (isLeftSide && hasAdvantage && advantageValue > 0) {
                 Text(
                     text = "+$advantageValue",
-                    fontSize = fontSize * 0.85f,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    fontSize = fontSize * 0.75f,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 2.dp)
                 )
