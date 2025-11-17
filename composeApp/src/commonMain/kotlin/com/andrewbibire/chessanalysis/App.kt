@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.colorspace.WhitePoint
 import coil3.compose.rememberAsyncImagePainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -124,6 +125,7 @@ fun ChessAnalysisApp(context: Any?) {
     // Alternative lines dialog
     var showAlternativeLinesDialog by remember { mutableStateOf(false) }
     var alternativeLines by remember { mutableStateOf<List<PVLine>>(emptyList()) }
+    var alternativeLinesFen by remember { mutableStateOf<String?>(null) }
     var isLoadingAlternatives by remember { mutableStateOf(false) }
 
     // Load last username when entering input mode
@@ -1628,6 +1630,7 @@ fun ChessAnalysisApp(context: Any?) {
                                                 try {
                                                     val result = stockfishEngine.evaluateWithMultiPV(fen, analysisDepth, 2)
                                                     alternativeLines = result.alternativeLines
+                                                    alternativeLinesFen = fen
                                                     showAlternativeLinesDialog = true
                                                 } catch (e: Exception) {
                                                     println("Error evaluating alternatives: ${e.message}")
@@ -2210,26 +2213,32 @@ fun ChessAnalysisApp(context: Any?) {
                                                 color = BoardDark
                                             )
 
-                                            val scoreColor = when {
-                                                line.score.startsWith("mate") -> {
-                                                    val mateIn = line.score.substringAfter("mate").trim().toIntOrNull() ?: 0
-                                                    if (mateIn > 0) Color(0xFF4CAF50) else Color(0xFFE53935)
-                                                }
-                                                else -> {
-                                                    val scoreValue = line.score.toDoubleOrNull() ?: 0.0
-                                                    when {
-                                                        scoreValue > 0 -> Color(0xFF4CAF50)
-                                                        scoreValue < 0 -> Color(0xFFE53935)
-                                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                                    }
-                                                }
+                                            // Convert score to White-centric perspective
+                                            val whiteCentricEval = alternativeLinesFen?.let { fen ->
+                                                parseEvaluationWhiteCentric(line.score, fen)
                                             }
 
+                                            val displayScore = whiteCentricEval?.let { eval ->
+                                                when (eval.type) {
+                                                    EvalType.Mate -> {
+                                                        val mateValue = kotlin.math.abs(eval.value.toInt())
+                                                        "mate in $mateValue"
+                                                    }
+                                                    EvalType.Centipawn -> {
+                                                        val pawns = eval.value / 100.0
+                                                        val sign = if (pawns >= 0) "+" else "-"
+                                                        val absValue = kotlin.math.abs(pawns)
+                                                        val intPart = absValue.toInt()
+                                                        val decimalPart = ((absValue - intPart) * 100).toInt()
+                                                        "$sign$intPart.${decimalPart.toString().padStart(2, '0')}"
+                                                    }
+                                                }
+                                            } ?: line.score
                                             Text(
-                                                text = line.score,
+                                                text = displayScore,
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold,
-                                                color = scoreColor
+                                                color = Color.White
                                             )
                                         }
 
