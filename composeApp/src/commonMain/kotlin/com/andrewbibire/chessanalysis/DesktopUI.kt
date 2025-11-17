@@ -1506,6 +1506,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                         fen = currentPosition.fenString,
                                         gameResult = effectiveGameResult,
                                         isLastMove = isLastOfOriginalGame || freeMoveGameEnd.isEnded,
+                                        flipped = isBoardFlipped,
                                         modifier = Modifier.width(40.dp).height(maxBoardSize)
                                     )
                                 }
@@ -2220,6 +2221,7 @@ fun VerticalEvaluationBar(
     fen: String,
     gameResult: String,
     isLastMove: Boolean,
+    flipped: Boolean,
     modifier: Modifier = Modifier
 ) {
     val evaluation = parseEvaluationWhiteCentric(score, fen)
@@ -2255,9 +2257,6 @@ fun VerticalEvaluationBar(
 
     val fraction = animatedWhiteAdvantage.coerceIn(0f, 1f)
 
-    val topTextColor = if (fraction <= 0f) Color.White else Color(0xFF3a3a3a)
-    val bottomTextColor = if (fraction >= 1f) Color(0xFF3a3a3a) else Color.White
-
     val isGameOver = isLastMove || (evaluation?.type == EvalType.Mate && kotlin.math.abs(evaluation.value) > 900)
 
     val (whiteScore, blackScore) = when {
@@ -2289,14 +2288,27 @@ fun VerticalEvaluationBar(
     }
 
     Box(modifier = modifier.background(Color(0xFF3a3a3a))) {
-        // White portion (top, grows downward)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(fraction)
-                .background(Color.White)
-                .align(Alignment.TopCenter)
-        )
+        if (flipped) {
+            // When flipped: White pieces at top, black pieces at bottom
+            // White portion (top, grows downward from top)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(fraction)
+                    .background(Color.White)
+                    .align(Alignment.TopCenter)
+            )
+        } else {
+            // Normal orientation: Black pieces at top, white pieces at bottom
+            // White portion (bottom, grows upward from bottom)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(fraction)
+                    .background(Color.White)
+                    .align(Alignment.BottomCenter)
+            )
+        }
 
         // Scores column
         Column(
@@ -2306,28 +2318,56 @@ fun VerticalEvaluationBar(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // White score at top
-            if (whiteScore != null) {
-                Text(
-                    text = whiteScore,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = topTextColor,
-                    fontWeight = FontWeight.Bold
-                )
-            } else {
-                Spacer(modifier = Modifier.height(1.dp))
-            }
+            if (flipped) {
+                // When flipped: White bar at top, black bar at bottom
+                // White score at top (on white background when white is winning)
+                if (whiteScore != null) {
+                    Text(
+                        text = whiteScore,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (fraction <= 0f) Color.White else Color(0xFF3a3a3a),
+                        fontWeight = FontWeight.Bold
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(1.dp))
+                }
 
-            // Black score at bottom
-            if (blackScore != null) {
-                Text(
-                    text = blackScore,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = bottomTextColor,
-                    fontWeight = FontWeight.Bold
-                )
+                // Black score at bottom (on black background when black is winning)
+                if (blackScore != null) {
+                    Text(
+                        text = blackScore,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (fraction >= 1f) Color(0xFF3a3a3a) else Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(1.dp))
+                }
             } else {
-                Spacer(modifier = Modifier.height(1.dp))
+                // Normal: White bar at bottom, black bar at top
+                // Black score at top (on black background when black is winning)
+                if (blackScore != null) {
+                    Text(
+                        text = blackScore,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (fraction >= 1f) Color(0xFF3a3a3a) else Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(1.dp))
+                }
+
+                // White score at bottom (on white background when white is winning)
+                if (whiteScore != null) {
+                    Text(
+                        text = whiteScore,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (fraction <= 0f) Color.White else Color(0xFF3a3a3a),
+                        fontWeight = FontWeight.Bold
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(1.dp))
+                }
             }
         }
     }
