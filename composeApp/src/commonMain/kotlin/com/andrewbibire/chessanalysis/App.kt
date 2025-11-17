@@ -1134,7 +1134,8 @@ fun ChessAnalysisApp(context: Any?) {
                                     while (positions.size > alternativeLineReturnPositionCount) {
                                         positions.removeAt(positions.size - 1)
                                     }
-                                    currentIndex = alternativeLineReturnIndex
+                                    // Go back one position from where we started the alternative line
+                                    currentIndex = alternativeLineReturnIndex - 1
                                     isExploringAlternativeLine = false
                                     positionsRevision++
                                 } else {
@@ -1835,7 +1836,8 @@ fun ChessAnalysisApp(context: Any?) {
                                                 while (positions.size > alternativeLineReturnPositionCount) {
                                                     positions.removeAt(positions.size - 1)
                                                 }
-                                                currentIndex = alternativeLineReturnIndex
+                                                // Go back one position from where we started the alternative line
+                                                currentIndex = alternativeLineReturnIndex - 1
                                                 isExploringAlternativeLine = false
                                                 positionsRevision++
                                             } else {
