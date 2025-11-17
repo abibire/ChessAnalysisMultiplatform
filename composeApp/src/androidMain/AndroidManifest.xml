@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Declare that app does not support large screens in landscape -->
+    <supports-screens
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:requiresSmallestWidthDp="320" />
 
     <application
         android:allowBackup="true"
@@ -10,15 +17,42 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <!-- Disable camera compatibility mode that allows rotation on tablets -->
+        <property
+            android:name="android.window.PROPERTY_CAMERA_COMPAT_ALLOW_FORCE_ROTATION"
+            android:value="false" />
+        <!-- Disable compatibility mode for orientation -->
+        <property
+            android:name="android.window.PROPERTY_COMPAT_ALLOW_IGNORING_ORIENTATION_REQUEST_WHEN_LOOP_DETECTED"
+            android:value="false" />
+        <property
+            android:name="android.window.PROPERTY_COMPAT_ALLOW_ORIENTATION_OVERRIDE"
+            android:value="false" />
         <activity
             android:exported="true"
+            android:screenOrientation="locked"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:resizeableActivity="false"
             android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Disable Android 15 tablet orientation override -->
+            <property
+                android:name="android.window.PROPERTY_ACTIVITY_EMBEDDING_SPLITS_ENABLED"
+                android:value="false" />
         </activity>
+
+        <!-- Lock PreviewActivity to portrait as well -->
+        <activity
+            android:name="androidx.compose.ui.tooling.PreviewActivity"
+            android:screenOrientation="portrait"
+            android:exported="true"
+            tools:replace="android:screenOrientation" />
     </application>
 
 </manifest>
