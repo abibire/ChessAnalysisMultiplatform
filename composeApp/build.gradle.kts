@@ -139,10 +139,10 @@ compose.desktop {
                 iconFile.set(project.file("src/jvmMain/resources/app-icon.icns"))
             }
             windows {
-                iconFile.set(project.file("src/jvmMain/resources/app-icon.png"))
+                iconFile.set(project.file("src/jvmMain/resources/app-icon.ico"))
             }
             linux {
-                iconFile.set(project.file("src/jvmMain/resources/app-icon.png"))
+                iconFile.set(project.file("src/jvmMain/resources/app-icon-linux.png"))
             }
         }
     }
