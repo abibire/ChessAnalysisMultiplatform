@@ -22,19 +22,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.layout.ContentScale
+import coil3.compose.LocalPlatformContext
+import coil3.compose.SubcomposeAsyncImage
+import coil3.request.ImageRequest
 import chessanalysis.composeapp.generated.resources.Res
-import chessanalysis.composeapp.generated.resources.bB
-import chessanalysis.composeapp.generated.resources.bK
-import chessanalysis.composeapp.generated.resources.bN
-import chessanalysis.composeapp.generated.resources.bP
-import chessanalysis.composeapp.generated.resources.bQ
-import chessanalysis.composeapp.generated.resources.bR
-import chessanalysis.composeapp.generated.resources.wB
-import chessanalysis.composeapp.generated.resources.wK
-import chessanalysis.composeapp.generated.resources.wN
-import chessanalysis.composeapp.generated.resources.wP
-import chessanalysis.composeapp.generated.resources.wQ
-import chessanalysis.composeapp.generated.resources.wR
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
@@ -216,8 +207,9 @@ fun Chessboard(
 
             // Floating piece that follows the drag
             if (draggedPiece != null && dragPosition != null) {
-                val pieceResource = getPieceDrawableResource(draggedPiece)
-                if (pieceResource != null) {
+                val pieceFileName = getPieceSvgFileName(draggedPiece)
+                if (pieceFileName != null) {
+                    val context = LocalPlatformContext.current
                     val pieceSize = (if (squareW < squareH) squareW else squareH) * 0.85f
 
                     // Convert from root coordinates to board-relative coordinates
@@ -233,8 +225,10 @@ fun Chessboard(
                             }
                             .size(pieceSize)
                     ) {
-                        Image(
-                            painter = painterResource(pieceResource),
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(Res.getUri("drawable/$pieceFileName"))
+                                .build(),
                             contentDescription = draggedPiece,
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.fillMaxSize()
@@ -332,10 +326,13 @@ fun ChessSquare(
         contentAlignment = Alignment.Center
     ) {
         if (piece.isNotEmpty()) {
-            val pieceResource = getPieceDrawableResource(piece)
-            if (pieceResource != null) {
-                Image(
-                    painter = painterResource(pieceResource),
+            val pieceFileName = getPieceSvgFileName(piece)
+            if (pieceFileName != null) {
+                val context = LocalPlatformContext.current
+                SubcomposeAsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(Res.getUri("drawable/$pieceFileName"))
+                        .build(),
                     contentDescription = piece,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
@@ -393,20 +390,20 @@ fun parseFenToBoard(fen: String): Array<Array<String>> {
     return board
 }
 
-fun getPieceDrawableResource(piece: String): DrawableResource? {
+fun getPieceSvgFileName(piece: String): String? {
     return when (piece) {
-        "K" -> Res.drawable.wK
-        "Q" -> Res.drawable.wQ
-        "R" -> Res.drawable.wR
-        "B" -> Res.drawable.wB
-        "N" -> Res.drawable.wN
-        "P" -> Res.drawable.wP
-        "k" -> Res.drawable.bK
-        "q" -> Res.drawable.bQ
-        "r" -> Res.drawable.bR
-        "b" -> Res.drawable.bB
-        "n" -> Res.drawable.bN
-        "p" -> Res.drawable.bP
+        "K" -> "wK.svg"
+        "Q" -> "wQ.svg"
+        "R" -> "wR.svg"
+        "B" -> "wB.svg"
+        "N" -> "wN.svg"
+        "P" -> "wP.svg"
+        "k" -> "bK.svg"
+        "q" -> "bQ.svg"
+        "r" -> "bR.svg"
+        "b" -> "bB.svg"
+        "n" -> "bN.svg"
+        "p" -> "bP.svg"
         else -> null
     }
 }
