@@ -28,7 +28,7 @@ actual class StockfishEngine actual constructor(context: Any?) {
             var bestMove: String? = null
 
             while (true) {
-                val line = reader?.readLine() ?: break
+                val line = reader?.readLine()?.trim() ?: break
                 println("JVM Stockfish: $line")
 
                 if (line.startsWith("info depth") && line.contains("score")) {
@@ -69,7 +69,7 @@ actual class StockfishEngine actual constructor(context: Any?) {
             var bestMove: String? = null
 
             while (true) {
-                val line = reader?.readLine() ?: break
+                val line = reader?.readLine()?.trim() ?: break
                 println("JVM Stockfish: $line")
 
                 if (line.startsWith("info depth") && line.contains("score") && line.contains("multipv")) {
@@ -126,15 +126,15 @@ actual class StockfishEngine actual constructor(context: Any?) {
             process = ProcessBuilder(stockfishBinary.absolutePath)
                 .redirectErrorStream(true)  // Merge stderr into stdout to prevent buffer deadlock
                 .start()
-            writer = BufferedWriter(OutputStreamWriter(process!!.outputStream))
-            reader = BufferedReader(InputStreamReader(process!!.inputStream))
+            writer = BufferedWriter(OutputStreamWriter(process!!.outputStream, Charsets.UTF_8))
+            reader = BufferedReader(InputStreamReader(process!!.inputStream, Charsets.UTF_8))
             println("JVM Stockfish: Process started, sending UCI command")
 
             writer?.write("uci\n")
             writer?.flush()
 
             while (true) {
-                val line = reader?.readLine() ?: break
+                val line = reader?.readLine()?.trim() ?: break
                 println("JVM Stockfish UCI: $line")
                 if (line.contains("uciok")) {
                     println("JVM Stockfish: UCI initialization complete")

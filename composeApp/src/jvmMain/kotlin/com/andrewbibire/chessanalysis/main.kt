@@ -6,10 +6,39 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.WindowPlacement
+import coil3.ImageLoader
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.disk.DiskCache
+import coil3.memory.MemoryCache
+import coil3.request.crossfade
+import coil3.svg.SvgDecoder
+import coil3.util.DebugLogger
 import java.awt.Taskbar
 import javax.imageio.ImageIO
+import okio.Path.Companion.toOkioPath
 
 fun main() = application {
+    // Configure Coil ImageLoader for desktop with SVG support
+    setSingletonImageLoaderFactory { context ->
+        ImageLoader.Builder(context)
+            .components {
+                add(SvgDecoder.Factory())
+            }
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.25)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(java.io.File(System.getProperty("java.io.tmpdir"), "coil_cache").toOkioPath())
+                    .maxSizeBytes(512L * 1024 * 1024) // 512MB
+                    .build()
+            }
+            .crossfade(true)
+            .logger(DebugLogger())
+            .build()
+    }
     // Set dock icon for macOS
     if (Taskbar.isTaskbarSupported()) {
         try {
