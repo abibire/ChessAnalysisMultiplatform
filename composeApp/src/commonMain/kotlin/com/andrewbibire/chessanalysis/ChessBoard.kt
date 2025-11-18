@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.Image
 import chessanalysis.composeapp.generated.resources.Res
 import chessanalysis.composeapp.generated.resources.bB
 import chessanalysis.composeapp.generated.resources.bK
@@ -392,24 +391,6 @@ fun parseFenToBoard(fen: String): Array<Array<String>> {
         }
     }
     return board
-}
-
-fun getPieceSvgFileName(piece: String): String? {
-    return when (piece) {
-        "K" -> "wK.svg"
-        "Q" -> "wQ.svg"
-        "R" -> "wR.svg"
-        "B" -> "wB.svg"
-        "N" -> "wN.svg"
-        "P" -> "wP.svg"
-        "k" -> "bK.svg"
-        "q" -> "bQ.svg"
-        "r" -> "bR.svg"
-        "b" -> "bB.svg"
-        "n" -> "bN.svg"
-        "p" -> "bP.svg"
-        else -> null
-    }
 }
 
 fun getPieceDrawableResource(piece: String): DrawableResource? {
