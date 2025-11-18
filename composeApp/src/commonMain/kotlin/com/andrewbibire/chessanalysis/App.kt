@@ -2968,7 +2968,7 @@ fun CapturedMaterial(
                 val count = capturedPieces[pieceChar] ?: 0
                 if (count > 0) {
                     val pieceFen = if (isWhite) pieceChar.uppercaseChar().toString() else pieceChar.toString()
-                    val pieceFileName = getPieceSvgFileName(pieceFen)
+                    val pieceResource = getPieceDrawableResource(pieceFen)
 
                     // For pawns, show count with number; for other pieces, show individual pieces
                     if (pieceChar == 'p') {
@@ -2977,12 +2977,9 @@ fun CapturedMaterial(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(1.dp)
                         ) {
-                            if (pieceFileName != null) {
-                                val context = coil3.compose.LocalPlatformContext.current
-                                coil3.compose.SubcomposeAsyncImage(
-                                    model = coil3.request.ImageRequest.Builder(context)
-                                        .data(chessanalysis.composeapp.generated.resources.Res.getUri("drawable/$pieceFileName"))
-                                        .build(),
+                            if (pieceResource != null) {
+                                Image(
+                                    painter = org.jetbrains.compose.resources.painterResource(pieceResource),
                                     contentDescription = pieceFen,
                                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                                     modifier = Modifier.size(fontSize.value.dp * 1.15f)
@@ -2999,12 +2996,9 @@ fun CapturedMaterial(
                     } else {
                         // Show individual pieces for Q, R, B, N
                         repeat(count) {
-                            if (pieceFileName != null) {
-                                val context = coil3.compose.LocalPlatformContext.current
-                                coil3.compose.SubcomposeAsyncImage(
-                                    model = coil3.request.ImageRequest.Builder(context)
-                                        .data(chessanalysis.composeapp.generated.resources.Res.getUri("drawable/$pieceFileName"))
-                                        .build(),
+                            if (pieceResource != null) {
+                                Image(
+                                    painter = org.jetbrains.compose.resources.painterResource(pieceResource),
                                     contentDescription = pieceFen,
                                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                                     modifier = Modifier.size(fontSize.value.dp * 1.15f)
