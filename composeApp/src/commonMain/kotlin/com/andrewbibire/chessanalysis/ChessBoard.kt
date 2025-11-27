@@ -22,14 +22,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.layout.ContentScale
-import coil3.compose.LocalPlatformContext
-import coil3.compose.SubcomposeAsyncImage
-import coil3.request.ImageRequest
 import chessanalysis.composeapp.generated.resources.Res
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
-import chessanalysis.composeapp.generated.resources.*
 
 // Data class to track square positions
 data class SquareBounds(val position: androidx.compose.ui.geometry.Offset, val size: IntSize)
@@ -394,68 +390,6 @@ fun getPieceSvgFileName(piece: String): String? {
         "n" -> "bN.svg"
         "p" -> "bP.svg"
         else -> null
-    }
-}
-
-fun getPieceDrawableResource(piece: String): DrawableResource? {
-    return when (piece) {
-        "K" -> Res.drawable.wK
-        "Q" -> Res.drawable.wQ
-        "R" -> Res.drawable.wR
-        "B" -> Res.drawable.wB
-        "N" -> Res.drawable.wN
-        "P" -> Res.drawable.wP
-        "k" -> Res.drawable.bK
-        "q" -> Res.drawable.bQ
-        "r" -> Res.drawable.bR
-        "b" -> Res.drawable.bB
-        "n" -> Res.drawable.bN
-        "p" -> Res.drawable.bP
-        else -> null
-    }
-}
-
-/**
- * Platform-aware chess piece image renderer.
- * Uses painterResource on desktop (Windows/Mac/Linux) and Coil on mobile (Android/iOS).
- */
-@Composable
-fun ChessPieceImage(
-    piece: String,
-    contentDescription: String,
-    modifier: Modifier = Modifier,
-    contentScale: ContentScale = ContentScale.Fit
-) {
-    val platform = getCurrentPlatform()
-
-    when (platform) {
-        PlatformType.JVM_DESKTOP -> {
-            // Desktop: Use painterResource (works reliably on Windows/Mac/Linux)
-            val pieceResource = getPieceDrawableResource(piece)
-            if (pieceResource != null) {
-                Image(
-                    painter = painterResource(pieceResource),
-                    contentDescription = contentDescription,
-                    contentScale = contentScale,
-                    modifier = modifier
-                )
-            }
-        }
-        PlatformType.ANDROID, PlatformType.IOS -> {
-            // Mobile: Use Coil for SVG loading
-            val pieceFileName = getPieceSvgFileName(piece)
-            if (pieceFileName != null) {
-                val context = LocalPlatformContext.current
-                SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(Res.getUri("drawable/$pieceFileName"))
-                        .build(),
-                    contentDescription = contentDescription,
-                    contentScale = contentScale,
-                    modifier = modifier
-                )
-            }
-        }
     }
 }
 
