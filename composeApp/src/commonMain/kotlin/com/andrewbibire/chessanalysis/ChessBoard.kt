@@ -207,33 +207,27 @@ fun Chessboard(
 
             // Floating piece that follows the drag
             if (draggedPiece != null && dragPosition != null) {
-                val pieceFileName = getPieceSvgFileName(draggedPiece)
-                if (pieceFileName != null) {
-                    val context = LocalPlatformContext.current
-                    val pieceSize = (if (squareW < squareH) squareW else squareH) * 0.85f
+                val pieceSize = (if (squareW < squareH) squareW else squareH) * 0.85f
 
-                    // Convert from root coordinates to board-relative coordinates
-                    val relativePosition = dragPosition - boardPositionInRoot
+                // Convert from root coordinates to board-relative coordinates
+                val relativePosition = dragPosition - boardPositionInRoot
 
-                    Box(
-                        modifier = Modifier
-                            .offset {
-                                androidx.compose.ui.unit.IntOffset(
-                                    x = (relativePosition.x - pieceSize.toPx() / 2).toInt(),
-                                    y = (relativePosition.y - pieceSize.toPx() / 2).toInt()
-                                )
-                            }
-                            .size(pieceSize)
-                    ) {
-                        SubcomposeAsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(Res.getUri("drawable/$pieceFileName"))
-                                .build(),
-                            contentDescription = draggedPiece,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                Box(
+                    modifier = Modifier
+                        .offset {
+                            androidx.compose.ui.unit.IntOffset(
+                                x = (relativePosition.x - pieceSize.toPx() / 2).toInt(),
+                                y = (relativePosition.y - pieceSize.toPx() / 2).toInt()
+                            )
+                        }
+                        .size(pieceSize)
+                ) {
+                    ChessPieceImage(
+                        piece = draggedPiece,
+                        contentDescription = draggedPiece,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }
@@ -326,23 +320,17 @@ fun ChessSquare(
         contentAlignment = Alignment.Center
     ) {
         if (piece.isNotEmpty()) {
-            val pieceFileName = getPieceSvgFileName(piece)
-            if (pieceFileName != null) {
-                val context = LocalPlatformContext.current
-                SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(Res.getUri("drawable/$pieceFileName"))
-                        .build(),
-                    contentDescription = piece,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(4.dp)
-                        .graphicsLayer {
-                            alpha = if (isDraggedFrom) 0f else 1f  // Completely hide when dragging
-                        }
-                )
-            }
+            ChessPieceImage(
+                piece = piece,
+                contentDescription = piece,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(4.dp)
+                    .graphicsLayer {
+                        alpha = if (isDraggedFrom) 0f else 1f  // Completely hide when dragging
+                    }
+            )
         }
 
         // Draw indicator for legal move squares (chess.com style)
