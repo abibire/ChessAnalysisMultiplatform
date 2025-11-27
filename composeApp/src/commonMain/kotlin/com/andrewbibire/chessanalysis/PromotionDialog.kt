@@ -89,17 +89,11 @@ fun PromotionPieceSquare(
             .padding(12.dp),
         contentAlignment = Alignment.Center
     ) {
-        val pieceFileName = getPieceSvgFileName(piece)
-        if (pieceFileName != null) {
-            val context = LocalPlatformContext.current
-            SubcomposeAsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(Res.getUri("drawable/$pieceFileName"))
-                    .build(),
-                contentDescription = piece,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        ChessPieceImage(
+            piece = piece,
+            contentDescription = piece,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

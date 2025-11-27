@@ -29,6 +29,7 @@ import chessanalysis.composeapp.generated.resources.Res
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import chessanalysis.composeapp.generated.resources.*
 
 // Data class to track square positions
 data class SquareBounds(val position: androidx.compose.ui.geometry.Offset, val size: IntSize)
@@ -207,33 +208,27 @@ fun Chessboard(
 
             // Floating piece that follows the drag
             if (draggedPiece != null && dragPosition != null) {
-                val pieceFileName = getPieceSvgFileName(draggedPiece)
-                if (pieceFileName != null) {
-                    val context = LocalPlatformContext.current
-                    val pieceSize = (if (squareW < squareH) squareW else squareH) * 0.85f
+                val pieceSize = (if (squareW < squareH) squareW else squareH) * 0.85f
 
-                    // Convert from root coordinates to board-relative coordinates
-                    val relativePosition = dragPosition - boardPositionInRoot
+                // Convert from root coordinates to board-relative coordinates
+                val relativePosition = dragPosition - boardPositionInRoot
 
-                    Box(
-                        modifier = Modifier
-                            .offset {
-                                androidx.compose.ui.unit.IntOffset(
-                                    x = (relativePosition.x - pieceSize.toPx() / 2).toInt(),
-                                    y = (relativePosition.y - pieceSize.toPx() / 2).toInt()
-                                )
-                            }
-                            .size(pieceSize)
-                    ) {
-                        SubcomposeAsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(Res.getUri("drawable/$pieceFileName"))
-                                .build(),
-                            contentDescription = draggedPiece,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                Box(
+                    modifier = Modifier
+                        .offset {
+                            androidx.compose.ui.unit.IntOffset(
+                                x = (relativePosition.x - pieceSize.toPx() / 2).toInt(),
+                                y = (relativePosition.y - pieceSize.toPx() / 2).toInt()
+                            )
+                        }
+                        .size(pieceSize)
+                ) {
+                    ChessPieceImage(
+                        piece = draggedPiece,
+                        contentDescription = draggedPiece,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }
@@ -326,23 +321,17 @@ fun ChessSquare(
         contentAlignment = Alignment.Center
     ) {
         if (piece.isNotEmpty()) {
-            val pieceFileName = getPieceSvgFileName(piece)
-            if (pieceFileName != null) {
-                val context = LocalPlatformContext.current
-                SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(Res.getUri("drawable/$pieceFileName"))
-                        .build(),
-                    contentDescription = piece,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(4.dp)
-                        .graphicsLayer {
-                            alpha = if (isDraggedFrom) 0f else 1f  // Completely hide when dragging
-                        }
-                )
-            }
+            ChessPieceImage(
+                piece = piece,
+                contentDescription = piece,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(4.dp)
+                    .graphicsLayer {
+                        alpha = if (isDraggedFrom) 0f else 1f  // Completely hide when dragging
+                    }
+            )
         }
 
         // Draw indicator for legal move squares (chess.com style)
@@ -405,6 +394,68 @@ fun getPieceSvgFileName(piece: String): String? {
         "n" -> "bN.svg"
         "p" -> "bP.svg"
         else -> null
+    }
+}
+
+fun getPieceDrawableResource(piece: String): DrawableResource? {
+    return when (piece) {
+        "K" -> Res.drawable.wK
+        "Q" -> Res.drawable.wQ
+        "R" -> Res.drawable.wR
+        "B" -> Res.drawable.wB
+        "N" -> Res.drawable.wN
+        "P" -> Res.drawable.wP
+        "k" -> Res.drawable.bK
+        "q" -> Res.drawable.bQ
+        "r" -> Res.drawable.bR
+        "b" -> Res.drawable.bB
+        "n" -> Res.drawable.bN
+        "p" -> Res.drawable.bP
+        else -> null
+    }
+}
+
+/**
+ * Platform-aware chess piece image renderer.
+ * Uses painterResource on desktop (Windows/Mac/Linux) and Coil on mobile (Android/iOS).
+ */
+@Composable
+fun ChessPieceImage(
+    piece: String,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit
+) {
+    val platform = getCurrentPlatform()
+
+    when (platform) {
+        PlatformType.JVM_DESKTOP -> {
+            // Desktop: Use painterResource (works reliably on Windows/Mac/Linux)
+            val pieceResource = getPieceDrawableResource(piece)
+            if (pieceResource != null) {
+                Image(
+                    painter = painterResource(pieceResource),
+                    contentDescription = contentDescription,
+                    contentScale = contentScale,
+                    modifier = modifier
+                )
+            }
+        }
+        PlatformType.ANDROID, PlatformType.IOS -> {
+            // Mobile: Use Coil for SVG loading
+            val pieceFileName = getPieceSvgFileName(piece)
+            if (pieceFileName != null) {
+                val context = LocalPlatformContext.current
+                SubcomposeAsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(Res.getUri("drawable/$pieceFileName"))
+                        .build(),
+                    contentDescription = contentDescription,
+                    contentScale = contentScale,
+                    modifier = modifier
+                )
+            }
+        }
     }
 }
 
