@@ -1218,6 +1218,7 @@ fun ChessAnalysisApp(context: Any?) {
                         fen = currentPosition.fenString,
                         gameResult = effectiveGameResult,
                         isLastMove = isLastOfOriginalGame || freeMoveGameEnd.isEnded,
+                        flipped = !isSearchedPlayerWhite,
                         modifier = Modifier.fillMaxWidth().height(24.dp)
                     )
                 } else {
@@ -2533,6 +2534,7 @@ fun EvaluationBar(
     fen: String,
     gameResult: String,
     isLastMove: Boolean,
+    flipped: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val evaluation = parseEvaluationWhiteCentric(score, fen)
@@ -2568,9 +2570,6 @@ fun EvaluationBar(
 
     val fraction = animatedWhiteAdvantage.coerceIn(0f, 1f)
 
-    val leftTextColor = if (fraction <= 0f) Color.White else Color(0xFF3a3a3a)
-    val rightTextColor = if (fraction >= 1f) Color(0xFF3a3a3a) else Color.White
-
     val isGameOver = isLastMove || (evaluation?.type == EvalType.Mate && kotlin.math.abs(evaluation.value) > 900)
 
     val (whiteScore, blackScore) = when {
@@ -2601,14 +2600,52 @@ fun EvaluationBar(
         else -> null to null
     }
 
-    Box(modifier = modifier.background(Color(0xFF3a3a3a))) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(fraction)
-                .background(Color.White)
-                .align(Alignment.CenterStart)
-        )
+    // Text colors based on which side of the bar they're on and advantage
+    val whiteTextColor = if (fraction <= 0f) Color.White else Color(0xFF3a3a3a)
+    val blackTextColor = if (fraction >= 1f) Color(0xFF3a3a3a) else Color.White
+
+    // When flipped, black is on left and white is on right
+    val leftScore: String?
+    val rightScore: String?
+    val leftTextColor: Color
+    val rightTextColor: Color
+
+    if (flipped) {
+        // Black on left, white on right
+        leftScore = blackScore
+        rightScore = whiteScore
+        leftTextColor = blackTextColor
+        rightTextColor = whiteTextColor
+    } else {
+        // White on left, black on right (default)
+        leftScore = whiteScore
+        rightScore = blackScore
+        leftTextColor = whiteTextColor
+        rightTextColor = blackTextColor
+    }
+
+    Box(modifier = modifier.background(if (flipped) Color.White else Color(0xFF3a3a3a))) {
+        if (flipped) {
+            // When flipped: Black on left, white on right
+            // Base is white, overlay with dark for black's advantage
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(1f - fraction)
+                    .background(Color(0xFF3a3a3a))
+                    .align(Alignment.CenterStart)
+            )
+        } else {
+            // Normal: White on left, black on right
+            // Base is dark, overlay with white for white's advantage
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(fraction)
+                    .background(Color.White)
+                    .align(Alignment.CenterStart)
+            )
+        }
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -2616,9 +2653,9 @@ fun EvaluationBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (whiteScore != null) {
+            if (leftScore != null) {
                 Text(
-                    text = whiteScore,
+                    text = leftScore,
                     style = MaterialTheme.typography.labelSmall,
                     color = leftTextColor,
                     fontWeight = FontWeight.Bold
@@ -2627,9 +2664,9 @@ fun EvaluationBar(
                 Spacer(modifier = Modifier.width(1.dp))
             }
 
-            if (blackScore != null) {
+            if (rightScore != null) {
                 Text(
-                    text = blackScore,
+                    text = rightScore,
                     style = MaterialTheme.typography.labelSmall,
                     color = rightTextColor,
                     fontWeight = FontWeight.Bold
