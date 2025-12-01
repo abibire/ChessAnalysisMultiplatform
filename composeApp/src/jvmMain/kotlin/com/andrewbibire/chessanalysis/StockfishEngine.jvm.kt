@@ -205,6 +205,12 @@ actual class StockfishEngine actual constructor(context: Any?) {
         log("os.name (lowercase): $osName")
         log("os.arch (lowercase): $osArch")
 
+        // Check Windows processor architecture from environment
+        val processorArch = System.getenv("PROCESSOR_ARCHITECTURE")?.lowercase()
+        val processorArchW6432 = System.getenv("PROCESSOR_ARCHITEW6432")?.lowercase()
+        log("PROCESSOR_ARCHITECTURE: $processorArch")
+        log("PROCESSOR_ARCHITEW6432: $processorArchW6432")
+
         val result = when {
             osName.contains("mac") || osName.contains("darwin") -> {
                 when {
@@ -219,9 +225,18 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 }
             }
             osName.contains("windows") -> {
+                // Windows ARM detection: check PROCESSOR_ARCHITECTURE environment variable
+                // On Windows ARM, this will be "arm64" even when running x64 emulated apps
+                val isWindowsArm = processorArch?.contains("arm") == true ||
+                                   processorArchW6432?.contains("arm") == true
+
                 when {
+                    isWindowsArm -> {
+                        log("Detected: Windows ARM64 (via PROCESSOR_ARCHITECTURE=$processorArch)")
+                        Pair("stockfish/windows-aarch64/stockfish.exe", "stockfish.exe")
+                    }
                     osArch.contains("aarch64") || osArch.contains("arm") -> {
-                        log("Detected: Windows ARM64")
+                        log("Detected: Windows ARM64 (via os.arch)")
                         Pair("stockfish/windows-aarch64/stockfish.exe", "stockfish.exe")
                     }
                     else -> {
