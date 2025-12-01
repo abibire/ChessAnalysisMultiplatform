@@ -1,10 +1,10 @@
-name: Build Desktop Apps
+name: Build All Platforms
 
 on:
   push:
-    branches:
-      - build-test  # Only run on this branch, change as needed
-  workflow_dispatch:  # Allow manual trigger from GitHub UI
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-windows:
@@ -75,3 +75,26 @@ jobs:
         with:
           name: macos-app
           path: composeApp/build/compose/binaries/main/app/
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Build Android APK
+        run: ./gradlew assembleRelease
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: composeApp/build/outputs/apk/release/*.apk

@@ -7,9 +7,6 @@ import java.io.BufferedWriter
 import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
-import java.io.FileWriter
-import java.text.SimpleDateFormat
-import java.util.Date
 
 actual class StockfishEngine actual constructor(context: Any?) {
     private var process: Process? = null
@@ -17,41 +14,19 @@ actual class StockfishEngine actual constructor(context: Any?) {
     private var reader: BufferedReader? = null
     private var executableFile: File? = null
 
-    companion object {
-        private val logFile: File by lazy {
-            val userHome = System.getProperty("user.home")
-            File(userHome, "ChessAnalysis-Stockfish-Debug.log").also {
-                it.writeText("=== Chess Analysis Stockfish Debug Log ===\n")
-                it.appendText("Started: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date())}\n\n")
-            }
-        }
-
-        private fun log(message: String) {
-            println(message) // Still print to console
-            try {
-                logFile.appendText("$message\n")
-            } catch (e: Exception) {
-                // Ignore logging errors
-            }
-        }
-    }
-
     actual suspend fun evaluatePosition(fen: String, depth: Int): EngineResult = withContext(Dispatchers.IO) {
         try {
-            log("JVM Stockfish: evaluatePosition called with fen=$fen, depth=$depth")
             initializeIfNeeded()
 
             writer?.write("position fen $fen\n")
             writer?.write("go depth $depth\n")
             writer?.flush()
-            log("JVM Stockfish: Commands sent to engine")
 
             var lastScore: String? = null
             var bestMove: String? = null
 
             while (true) {
                 val line = reader?.readLine()?.trim() ?: break
-                log("JVM Stockfish: $line")
 
                 if (line.startsWith("info depth") && line.contains("score")) {
                     lastScore = parseScoreFromInfo(line)
@@ -66,25 +41,20 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 }
             }
 
-            log("JVM Stockfish: Evaluation complete - score=$lastScore, bestMove=$bestMove")
             EngineResult(lastScore ?: "0.00", bestMove)
         } catch (e: Exception) {
-            log("JVM Stockfish ERROR: ${e.message}")
-            log("Stack trace: ${e.stackTraceToString()}")
             throw e
         }
     }
 
     actual suspend fun evaluateWithMultiPV(fen: String, depth: Int, numLines: Int): EngineResult = withContext(Dispatchers.IO) {
         try {
-            log("JVM Stockfish: evaluateWithMultiPV called with fen=$fen, depth=$depth, numLines=$numLines")
             initializeIfNeeded()
 
             writer?.write("setoption name MultiPV value $numLines\n")
             writer?.write("position fen $fen\n")
             writer?.write("go depth $depth\n")
             writer?.flush()
-            log("JVM Stockfish: Multi-PV commands sent to engine")
 
             val pvLines = mutableMapOf<Int, PVLine>()
             var lastScore: String? = null
@@ -92,7 +62,6 @@ actual class StockfishEngine actual constructor(context: Any?) {
 
             while (true) {
                 val line = reader?.readLine()?.trim() ?: break
-                log("JVM Stockfish: $line")
 
                 if (line.startsWith("info depth") && line.contains("score") && line.contains("multipv")) {
                     val multipvIndex = parseMultiPVIndex(line)
@@ -116,7 +85,6 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 }
             }
 
-            // Reset MultiPV to 1 for future single-line evaluations
             writer?.write("setoption name MultiPV value 1\n")
             writer?.flush()
 
@@ -124,44 +92,32 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 pvLines.entries.find { entry -> entry.value == it }?.key ?: Int.MAX_VALUE
             }
 
-            log("JVM Stockfish: Multi-PV evaluation complete - ${alternativeLines.size} lines")
             EngineResult(lastScore ?: "0.00", bestMove, alternativeLines)
         } catch (e: Exception) {
-            log("JVM Stockfish ERROR: ${e.message}")
-            log("Stack trace: ${e.stackTraceToString()}")
             throw e
         }
     }
 
     private fun initializeIfNeeded() {
         if (process == null) {
-            log("JVM Stockfish: Initializing engine...")
             val stockfishBinary = extractStockfishBinary()
-            log("JVM Stockfish: Binary extracted to ${stockfishBinary.absolutePath}")
-            log("JVM Stockfish: Binary exists: ${stockfishBinary.exists()}, size: ${stockfishBinary.length()} bytes")
 
-            // Make sure it's executable on Unix-like systems
             if (!System.getProperty("os.name").lowercase().contains("windows")) {
                 stockfishBinary.setExecutable(true)
-                log("JVM Stockfish: Made binary executable")
             }
 
-            log("JVM Stockfish: Starting process...")
             process = ProcessBuilder(stockfishBinary.absolutePath)
-                .redirectErrorStream(true)  // Merge stderr into stdout to prevent buffer deadlock
+                .redirectErrorStream(true)
                 .start()
             writer = BufferedWriter(OutputStreamWriter(process!!.outputStream, Charsets.UTF_8))
             reader = BufferedReader(InputStreamReader(process!!.inputStream, Charsets.UTF_8))
-            log("JVM Stockfish: Process started, sending UCI command")
 
             writer?.write("uci\n")
             writer?.flush()
 
             while (true) {
                 val line = reader?.readLine()?.trim() ?: break
-                log("JVM Stockfish UCI: $line")
                 if (line.contains("uciok")) {
-                    log("JVM Stockfish: UCI initialization complete")
                     break
                 }
             }
@@ -170,24 +126,18 @@ actual class StockfishEngine actual constructor(context: Any?) {
 
     private fun extractStockfishBinary(): File {
         val (resourcePath, fileName) = getStockfishResourcePath()
-        log("JVM Stockfish: Looking for resource at: $resourcePath")
 
-        // Create a temp directory for the executable
         val tempDir = File(System.getProperty("java.io.tmpdir"), "stockfish-jvm")
         tempDir.mkdirs()
-        log("JVM Stockfish: Temp directory: ${tempDir.absolutePath}")
 
         val executableFile = File(tempDir, fileName)
 
-        // Extract if not already present or if file size is different
         val resourceStream = this::class.java.getResourceAsStream("/$resourcePath")
             ?: throw IllegalStateException("Stockfish binary not found in resources: /$resourcePath")
 
-        log("JVM Stockfish: Found resource, extracting to ${executableFile.absolutePath}")
         resourceStream.use { input ->
             executableFile.outputStream().use { output ->
-                val bytes = input.copyTo(output)
-                log("JVM Stockfish: Extracted $bytes bytes")
+                input.copyTo(output)
             }
         }
 
@@ -197,7 +147,6 @@ actual class StockfishEngine actual constructor(context: Any?) {
 
     private fun detectWindowsArchitecture(): String? {
         return try {
-            // Use systeminfo command to get the true system architecture
             val process = ProcessBuilder("cmd.exe", "/c", "systeminfo | findstr /B /C:\"System Type\"")
                 .redirectErrorStream(true)
                 .start()
@@ -205,15 +154,12 @@ actual class StockfishEngine actual constructor(context: Any?) {
             val output = process.inputStream.bufferedReader().use { it.readText() }
             process.waitFor()
 
-            log("systeminfo output: $output")
-
             when {
                 output.contains("ARM64", ignoreCase = true) -> "arm64"
                 output.contains("x64", ignoreCase = true) -> "x64"
                 else -> null
             }
         } catch (e: Exception) {
-            log("Failed to detect Windows architecture via systeminfo: ${e.message}")
             null
         }
     }
@@ -222,70 +168,36 @@ actual class StockfishEngine actual constructor(context: Any?) {
         val osName = System.getProperty("os.name").lowercase()
         val osArch = System.getProperty("os.arch").lowercase()
 
-        log("=== JVM Stockfish Platform Detection ===")
-        log("os.name (raw): ${System.getProperty("os.name")}")
-        log("os.arch (raw): ${System.getProperty("os.arch")}")
-        log("os.name (lowercase): $osName")
-        log("os.arch (lowercase): $osArch")
-
-        // Check Windows processor architecture from environment
-        val processorArch = System.getenv("PROCESSOR_ARCHITECTURE")?.lowercase()
-        val processorArchW6432 = System.getenv("PROCESSOR_ARCHITEW6432")?.lowercase()
-        log("PROCESSOR_ARCHITECTURE: $processorArch")
-        log("PROCESSOR_ARCHITEW6432: $processorArchW6432")
-
-        val result = when {
+        return when {
             osName.contains("mac") || osName.contains("darwin") -> {
                 when {
-                    osArch.contains("aarch64") || osArch.contains("arm") -> {
-                        log("Detected: macOS ARM64")
+                    osArch.contains("aarch64") || osArch.contains("arm") ->
                         Pair("stockfish/macos-aarch64/stockfish", "stockfish")
-                    }
-                    else -> {
-                        log("Detected: macOS x86-64")
+                    else ->
                         Pair("stockfish/macos-x86-64/stockfish", "stockfish")
-                    }
                 }
             }
             osName.contains("windows") -> {
-                // Try multiple detection methods for Windows ARM
-                // Method 1: Environment variables
-                val isWindowsArmEnv = processorArch?.contains("arm") == true ||
-                                      processorArchW6432?.contains("arm") == true
-
-                // Method 2: System command (most reliable on Windows ARM)
+                val processorArch = System.getenv("PROCESSOR_ARCHITECTURE")?.lowercase()
+                val processorArchW6432 = System.getenv("PROCESSOR_ARCHITEW6432")?.lowercase()
                 val systemArch = detectWindowsArchitecture()
-                log("System architecture detection: $systemArch")
 
-                val isWindowsArm = isWindowsArmEnv ||
+                val isWindowsArm = processorArch?.contains("arm") == true ||
+                                   processorArchW6432?.contains("arm") == true ||
                                    osArch.contains("aarch64") ||
                                    osArch.contains("arm") ||
                                    systemArch == "arm64"
 
                 when {
-                    isWindowsArm -> {
-                        log("Detected: Windows ARM64")
-                        Pair("stockfish/windows-aarch64/stockfish.exe", "stockfish.exe")
-                    }
-                    else -> {
-                        log("Detected: Windows x86-64")
-                        Pair("stockfish/windows-x86-64/stockfish.exe", "stockfish.exe")
-                    }
+                    isWindowsArm -> Pair("stockfish/windows-aarch64/stockfish.exe", "stockfish.exe")
+                    else -> Pair("stockfish/windows-x86-64/stockfish.exe", "stockfish.exe")
                 }
             }
             osName.contains("linux") -> {
-                log("Detected: Linux x86-64")
                 Pair("stockfish/linux-x86-64/stockfish", "stockfish")
             }
-            else -> {
-                log("ERROR: Unsupported operating system")
-                throw IllegalStateException("Unsupported operating system: $osName")
-            }
+            else -> throw IllegalStateException("Unsupported operating system: $osName")
         }
-
-        log("Selected resource path: ${result.first}")
-        log("======================================")
-        return result
     }
 
     private fun parseScoreFromInfo(line: String): String {
@@ -349,7 +261,6 @@ actual class StockfishEngine actual constructor(context: Any?) {
             writer?.write("quit\n")
             writer?.flush()
         } catch (e: Exception) {
-            // Ignore
         }
 
         writer?.close()
@@ -357,7 +268,6 @@ actual class StockfishEngine actual constructor(context: Any?) {
         process?.destroy()
         process = null
 
-        // Clean up temp file
         executableFile?.delete()
     }
 }
