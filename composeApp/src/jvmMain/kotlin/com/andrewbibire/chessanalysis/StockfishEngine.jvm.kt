@@ -156,8 +156,8 @@ actual class StockfishEngine actual constructor(context: Any?) {
         val executableFile = File(tempDir, fileName)
 
         // Extract if not already present or if file size is different
-        val resourceStream = this::class.java.classLoader.getResourceAsStream(resourcePath)
-            ?: throw IllegalStateException("Stockfish binary not found in resources: $resourcePath")
+        val resourceStream = this::class.java.getResourceAsStream("/$resourcePath")
+            ?: throw IllegalStateException("Stockfish binary not found in resources: /$resourcePath")
 
         println("JVM Stockfish: Found resource, extracting to ${executableFile.absolutePath}")
         resourceStream.use { input ->
