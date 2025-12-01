@@ -186,7 +186,12 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 }
             }
             osName.contains("windows") -> {
-                Pair("stockfish/windows-x86-64/stockfish.exe", "stockfish.exe")
+                when {
+                    osArch.contains("aarch64") || osArch.contains("arm") ->
+                        Pair("stockfish/windows-aarch64/stockfish.exe", "stockfish.exe")
+                    else ->
+                        Pair("stockfish/windows-x86-64/stockfish.exe", "stockfish.exe")
+                }
             }
             osName.contains("linux") -> {
                 Pair("stockfish/linux-x86-64/stockfish", "stockfish")
