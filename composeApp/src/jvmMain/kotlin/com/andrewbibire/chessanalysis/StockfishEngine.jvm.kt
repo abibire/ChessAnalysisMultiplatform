@@ -195,6 +195,29 @@ actual class StockfishEngine actual constructor(context: Any?) {
         return executableFile
     }
 
+    private fun detectWindowsArchitecture(): String? {
+        return try {
+            // Use systeminfo command to get the true system architecture
+            val process = ProcessBuilder("cmd.exe", "/c", "systeminfo | findstr /B /C:\"System Type\"")
+                .redirectErrorStream(true)
+                .start()
+
+            val output = process.inputStream.bufferedReader().use { it.readText() }
+            process.waitFor()
+
+            log("systeminfo output: $output")
+
+            when {
+                output.contains("ARM64", ignoreCase = true) -> "arm64"
+                output.contains("x64", ignoreCase = true) -> "x64"
+                else -> null
+            }
+        } catch (e: Exception) {
+            log("Failed to detect Windows architecture via systeminfo: ${e.message}")
+            null
+        }
+    }
+
     private fun getStockfishResourcePath(): Pair<String, String> {
         val osName = System.getProperty("os.name").lowercase()
         val osArch = System.getProperty("os.arch").lowercase()
@@ -225,18 +248,23 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 }
             }
             osName.contains("windows") -> {
-                // Windows ARM detection: check PROCESSOR_ARCHITECTURE environment variable
-                // On Windows ARM, this will be "arm64" even when running x64 emulated apps
-                val isWindowsArm = processorArch?.contains("arm") == true ||
-                                   processorArchW6432?.contains("arm") == true
+                // Try multiple detection methods for Windows ARM
+                // Method 1: Environment variables
+                val isWindowsArmEnv = processorArch?.contains("arm") == true ||
+                                      processorArchW6432?.contains("arm") == true
+
+                // Method 2: System command (most reliable on Windows ARM)
+                val systemArch = detectWindowsArchitecture()
+                log("System architecture detection: $systemArch")
+
+                val isWindowsArm = isWindowsArmEnv ||
+                                   osArch.contains("aarch64") ||
+                                   osArch.contains("arm") ||
+                                   systemArch == "arm64"
 
                 when {
                     isWindowsArm -> {
-                        log("Detected: Windows ARM64 (via PROCESSOR_ARCHITECTURE=$processorArch)")
-                        Pair("stockfish/windows-aarch64/stockfish.exe", "stockfish.exe")
-                    }
-                    osArch.contains("aarch64") || osArch.contains("arm") -> {
-                        log("Detected: Windows ARM64 (via os.arch)")
+                        log("Detected: Windows ARM64")
                         Pair("stockfish/windows-aarch64/stockfish.exe", "stockfish.exe")
                     }
                     else -> {
