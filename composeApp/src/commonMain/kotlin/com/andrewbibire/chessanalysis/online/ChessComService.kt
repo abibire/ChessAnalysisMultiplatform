@@ -35,11 +35,9 @@ object ChessComService {
                 val standardGames = result.data.games.filter { it.rules == "chess" }
                 val variantCount = result.data.games.size - standardGames.size
                 if (variantCount > 0) {
-                    println("Chess.com: Filtered out $variantCount variant games")
                 }
 
                 val games = standardGames.map { it.toOnlineGame() }.reversed()
-                println("Chess.com: Fetched ${games.size} standard chess games")
                 NetworkResult.Success(games)
             }
             is NetworkResult.Error -> result

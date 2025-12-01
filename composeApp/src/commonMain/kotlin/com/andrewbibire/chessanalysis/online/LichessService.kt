@@ -72,19 +72,15 @@ object LichessService {
 
             if (response.status.isSuccess()) {
                 val bodyText = response.bodyAsText()
-                println("Response first 100 chars: ${bodyText.take(100)}")
                 val games = parseNdJson(bodyText)
-                println("Parsed ${games.size} games")
                 NetworkResult.Success(games)
             } else {
-                println("HTTP Error: ${response.status.value}")
                 NetworkResult.Error(
                     Exception("HTTP ${response.status.value}"),
                     "Failed to fetch games: ${response.status.description}"
                 )
             }
         } catch (e: Exception) {
-            println("Lichess API Error: ${e.message}")
             e.printStackTrace()
             NetworkResult.Error(e, "Failed to fetch Lichess games: ${e.message}")
         }
@@ -109,13 +105,11 @@ object LichessService {
                         null
                     }
                 } catch (e: Exception) {
-                    println("JSON parse error: ${e.message}")
                     null // Skip malformed lines
                 }
             }
 
         if (variantCount > 0) {
-            println("Lichess: Filtered out $variantCount variant games")
         }
 
         return games

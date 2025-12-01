@@ -19,7 +19,6 @@ class JvmSoundPlayer : SoundPlayer {
     override fun playSound(fileName: String) {
         scope.launch {
             try {
-                println("JVM SoundPlayer: Playing $fileName")
 
                 // Load from platform-specific resources
                 val resourcePath = "/files/$fileName"
@@ -27,14 +26,12 @@ class JvmSoundPlayer : SoundPlayer {
                     ?: throw IllegalArgumentException("Resource not found: $resourcePath")
 
                 val bytes = inputStream.readBytes()
-                println("JVM SoundPlayer: Read ${bytes.size} bytes for $fileName")
 
                 // Create audio input stream from bytes
                 val audioInputStream: AudioInputStream = AudioSystem.getAudioInputStream(
                     BufferedInputStream(bytes.inputStream())
                 )
 
-                println("JVM SoundPlayer: Got audio stream, format = ${audioInputStream.format}")
 
                 // Create clip and play
                 val clip = AudioSystem.getClip()
@@ -49,9 +46,7 @@ class JvmSoundPlayer : SoundPlayer {
 
                 clip.start()
 
-                println("JVM SoundPlayer: Clip started, length = ${clip.microsecondLength / 1000}ms")
             } catch (e: Exception) {
-                println("JVM SoundPlayer ERROR: ${e.message}")
                 e.printStackTrace()
             }
         }
@@ -71,7 +66,6 @@ class JvmSoundPlayer : SoundPlayer {
         scope.launch {
             for (fileName in fileNames) {
                 try {
-                    println("JVM SoundPlayer: Playing sequential sound $fileName")
 
                     // Load from platform-specific resources
                     val resourcePath = "/files/$fileName"
@@ -97,7 +91,6 @@ class JvmSoundPlayer : SoundPlayer {
                     }
 
                     clip.start()
-                    println("JVM SoundPlayer: Sequential clip started, length = ${clip.microsecondLength / 1000}ms")
 
                     // Wait until clip finishes playing
                     while (isPlaying && clip.isOpen) {
@@ -107,9 +100,7 @@ class JvmSoundPlayer : SoundPlayer {
                     // Tiny delay between sounds for clean transition
                     kotlinx.coroutines.delay(20)
 
-                    println("JVM SoundPlayer: Sequential sound $fileName finished")
                 } catch (e: Exception) {
-                    println("JVM SoundPlayer ERROR in sequential playback: ${e.message}")
                     e.printStackTrace()
                 }
             }

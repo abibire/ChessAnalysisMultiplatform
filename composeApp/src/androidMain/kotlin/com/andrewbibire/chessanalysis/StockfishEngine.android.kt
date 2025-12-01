@@ -12,7 +12,6 @@ actual class StockfishEngine actual constructor(context: Any?) {
     private var reader: java.io.BufferedReader? = null
 
     actual suspend fun evaluatePosition(fen: String, depth: Int): EngineResult = withContext(Dispatchers.IO) {
-        println("ANDROID Stockfish: evaluatePosition($fen, depth=$depth)")
         initializeIfNeeded()
 
         writer?.write("position fen $fen\n")
@@ -38,12 +37,10 @@ actual class StockfishEngine actual constructor(context: Any?) {
             }
         }
 
-        println("ANDROID Stockfish: Evaluation complete - score=$lastScore, bestMove=$bestMove")
         EngineResult(lastScore ?: "0.00", bestMove)
     }
 
     actual suspend fun evaluateWithMultiPV(fen: String, depth: Int, numLines: Int): EngineResult = withContext(Dispatchers.IO) {
-        println("ANDROID Stockfish: evaluateWithMultiPV($fen, depth=$depth, numLines=$numLines)")
         initializeIfNeeded()
 
         writer?.write("setoption name MultiPV value $numLines\n")
@@ -88,7 +85,6 @@ actual class StockfishEngine actual constructor(context: Any?) {
             pvLines.entries.find { entry -> entry.value == it }?.key ?: Int.MAX_VALUE
         }
 
-        println("ANDROID Stockfish: Multi-PV evaluation complete - ${alternativeLines.size} lines")
         EngineResult(lastScore ?: "0.00", bestMove, alternativeLines)
     }
 

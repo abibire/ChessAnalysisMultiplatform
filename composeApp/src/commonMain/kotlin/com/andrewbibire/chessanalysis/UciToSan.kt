@@ -75,7 +75,6 @@ fun uciToSan(uci: String, fen: String): String {
         val check = if (board.isMated) "#" else if (board.isKingAttacked) "+" else ""
         notation + check
     } catch (e: Exception) {
-        println("Error converting UCI $cleanUci to SAN: ${e.message}")
         e.printStackTrace()
         cleanUci
     }

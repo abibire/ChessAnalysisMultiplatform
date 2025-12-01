@@ -14,7 +14,6 @@ object OpeningBook {
         val json = try {
             Res.readBytes("files/openings.json").decodeToString()
         } catch (e: Exception) {
-            println("Error loading openings.json: ${e.message}")
             null
         } ?: return
 
@@ -33,7 +32,6 @@ fun parseOpenings(json: String): Map<String, String> {
         val jsonElement = Json.parseToJsonElement(json)
         jsonElement.jsonObject.mapValues { it.value.jsonPrimitive.content }
     } catch (e: Exception) {
-        println("Error parsing openings.json: ${e.message}")
         emptyMap()
     }
 }

@@ -8,15 +8,12 @@ import stockfish.*
 actual class StockfishEngine actual constructor(context: Any?) {
 
     init {
-        println("KOTLIN[iOS]: StockfishEngine init -> stockfish_init()")
         stockfish_init()
     }
 
     actual suspend fun evaluatePosition(fen: String, depth: Int): EngineResult {
-        println("KOTLIN[iOS]: evaluatePosition($fen, depth=$depth)")
         val resultPtr = stockfish_evaluate(fen, depth)
         val resultStr = resultPtr?.toKString() ?: "0.00|"
-        println("KOTLIN[iOS]: result <- $resultStr")
 
         val parts = resultStr.split("|")
         val score = parts.getOrNull(0) ?: "0.00"
@@ -26,10 +23,8 @@ actual class StockfishEngine actual constructor(context: Any?) {
     }
 
     actual suspend fun evaluateWithMultiPV(fen: String, depth: Int, numLines: Int): EngineResult {
-        println("KOTLIN[iOS]: evaluateWithMultiPV($fen, depth=$depth, numLines=$numLines)")
         val resultPtr = stockfish_evaluate_multipv(fen, depth, numLines)
         val resultStr = resultPtr?.toKString() ?: "0.00||"
-        println("KOTLIN[iOS]: multi-PV result <- $resultStr")
 
         // Format: score|bestMove||line1Score:line1Move:pv1,pv2,pv3|line2Score:line2Move:pv1,pv2,pv3|...
         val mainParts = resultStr.split("||", limit = 2)
@@ -56,7 +51,6 @@ actual class StockfishEngine actual constructor(context: Any?) {
 
                         PVLine(lineScore, lineMove, pv)
                     } catch (e: Exception) {
-                        println("KOTLIN[iOS]: Error parsing line '$lineStr': ${e.message}")
                         null
                     }
                 }
@@ -64,16 +58,13 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 emptyList()
             }
         } catch (e: Exception) {
-            println("KOTLIN[iOS]: Error parsing multi-PV result: ${e.message}")
             emptyList()
         }
 
-        println("KOTLIN[iOS]: Parsed ${alternativeLines.size} alternative lines")
         return EngineResult(score, bestMove, alternativeLines)
     }
 
     actual fun close() {
-        println("KOTLIN[iOS]: close() -> stockfish_cleanup()")
         stockfish_cleanup()
     }
 }

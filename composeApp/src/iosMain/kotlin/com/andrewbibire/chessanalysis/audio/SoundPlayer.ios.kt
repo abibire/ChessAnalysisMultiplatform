@@ -24,7 +24,6 @@ class IOSSoundPlayer : SoundPlayer {
                 // Load from iOS-specific compose resources
                 val uri = Res.getUri("files/$fileName")
                 val url = NSURL.URLWithString(uri) ?: run {
-                    println("iOS SoundPlayer ERROR: Resource not found: $fileName")
                     return@launch
                 }
 
@@ -33,7 +32,6 @@ class IOSSoundPlayer : SoundPlayer {
                 currentPlayer = AVAudioPlayer(contentsOfURL = url, error = null)
                 currentPlayer?.play()
             } catch (e: Exception) {
-                println("iOS SoundPlayer ERROR: ${e.message}")
                 e.printStackTrace()
             }
         }
@@ -54,7 +52,6 @@ class IOSSoundPlayer : SoundPlayer {
                     // Load from iOS-specific compose resources
                     val uri = Res.getUri("files/$fileName")
                     val url = NSURL.URLWithString(uri) ?: run {
-                        println("iOS SoundPlayer ERROR: Resource not found: $fileName")
                         continue
                     }
 
@@ -68,7 +65,6 @@ class IOSSoundPlayer : SoundPlayer {
                     val durationMs = (player.duration * 1000).toLong()
                     kotlinx.coroutines.delay(durationMs + 20)
                 } catch (e: Exception) {
-                    println("iOS SoundPlayer ERROR: ${e.message}")
                     e.printStackTrace()
                 }
             }

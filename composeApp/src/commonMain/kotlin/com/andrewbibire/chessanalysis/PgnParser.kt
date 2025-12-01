@@ -26,7 +26,6 @@ fun generateFensFromPgn(pgn: String): List<Position> {
     }
 
     // If that fails, try custom SAN parsing
-    println("Standard parsing failed, trying custom SAN parser")
     return tryCustomSanParsing(pgn)
 }
 
@@ -44,7 +43,6 @@ private fun tryStandardParsing(pgn: String): List<Position> {
         pgnHolder.loadPgn(cleanedPgn)
         val game = pgnHolder.games.firstOrNull()
         if (game == null) {
-            println("No game found after parsing PGN")
             return positions
         }
         positions.add(Position(fenString = board.fen))
@@ -53,7 +51,6 @@ private fun tryStandardParsing(pgn: String): List<Position> {
             try {
                 // Skip moves with null coordinates - can't process them
                 if (move.from == null || move.to == null) {
-                    println("Move with null coordinates: ${move.san}")
                     // Can't continue without proper move parsing
                     return emptyList()
                 }
@@ -80,13 +77,11 @@ private fun tryStandardParsing(pgn: String): List<Position> {
 
                 positions.add(Position(fenString = board.fen, playedMove = playedMove, sanNotation = san))
             } catch (e: Exception) {
-                println("Failed to parse move ${move.san}: ${e.message}")
                 // If a move fails, we can't continue reliably
                 return emptyList()
             }
         }
     } catch (e: Exception) {
-        println("Failed to parse PGN: ${e.message}")
         return emptyList()
     }
     return positions
@@ -100,13 +95,11 @@ private fun tryCustomSanParsing(pgn: String): List<Position> {
         // Extract the moves section from PGN
         val movesText = extractMovesFromPgn(pgn)
         if (movesText.isEmpty()) {
-            println("No moves found in PGN")
             return positions
         }
 
         // Parse move tokens (e.g., "1. e4 e5 2. Nf3 Nc6")
         val moveTokens = parseMoveTokens(movesText)
-        println("Found ${moveTokens.size} move tokens")
 
         positions.add(Position(fenString = board.fen))
 
@@ -114,7 +107,6 @@ private fun tryCustomSanParsing(pgn: String): List<Position> {
             try {
                 val move = findMoveFromSan(board, sanMove)
                 if (move == null) {
-                    println("Could not find legal move for SAN: $sanMove")
                     break
                 }
 
@@ -135,12 +127,10 @@ private fun tryCustomSanParsing(pgn: String): List<Position> {
 
                 positions.add(Position(fenString = board.fen, playedMove = playedMove, sanNotation = sanMove))
             } catch (e: Exception) {
-                println("Error applying move $sanMove: ${e.message}")
                 break
             }
         }
     } catch (e: Exception) {
-        println("Custom parsing failed: ${e.message}")
     }
     return positions
 }

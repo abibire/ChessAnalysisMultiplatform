@@ -49,7 +49,6 @@ object MoveAnalyzer {
         val isPromotionRank = (fromRank == '7' && toRank == '8') || (fromRank == '2' && toRank == '1')
 
         val result = isValidPromotionPiece && isPromotionRank
-        println("MoveAnalyzer.isPromotion: uciMove=$uciMove, length=${uciMove.length}, lastChar=$lastChar, isValidPiece=$isValidPromotionPiece, isPromotionRank=$isPromotionRank, result=$result")
         return result
     }
 

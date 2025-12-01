@@ -230,7 +230,6 @@ fun ChessAnalysisApp(context: Any?) {
                 if (result is com.andrewbibire.chessanalysis.network.NetworkResult.Success) {
                     whiteAvatar = result.data.avatar
                     whiteCountryCode = result.data.getCountryCode()
-                    println("DEBUG: Fetched white avatar for $username: ${result.data.avatar}, country: ${whiteCountryCode}")
                 }
             }
             blackPlayer?.let { username ->
@@ -238,7 +237,6 @@ fun ChessAnalysisApp(context: Any?) {
                 if (result is com.andrewbibire.chessanalysis.network.NetworkResult.Success) {
                     blackAvatar = result.data.avatar
                     blackCountryCode = result.data.getCountryCode()
-                    println("DEBUG: Fetched black avatar for $username: ${result.data.avatar}, country: ${blackCountryCode}")
                 }
             }
         }
@@ -254,13 +252,11 @@ fun ChessAnalysisApp(context: Any?) {
         val whiteLower = whitePlayer?.lowercase()
         val blackLower = blackPlayer?.lowercase()
         val result = whiteLower == searchedUsername
-        println("DEBUG: searchedUsername=$searchedUsername, whiteLower=$whiteLower, blackLower=$blackLower, isSearchedPlayerWhite=$result")
         result
     }
 
     val leftPlayer = remember(isSearchedPlayerWhite, whitePlayer, blackPlayer) {
         val player = if (isSearchedPlayerWhite) whitePlayer else blackPlayer
-        println("DEBUG: leftPlayer=$player (isSearchedPlayerWhite=$isSearchedPlayerWhite)")
         player
     }
     val leftElo = remember(isSearchedPlayerWhite, whiteElo, blackElo) {
@@ -278,7 +274,6 @@ fun ChessAnalysisApp(context: Any?) {
 
     val rightPlayer = remember(isSearchedPlayerWhite, whitePlayer, blackPlayer) {
         val player = if (isSearchedPlayerWhite) blackPlayer else whitePlayer
-        println("DEBUG: rightPlayer=$player (isSearchedPlayerWhite=$isSearchedPlayerWhite)")
         player
     }
     val rightElo = remember(isSearchedPlayerWhite, whiteElo, blackElo) {
@@ -362,7 +357,6 @@ fun ChessAnalysisApp(context: Any?) {
                 }
             }
         } catch (e: Exception) {
-            println("CHECK_GAME_END: Exception: ${e.message}")
             GameEndState(false, "*", "")
         }
     }
@@ -377,7 +371,6 @@ fun ChessAnalysisApp(context: Any?) {
 
             // Only return moves if there's a piece at the square and it's the right color to move
             if (piece == Piece.NONE) {
-                println("GET_LEGAL_MOVES: No piece at $fromSquare")
                 return emptyList()
             }
 
@@ -385,17 +378,14 @@ fun ChessAnalysisApp(context: Any?) {
             val pieceIsWhite = piece.pieceSide == com.github.bhlangonijr.chesslib.Side.WHITE
 
             if (whiteToMove != pieceIsWhite) {
-                println("GET_LEGAL_MOVES: Wrong turn. whiteToMove=$whiteToMove, pieceIsWhite=$pieceIsWhite")
                 return emptyList()
             }
 
             val legalMoves = board.legalMoves()
                 .filter { it.from.toString().lowercase() == fromSquare }
                 .map { it.to.toString().lowercase() }
-            println("GET_LEGAL_MOVES: Found ${legalMoves.size} legal moves for $fromSquare: $legalMoves")
             legalMoves
         } catch (e: Exception) {
-            println("GET_LEGAL_MOVES: Exception for $fromSquare: ${e.message}")
             e.printStackTrace()
             emptyList()
         }
@@ -612,11 +602,9 @@ fun ChessAnalysisApp(context: Any?) {
 
                     positions.add(newPosition)
                 } else {
-                    println("Could not find legal move for UCI: $uciMove")
                     break
                 }
             } catch (e: Exception) {
-                println("Error playing move $uciMove: ${e.message}")
                 break
             }
         }
@@ -671,7 +659,6 @@ fun ChessAnalysisApp(context: Any?) {
         } else {
             val currentPosition = positions[safeCurrentIndex]
             val moves = getLegalMovesForSquare(currentPosition.fenString, fromSquare)
-            println("CAN_START_DRAG: fromSquare=$fromSquare, fen=${currentPosition.fenString.take(50)}, moves=$moves, isEmpty=${moves.isEmpty()}")
             moves.isNotEmpty()
         }
     }
@@ -680,13 +667,11 @@ fun ChessAnalysisApp(context: Any?) {
         if (positions.isNotEmpty()) {
             val currentPosition = positions[safeCurrentIndex]
             val moves = getLegalMovesForSquare(currentPosition.fenString, fromSquare)
-            println("DRAG START: from=$fromSquare, piece=$piece, legalMoves=$moves")
             if (moves.isNotEmpty()) {
                 draggedPiece = DragState(fromSquare, piece)
                 legalMovesForSelected = moves
                 selectedSquare = null // Clear click selection when dragging
             } else {
-                println("DRAG START: No legal moves, drag will be blocked")
             }
         }
     }
@@ -696,15 +681,12 @@ fun ChessAnalysisApp(context: Any?) {
     }
 
     val onDragEnd: (String?) -> Unit = onDragEnd@{ toSquare ->
-        println("DRAG END: toSquare=$toSquare, draggedFrom=${draggedPiece?.fromSquare}, legalMoves=$legalMovesForSelected")
 
         try {
             draggedPiece?.let { drag ->
                 if (toSquare != null && legalMovesForSelected.contains(toSquare)) {
-                    println("DRAG END: Making move ${drag.fromSquare} -> $toSquare")
                     makeMove(drag.fromSquare, toSquare)
                 } else {
-                    println("DRAG END: Move NOT in legal moves. toSquare=$toSquare, legal=$legalMovesForSelected")
                 }
             }
         } finally {
@@ -810,8 +792,6 @@ fun ChessAnalysisApp(context: Any?) {
             blunder = black["Blunder"] ?: 0
         )
 
-        println("DEBUG: Analysis completed=$analysisCompleted, White stats: $whiteStats")
-        println("DEBUG: Analysis completed=$analysisCompleted, Black stats: $blackStats")
 
         Pair(whiteStats, blackStats)
     }
@@ -894,7 +874,6 @@ fun ChessAnalysisApp(context: Any?) {
                     analysisCompleted++ // Trigger stats recalculation
                 }
             } catch (e: Exception) {
-                println("KOTLIN: Analysis error: ${e.message}")
             } finally {
                 // Only reset counters if we're still the current analysis (no new one started)
                 if (currentRevision == analysisRevision) {
@@ -1771,7 +1750,6 @@ fun ChessAnalysisApp(context: Any?) {
                                                     alternativeLinesFen = fen
                                                     showAlternativeLinesDialog = true
                                                 } catch (e: Exception) {
-                                                    println("Error evaluating alternatives: ${e.message}")
                                                 } finally {
                                                     isLoadingAlternatives = false
                                                 }

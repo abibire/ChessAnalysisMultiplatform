@@ -64,19 +64,15 @@ fun Chessboard(
 
     // Function to find which square contains a position
     fun findSquareAt(position: androidx.compose.ui.geometry.Offset): String? {
-        println("FIND_SQUARE: Looking for square at position $position, flipped=$flipped")
-        println("FIND_SQUARE: Available squares: ${squarePositions.keys.sorted()}")
         val result = squarePositions.entries.firstOrNull { (square, bounds) ->
             val contains = position.x >= bounds.position.x &&
                 position.x < bounds.position.x + bounds.size.width &&
                 position.y >= bounds.position.y &&
                 position.y < bounds.position.y + bounds.size.height
             if (contains) {
-                println("FIND_SQUARE: Found match - square=$square, bounds=[${bounds.position.x},${bounds.position.x + bounds.size.width}) x [${bounds.position.y},${bounds.position.y + bounds.size.height})")
             }
             contains
         }?.key
-        println("FIND_SQUARE: Result = $result")
         return result
     }
 
@@ -270,22 +266,17 @@ fun ChessSquare(
             .pointerInput(squareUci, piece, canStartDrag, onDragStart, onDrag, onDragEnd) {
                 detectDragGestures(
                     onDragStart = { startOffset ->
-                        println("DRAG_START: square=$squareUci, piece='$piece', isEmpty=${piece.isEmpty()}")
                         if (piece.isNotEmpty() && canStartDrag()) {
                             dragStartOffset = startOffset
                             currentDragOffset = androidx.compose.ui.geometry.Offset.Zero
                             onDragStart()
-                            println("DRAG_START: Called onDragStart for $squareUci")
                         } else {
-                            println("DRAG_START: Piece is empty or cannot start drag, not calling onDragStart")
                         }
                     },
                     onDragEnd = {
-                        println("DRAG_END_CALLBACK: square=$squareUci")
                         if (piece.isNotEmpty()) {
                             // Calculate absolute drop position
                             val dropPosition = squarePosition + dragStartOffset + currentDragOffset
-                            println("DRAG_END_CALC: square=$squareUci, squarePosition=$squarePosition, dragStartOffset=$dragStartOffset, currentDragOffset=$currentDragOffset, dropPosition=$dropPosition")
                             onDragEnd(dropPosition)
                         } else {
                             // Even if piece is empty now, still clear state
@@ -295,7 +286,6 @@ fun ChessSquare(
                         dragStartOffset = androidx.compose.ui.geometry.Offset.Zero
                     },
                     onDragCancel = {
-                        println("DRAG_CANCEL: square=$squareUci")
                         // Always call onDragEnd to clear state, even on cancel
                         onDragEnd(androidx.compose.ui.geometry.Offset.Zero)
                         currentDragOffset = androidx.compose.ui.geometry.Offset.Zero

@@ -25,7 +25,6 @@ class ChessSoundManager(
         isPromotion: Boolean = false,
         isCastling: Boolean = false
     ) {
-        println("ChessSoundManager: isCapture=$isCapture, isCheck=$isCheck, isCheckmate=$isCheckmate, isPromotion=$isPromotion, isCastling=$isCastling")
 
         // Priority order:
         // 1. Checkmate: check sound + game end sound
@@ -37,7 +36,6 @@ class ChessSoundManager(
 
         if (isCheckmate) {
             // For checkmate: play check sound, wait for it to finish, then play game end
-            println("ChessSoundManager: Playing checkmate sounds: check.$ext -> gameend.$ext")
             playCheckmateSound()
         } else {
             val soundFile = when {
@@ -48,7 +46,6 @@ class ChessSoundManager(
                 else -> "move.$ext"
             }
 
-            println("ChessSoundManager: Playing sound: $soundFile")
             soundPlayer.playSound(soundFile)
         }
     }

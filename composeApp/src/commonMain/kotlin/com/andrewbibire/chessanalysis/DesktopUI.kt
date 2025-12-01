@@ -764,7 +764,6 @@ fun DesktopChessAnalysisApp(context: Any?) {
                     analysisCompleted++
                 }
             } catch (e: Exception) {
-                println("KOTLIN: Analysis error: ${e.message}")
             } finally {
                 if (currentRevision == analysisRevision) {
                     isEvaluating = false
@@ -2068,7 +2067,6 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                             alternativeLines = result.alternativeLines
                                             alternativeLinesFen = fen
                                         } catch (e: Exception) {
-                                            println("Error evaluating alternatives: ${e.message}")
                                         } finally {
                                             isLoadingAlternatives = false
                                         }
