@@ -1,5 +1,6 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.language.jvm.tasks.ProcessResources
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -144,6 +145,29 @@ compose.desktop {
             linux {
                 iconFile.set(project.file("src/jvmMain/resources/app-icon-linux.png"))
             }
+        }
+    }
+}
+
+// Filter JVM resources based on target platform
+tasks.named("jvmProcessResources", ProcessResources::class) {
+    val osName = System.getProperty("os.name").lowercase()
+
+    when {
+        osName.contains("windows") -> {
+            // Exclude macOS and Linux binaries from Windows builds
+            exclude("stockfish/macos-*/**", "stockfish/linux-*/**")
+            println("Filtering resources for Windows build")
+        }
+        osName.contains("mac") || osName.contains("darwin") -> {
+            // Exclude Windows and Linux binaries from macOS builds
+            exclude("stockfish/windows-*/**", "stockfish/linux-*/**")
+            println("Filtering resources for macOS build")
+        }
+        osName.contains("linux") -> {
+            // Exclude Windows and macOS binaries from Linux builds
+            exclude("stockfish/windows-*/**", "stockfish/macos-*/**")
+            println("Filtering resources for Linux build")
         }
     }
 }
