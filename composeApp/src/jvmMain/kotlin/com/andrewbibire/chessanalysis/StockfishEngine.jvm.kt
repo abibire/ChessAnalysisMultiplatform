@@ -7,6 +7,9 @@ import java.io.BufferedWriter
 import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.io.FileWriter
+import java.text.SimpleDateFormat
+import java.util.Date
 
 actual class StockfishEngine actual constructor(context: Any?) {
     private var process: Process? = null
@@ -14,22 +17,41 @@ actual class StockfishEngine actual constructor(context: Any?) {
     private var reader: BufferedReader? = null
     private var executableFile: File? = null
 
+    companion object {
+        private val logFile: File by lazy {
+            val userHome = System.getProperty("user.home")
+            File(userHome, "ChessAnalysis-Stockfish-Debug.log").also {
+                it.writeText("=== Chess Analysis Stockfish Debug Log ===\n")
+                it.appendText("Started: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date())}\n\n")
+            }
+        }
+
+        private fun log(message: String) {
+            println(message) // Still print to console
+            try {
+                logFile.appendText("$message\n")
+            } catch (e: Exception) {
+                // Ignore logging errors
+            }
+        }
+    }
+
     actual suspend fun evaluatePosition(fen: String, depth: Int): EngineResult = withContext(Dispatchers.IO) {
         try {
-            println("JVM Stockfish: evaluatePosition called with fen=$fen, depth=$depth")
+            log("JVM Stockfish: evaluatePosition called with fen=$fen, depth=$depth")
             initializeIfNeeded()
 
             writer?.write("position fen $fen\n")
             writer?.write("go depth $depth\n")
             writer?.flush()
-            println("JVM Stockfish: Commands sent to engine")
+            log("JVM Stockfish: Commands sent to engine")
 
             var lastScore: String? = null
             var bestMove: String? = null
 
             while (true) {
                 val line = reader?.readLine()?.trim() ?: break
-                println("JVM Stockfish: $line")
+                log("JVM Stockfish: $line")
 
                 if (line.startsWith("info depth") && line.contains("score")) {
                     lastScore = parseScoreFromInfo(line)
@@ -44,25 +66,25 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 }
             }
 
-            println("JVM Stockfish: Evaluation complete - score=$lastScore, bestMove=$bestMove")
+            log("JVM Stockfish: Evaluation complete - score=$lastScore, bestMove=$bestMove")
             EngineResult(lastScore ?: "0.00", bestMove)
         } catch (e: Exception) {
-            println("JVM Stockfish ERROR: ${e.message}")
-            e.printStackTrace()
+            log("JVM Stockfish ERROR: ${e.message}")
+            log("Stack trace: ${e.stackTraceToString()}")
             throw e
         }
     }
 
     actual suspend fun evaluateWithMultiPV(fen: String, depth: Int, numLines: Int): EngineResult = withContext(Dispatchers.IO) {
         try {
-            println("JVM Stockfish: evaluateWithMultiPV called with fen=$fen, depth=$depth, numLines=$numLines")
+            log("JVM Stockfish: evaluateWithMultiPV called with fen=$fen, depth=$depth, numLines=$numLines")
             initializeIfNeeded()
 
             writer?.write("setoption name MultiPV value $numLines\n")
             writer?.write("position fen $fen\n")
             writer?.write("go depth $depth\n")
             writer?.flush()
-            println("JVM Stockfish: Multi-PV commands sent to engine")
+            log("JVM Stockfish: Multi-PV commands sent to engine")
 
             val pvLines = mutableMapOf<Int, PVLine>()
             var lastScore: String? = null
@@ -70,7 +92,7 @@ actual class StockfishEngine actual constructor(context: Any?) {
 
             while (true) {
                 val line = reader?.readLine()?.trim() ?: break
-                println("JVM Stockfish: $line")
+                log("JVM Stockfish: $line")
 
                 if (line.startsWith("info depth") && line.contains("score") && line.contains("multipv")) {
                     val multipvIndex = parseMultiPVIndex(line)
@@ -102,42 +124,44 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 pvLines.entries.find { entry -> entry.value == it }?.key ?: Int.MAX_VALUE
             }
 
-            println("JVM Stockfish: Multi-PV evaluation complete - ${alternativeLines.size} lines")
+            log("JVM Stockfish: Multi-PV evaluation complete - ${alternativeLines.size} lines")
             EngineResult(lastScore ?: "0.00", bestMove, alternativeLines)
         } catch (e: Exception) {
-            println("JVM Stockfish ERROR: ${e.message}")
-            e.printStackTrace()
+            log("JVM Stockfish ERROR: ${e.message}")
+            log("Stack trace: ${e.stackTraceToString()}")
             throw e
         }
     }
 
     private fun initializeIfNeeded() {
         if (process == null) {
-            println("JVM Stockfish: Initializing engine...")
+            log("JVM Stockfish: Initializing engine...")
             val stockfishBinary = extractStockfishBinary()
-            println("JVM Stockfish: Binary extracted to ${stockfishBinary.absolutePath}")
+            log("JVM Stockfish: Binary extracted to ${stockfishBinary.absolutePath}")
+            log("JVM Stockfish: Binary exists: ${stockfishBinary.exists()}, size: ${stockfishBinary.length()} bytes")
 
             // Make sure it's executable on Unix-like systems
             if (!System.getProperty("os.name").lowercase().contains("windows")) {
                 stockfishBinary.setExecutable(true)
-                println("JVM Stockfish: Made binary executable")
+                log("JVM Stockfish: Made binary executable")
             }
 
+            log("JVM Stockfish: Starting process...")
             process = ProcessBuilder(stockfishBinary.absolutePath)
                 .redirectErrorStream(true)  // Merge stderr into stdout to prevent buffer deadlock
                 .start()
             writer = BufferedWriter(OutputStreamWriter(process!!.outputStream, Charsets.UTF_8))
             reader = BufferedReader(InputStreamReader(process!!.inputStream, Charsets.UTF_8))
-            println("JVM Stockfish: Process started, sending UCI command")
+            log("JVM Stockfish: Process started, sending UCI command")
 
             writer?.write("uci\n")
             writer?.flush()
 
             while (true) {
                 val line = reader?.readLine()?.trim() ?: break
-                println("JVM Stockfish UCI: $line")
+                log("JVM Stockfish UCI: $line")
                 if (line.contains("uciok")) {
-                    println("JVM Stockfish: UCI initialization complete")
+                    log("JVM Stockfish: UCI initialization complete")
                     break
                 }
             }
@@ -146,12 +170,12 @@ actual class StockfishEngine actual constructor(context: Any?) {
 
     private fun extractStockfishBinary(): File {
         val (resourcePath, fileName) = getStockfishResourcePath()
-        println("JVM Stockfish: Looking for resource at: $resourcePath")
+        log("JVM Stockfish: Looking for resource at: $resourcePath")
 
         // Create a temp directory for the executable
         val tempDir = File(System.getProperty("java.io.tmpdir"), "stockfish-jvm")
         tempDir.mkdirs()
-        println("JVM Stockfish: Temp directory: ${tempDir.absolutePath}")
+        log("JVM Stockfish: Temp directory: ${tempDir.absolutePath}")
 
         val executableFile = File(tempDir, fileName)
 
@@ -159,11 +183,11 @@ actual class StockfishEngine actual constructor(context: Any?) {
         val resourceStream = this::class.java.getResourceAsStream("/$resourcePath")
             ?: throw IllegalStateException("Stockfish binary not found in resources: /$resourcePath")
 
-        println("JVM Stockfish: Found resource, extracting to ${executableFile.absolutePath}")
+        log("JVM Stockfish: Found resource, extracting to ${executableFile.absolutePath}")
         resourceStream.use { input ->
             executableFile.outputStream().use { output ->
                 val bytes = input.copyTo(output)
-                println("JVM Stockfish: Extracted $bytes bytes")
+                log("JVM Stockfish: Extracted $bytes bytes")
             }
         }
 
@@ -174,30 +198,51 @@ actual class StockfishEngine actual constructor(context: Any?) {
     private fun getStockfishResourcePath(): Pair<String, String> {
         val osName = System.getProperty("os.name").lowercase()
         val osArch = System.getProperty("os.arch").lowercase()
-        println("JVM Stockfish: Detecting platform - OS: $osName, Arch: $osArch")
 
-        return when {
+        log("=== JVM Stockfish Platform Detection ===")
+        log("os.name (raw): ${System.getProperty("os.name")}")
+        log("os.arch (raw): ${System.getProperty("os.arch")}")
+        log("os.name (lowercase): $osName")
+        log("os.arch (lowercase): $osArch")
+
+        val result = when {
             osName.contains("mac") || osName.contains("darwin") -> {
                 when {
-                    osArch.contains("aarch64") || osArch.contains("arm") ->
+                    osArch.contains("aarch64") || osArch.contains("arm") -> {
+                        log("Detected: macOS ARM64")
                         Pair("stockfish/macos-aarch64/stockfish", "stockfish")
-                    else ->
+                    }
+                    else -> {
+                        log("Detected: macOS x86-64")
                         Pair("stockfish/macos-x86-64/stockfish", "stockfish")
+                    }
                 }
             }
             osName.contains("windows") -> {
                 when {
-                    osArch.contains("aarch64") || osArch.contains("arm") ->
+                    osArch.contains("aarch64") || osArch.contains("arm") -> {
+                        log("Detected: Windows ARM64")
                         Pair("stockfish/windows-aarch64/stockfish.exe", "stockfish.exe")
-                    else ->
+                    }
+                    else -> {
+                        log("Detected: Windows x86-64")
                         Pair("stockfish/windows-x86-64/stockfish.exe", "stockfish.exe")
+                    }
                 }
             }
             osName.contains("linux") -> {
+                log("Detected: Linux x86-64")
                 Pair("stockfish/linux-x86-64/stockfish", "stockfish")
             }
-            else -> throw IllegalStateException("Unsupported operating system: $osName")
+            else -> {
+                log("ERROR: Unsupported operating system")
+                throw IllegalStateException("Unsupported operating system: $osName")
+            }
         }
+
+        log("Selected resource path: ${result.first}")
+        log("======================================")
+        return result
     }
 
     private fun parseScoreFromInfo(line: String): String {
