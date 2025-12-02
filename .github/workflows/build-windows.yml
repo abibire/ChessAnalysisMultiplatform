@@ -22,8 +22,13 @@ jobs:
       - name: Build Windows Distributable
         run: ./gradlew createDistributable
 
+      - name: Create Windows ZIP
+        run: |
+          cd composeApp/build/compose/binaries/main
+          Compress-Archive -Path app\* -DestinationPath ChessAnalysis-windows.zip
+
       - name: Upload Windows App
         uses: actions/upload-artifact@v4
         with:
           name: windows-app
-          path: composeApp/build/compose/binaries/main/app/
+          path: composeApp/build/compose/binaries/main/ChessAnalysis-windows.zip

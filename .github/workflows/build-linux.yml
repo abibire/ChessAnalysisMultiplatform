@@ -22,8 +22,13 @@ jobs:
       - name: Build Linux Distributable
         run: ./gradlew createDistributable
 
+      - name: Create Linux ZIP
+        run: |
+          cd composeApp/build/compose/binaries/main/app
+          zip -r ../ChessAnalysis-linux.zip .
+
       - name: Upload Linux App
         uses: actions/upload-artifact@v4
         with:
           name: linux-app
-          path: composeApp/build/compose/binaries/main/app/
+          path: composeApp/build/compose/binaries/main/ChessAnalysis-linux.zip
