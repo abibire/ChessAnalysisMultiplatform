@@ -41,12 +41,13 @@ jobs:
           ls -la flatpak-source/
           ls -la flatpak-source/bin/ || echo "No bin directory"
 
-      - name: Build Flatpak
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
-        with:
-          bundle: ChessAnalysis-linux.flatpak
-          manifest-path: com.andrewbibire.chessanalysis.yml
-          cache-key: flatpak-builder-${{ github.sha }}
+      - name: Build Flatpak manually
+        run: |
+          df -h
+          flatpak-builder --user --install-deps-from=flathub --force-clean --disable-rofiles-fuse flatpak_app com.andrewbibire.chessanalysis.yml
+          flatpak build-export --disable-fsync --no-update-summary export flatpak_app
+          flatpak build-bundle --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo export ChessAnalysis-linux.flatpak com.andrewbibire.chessanalysis
+          ls -lh ChessAnalysis-linux.flatpak
 
       - name: Upload Flatpak
         uses: actions/upload-artifact@v4
