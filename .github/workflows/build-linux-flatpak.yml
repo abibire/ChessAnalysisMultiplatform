@@ -33,20 +33,12 @@ jobs:
           ls -la flatpak-source/
           ls -la flatpak-source/bin/ || echo "No bin directory"
 
-      - name: Configure flatpak to ignore disk space limits
-        run: |
-          mkdir -p repo
-          ostree --repo=repo init --mode=archive-z2
-          ostree --repo=repo config set core.min-free-space-percent 0
-
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: ChessAnalysis-linux.flatpak
           manifest-path: com.andrewbibire.chessanalysis.yml
           cache-key: flatpak-builder-${{ github.sha }}
-          repository-name: repo
-          repository-url: https://github.com/${{ github.repository }}
 
       - name: Upload Flatpak
         uses: actions/upload-artifact@v4
