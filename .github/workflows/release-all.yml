@@ -16,12 +16,15 @@ jobs:
   build-linux:
     uses: ./.github/workflows/build-linux.yml
 
+  build-linux-deb:
+    uses: ./.github/workflows/build-linux-deb.yml
+
   build-android:
     uses: ./.github/workflows/build-android.yml
     secrets: inherit
 
   create-release:
-    needs: [build-windows, build-macos, build-linux, build-android]
+    needs: [build-windows, build-macos, build-linux, build-linux-deb, build-android]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
@@ -34,6 +37,7 @@ jobs:
           files: |
             windows-app/ChessAnalysis-windows.zip
             linux-app/ChessAnalysis-linux.zip
+            linux-deb/ChessAnalysis-linux.deb
             android-apk/ChessAnalysis-android.apk
             macos-dmg/ChessAnalysis-macos.dmg
           draft: false
