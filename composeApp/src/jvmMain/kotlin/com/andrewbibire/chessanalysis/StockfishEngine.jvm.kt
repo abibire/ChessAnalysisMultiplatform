@@ -194,7 +194,12 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 }
             }
             osName.contains("linux") -> {
-                Pair("stockfish/linux-x86-64/stockfish", "stockfish")
+                when {
+                    osArch.contains("aarch64") || osArch.contains("arm") ->
+                        Pair("stockfish/linux-aarch64/stockfish", "stockfish")
+                    else ->
+                        Pair("stockfish/linux-x86-64/stockfish", "stockfish")
+                }
             }
             else -> throw IllegalStateException("Unsupported operating system: $osName")
         }
