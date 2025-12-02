@@ -26,8 +26,8 @@ modules:
     buildsystem: simple
     build-commands:
       - ls -la
-      - install -Dm755 bin/com.andrewbibire.chessanalysis /app/bin/com.andrewbibire.chessanalysis
-      - cp -r lib /app/lib
+      - cd com.andrewbibire.chessanalysis && install -Dm755 bin/com.andrewbibire.chessanalysis /app/bin/com.andrewbibire.chessanalysis
+      - cd com.andrewbibire.chessanalysis && cp -r lib /app/lib
     sources:
       - type: dir
         path: flatpak-source
