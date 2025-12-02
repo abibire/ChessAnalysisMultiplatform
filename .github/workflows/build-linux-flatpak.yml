@@ -41,6 +41,10 @@ jobs:
           ls -la flatpak-source/
           ls -la flatpak-source/bin/ || echo "No bin directory"
 
+      - name: Setup Flathub remote
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
       - name: Build Flatpak manually
         run: |
           df -h
