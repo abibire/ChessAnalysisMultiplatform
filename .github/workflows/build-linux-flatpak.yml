@@ -11,6 +11,14 @@ jobs:
       image: bilelmoussaoui/flatpak-github-actions:freedesktop-24.08
       options: --privileged
     steps:
+      - name: Free up disk space
+        run: |
+          df -h
+          rm -rf /usr/share/dotnet
+          rm -rf /opt/ghc
+          rm -rf /usr/local/share/boost
+          df -h
+
       - uses: actions/checkout@v4
 
       - name: Setup Java
