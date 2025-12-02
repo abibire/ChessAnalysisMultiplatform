@@ -1,0 +1,29 @@
+name: Build macOS
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Build macOS Distributable
+        run: ./gradlew createDistributable
+
+      - name: Upload macOS App
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: composeApp/build/compose/binaries/main/app/
