@@ -1,6 +1,6 @@
 app-id: com.andrewbibire.chessanalysis
 runtime: org.freedesktop.Platform
-runtime-version: '23.08'
+runtime-version: '24.08'
 sdk: org.freedesktop.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.openjdk21
@@ -25,8 +25,9 @@ modules:
   - name: chessanalysis
     buildsystem: simple
     build-commands:
+      - ls -la
       - install -Dm755 bin/com.andrewbibire.chessanalysis /app/bin/com.andrewbibire.chessanalysis
       - cp -r lib /app/lib
     sources:
       - type: dir
-        path: app
+        path: flatpak-source

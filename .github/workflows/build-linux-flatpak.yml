@@ -8,7 +8,7 @@ jobs:
   build-flatpak:
     runs-on: ubuntu-latest
     container:
-      image: bilelmoussaoui/flatpak-github-actions:freedesktop-23.08
+      image: bilelmoussaoui/flatpak-github-actions:freedesktop-24.08
       options: --privileged
     steps:
       - uses: actions/checkout@v4
@@ -25,10 +25,13 @@ jobs:
       - name: Build Linux Distributable
         run: ./gradlew createDistributable
 
-      - name: Copy app files for Flatpak
+      - name: Prepare app files for Flatpak
         run: |
-          mkdir -p app
-          cp -r composeApp/build/compose/binaries/main/app/* app/
+          ls -la composeApp/build/compose/binaries/main/app/
+          mkdir -p flatpak-source
+          cp -r composeApp/build/compose/binaries/main/app/* flatpak-source/
+          ls -la flatpak-source/
+          ls -la flatpak-source/bin/ || echo "No bin directory"
 
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
