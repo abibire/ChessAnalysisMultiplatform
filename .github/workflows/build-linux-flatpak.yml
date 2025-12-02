@@ -48,14 +48,16 @@ jobs:
       - name: Build Flatpak manually
         run: |
           df -h
-          # Configure cache repo to ignore disk space
-          mkdir -p .flatpak-builder/cache
-          ostree --repo=.flatpak-builder/cache init --mode=bare-user
-          ostree --repo=.flatpak-builder/cache config set core.min-free-space-percent 0
           # Build without cache to save space
           flatpak-builder --user --install-deps-from=flathub --force-clean --disable-rofiles-fuse --disable-cache flatpak_app com.andrewbibire.chessanalysis.yml
-          # Create bundle directly without intermediate repo export
-          flatpak build-bundle --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo . ChessAnalysis-linux.flatpak com.andrewbibire.chessanalysis flatpak_app
+          # Create export repo with disk space check disabled
+          mkdir -p export-repo
+          ostree --repo=export-repo init --mode=archive-z2
+          ostree --repo=export-repo config set core.min-free-space-percent 0
+          # Export to repo
+          flatpak build-export export-repo flatpak_app
+          # Create bundle from repo
+          flatpak build-bundle --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo export-repo ChessAnalysis-linux.flatpak com.andrewbibire.chessanalysis
           ls -lh ChessAnalysis-linux.flatpak
 
       - name: Upload Flatpak
