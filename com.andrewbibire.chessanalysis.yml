@@ -1,0 +1,32 @@
+app-id: com.andrewbibire.chessanalysis
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.openjdk21
+command: com.andrewbibire.chessanalysis
+
+finish-args:
+  # Display
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  # GPU acceleration
+  - --device=dri
+  # Network access
+  - --share=network
+
+modules:
+  - name: openjdk
+    buildsystem: simple
+    build-commands:
+      - /usr/lib/sdk/openjdk21/install.sh
+
+  - name: chessanalysis
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 bin/com.andrewbibire.chessanalysis /app/bin/com.andrewbibire.chessanalysis
+      - cp -r lib /app/lib
+    sources:
+      - type: dir
+        path: app

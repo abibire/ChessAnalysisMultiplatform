@@ -1,0 +1,44 @@
+name: Build Linux Flatpak
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-flatpak:
+    runs-on: ubuntu-latest
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:freedesktop-23.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Build Linux Distributable
+        run: ./gradlew createDistributable
+
+      - name: Copy app files for Flatpak
+        run: |
+          mkdir -p app
+          cp -r composeApp/build/compose/binaries/main/app/* app/
+
+      - name: Build Flatpak
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: ChessAnalysis-linux.flatpak
+          manifest-path: com.andrewbibire.chessanalysis.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+
+      - name: Upload Flatpak
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-flatpak
+          path: ChessAnalysis-linux.flatpak
