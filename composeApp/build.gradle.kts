@@ -146,7 +146,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.andrewbibire.chessanalysis"
+            packageName = "Chess Analysis"
             packageVersion = "1.0.0"
 
             macOS {
