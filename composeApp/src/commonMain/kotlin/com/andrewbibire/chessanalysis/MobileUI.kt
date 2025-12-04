@@ -1,5 +1,6 @@
 package com.andrewbibire.chessanalysis
-
+import com.andrewbibire.chessanalysis.ui.components.GameControls
+import com.andrewbibire.chessanalysis.ui.components.buttons.EvaluationButton
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -1793,95 +1794,25 @@ fun ChessAnalysisApp(context: Any?) {
                                 }
                             }
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                EvaluationButton(
-                                    onClick = { currentIndex = 0 },
-                                    enabled = currentIndex > 0 && !isEvaluating,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.SkipPrevious,
-                                        contentDescription = "First move",
-                                        modifier = Modifier.size(24.dp)
-                                    )
+                            GameControls(
+                                currentIndex = currentIndex,
+                                onCurrentIndexChange = { currentIndex = it },
+                                isPlaying = isPlaying,
+                                onPlayingChange = { isPlaying = it },
+                                isEvaluating = isEvaluating,
+                                positions = positions,
+                                isExploringAlternativeLine = isExploringAlternativeLine,
+                                alternativeLineReturnIndex = alternativeLineReturnIndex,
+                                alternativeLineReturnPositionCount = alternativeLineReturnPositionCount,
+                                onExitAlternativeLine = {
+                                    while (positions.size > alternativeLineReturnPositionCount) {
+                                        positions.removeAt(positions.size - 1)
+                                    }
+                                    currentIndex = alternativeLineReturnIndex - 1
+                                    isExploringAlternativeLine = false
+                                    positionsRevision++
                                 }
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                EvaluationButton(
-                                    onClick = {
-                                        if (currentIndex > 0) {
-                                            // Check if we should exit alternative line exploration
-                                            if (isExploringAlternativeLine && currentIndex == alternativeLineReturnIndex) {
-                                                // Remove all alternative line positions
-                                                while (positions.size > alternativeLineReturnPositionCount) {
-                                                    positions.removeAt(positions.size - 1)
-                                                }
-                                                // Go back one position from where we started the alternative line
-                                                currentIndex = alternativeLineReturnIndex - 1
-                                                isExploringAlternativeLine = false
-                                                positionsRevision++
-                                            } else {
-                                                currentIndex--
-                                            }
-                                        }
-                                    },
-                                    enabled = currentIndex > 0 && !isEvaluating,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.NavigateBefore,
-                                        contentDescription = "Previous move",
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                EvaluationButton(
-                                    onClick = { isPlaying = !isPlaying },
-                                    enabled = currentIndex < positions.lastIndex && !isEvaluating,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(
-                                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                        contentDescription = if (isPlaying) "Pause" else "Play",
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                EvaluationButton(
-                                    onClick = { if (currentIndex < positions.lastIndex) currentIndex++ },
-                                    enabled = currentIndex < positions.lastIndex && !isEvaluating,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.NavigateNext,
-                                        contentDescription = "Next move",
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                EvaluationButton(
-                                    onClick = { currentIndex = positions.lastIndex },
-                                    enabled = currentIndex < positions.lastIndex && !isEvaluating,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.SkipNext,
-                                        contentDescription = "Last move",
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
+                            )
                         }
                     }
                 }
@@ -2454,37 +2385,6 @@ fun ChessAnalysisApp(context: Any?) {
     }
 }
 
-@Composable
-fun EvaluationButton(
-    onClick: () -> Unit,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier
-            .height(48.dp)
-            .shadow(
-                elevation = if (enabled) 4.dp else 0.dp,
-                shape = RoundedCornerShape(12.dp)
-            ),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF3d3d3d),
-            contentColor = Color.White,
-            disabledContainerColor = Color(0xFF2a2a2a),
-            disabledContentColor = Color(0xFF555555)
-        ),
-        shape = RoundedCornerShape(12.dp),
-        contentPadding = PaddingValues(0.dp),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
-            disabledElevation = 0.dp
-        )
-    ) { content() }
-}
 
 fun normalizeScoreForDisplay(raw: String?, fen: String, isLast: Boolean): String {
     if (raw == null) return "N/A"
