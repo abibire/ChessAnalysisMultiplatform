@@ -1606,17 +1606,35 @@ fun DesktopChessAnalysisApp(context: Any?) {
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
+                        Button(
                             onClick = { currentIndex = 0 },
                             enabled = currentIndex > 0 && !isEvaluating,
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier
+                                .size(56.dp)
+                                .shadow(
+                                    elevation = if (currentIndex > 0 && !isEvaluating) 4.dp else 0.dp,
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF3d3d3d),
+                                contentColor = Color.White,
+                                disabledContainerColor = Color(0xFF2a2a2a),
+                                disabledContentColor = Color(0xFF555555)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(0.dp),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 0.dp,
+                                pressedElevation = 0.dp,
+                                disabledElevation = 0.dp
+                            )
                         ) {
                             Icon(Icons.Filled.SkipPrevious, "First move", modifier = Modifier.size(28.dp))
                         }
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                        IconButton(
+                        Button(
                             onClick = {
                                 if (currentIndex > 0) {
                                     if (isExploringAlternativeLine && currentIndex == alternativeLineReturnIndex) {
@@ -1632,17 +1650,53 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                 }
                             },
                             enabled = currentIndex > 0 && !isEvaluating,
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier
+                                .size(56.dp)
+                                .shadow(
+                                    elevation = if (currentIndex > 0 && !isEvaluating) 4.dp else 0.dp,
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF3d3d3d),
+                                contentColor = Color.White,
+                                disabledContainerColor = Color(0xFF2a2a2a),
+                                disabledContentColor = Color(0xFF555555)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(0.dp),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 0.dp,
+                                pressedElevation = 0.dp,
+                                disabledElevation = 0.dp
+                            )
                         ) {
                             Icon(Icons.Filled.NavigateBefore, "Previous move", modifier = Modifier.size(28.dp))
                         }
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                        IconButton(
+                        Button(
                             onClick = { isPlaying = !isPlaying },
                             enabled = currentIndex < positions.lastIndex && !isEvaluating,
-                            modifier = Modifier.size(56.dp)
+                            modifier = Modifier
+                                .size(56.dp)
+                                .shadow(
+                                    elevation = if (currentIndex < positions.lastIndex && !isEvaluating) 4.dp else 0.dp,
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF3d3d3d),
+                                contentColor = Color.White,
+                                disabledContainerColor = Color(0xFF2a2a2a),
+                                disabledContentColor = Color(0xFF555555)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(0.dp),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 0.dp,
+                                pressedElevation = 0.dp,
+                                disabledElevation = 0.dp
+                            )
                         ) {
                             Icon(
                                 imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
@@ -1651,22 +1705,58 @@ fun DesktopChessAnalysisApp(context: Any?) {
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                        IconButton(
+                        Button(
                             onClick = { if (currentIndex < positions.lastIndex) currentIndex++ },
                             enabled = currentIndex < positions.lastIndex && !isEvaluating,
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier
+                                .size(56.dp)
+                                .shadow(
+                                    elevation = if (currentIndex < positions.lastIndex && !isEvaluating) 4.dp else 0.dp,
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF3d3d3d),
+                                contentColor = Color.White,
+                                disabledContainerColor = Color(0xFF2a2a2a),
+                                disabledContentColor = Color(0xFF555555)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(0.dp),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 0.dp,
+                                pressedElevation = 0.dp,
+                                disabledElevation = 0.dp
+                            )
                         ) {
                             Icon(Icons.Filled.NavigateNext, "Next move", modifier = Modifier.size(28.dp))
                         }
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                        IconButton(
+                        Button(
                             onClick = { currentIndex = positions.lastIndex },
                             enabled = currentIndex < positions.lastIndex && !isEvaluating,
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier
+                                .size(56.dp)
+                                .shadow(
+                                    elevation = if (currentIndex < positions.lastIndex && !isEvaluating) 4.dp else 0.dp,
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF3d3d3d),
+                                contentColor = Color.White,
+                                disabledContainerColor = Color(0xFF2a2a2a),
+                                disabledContentColor = Color(0xFF555555)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(0.dp),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 0.dp,
+                                pressedElevation = 0.dp,
+                                disabledElevation = 0.dp
+                            )
                         ) {
                             Icon(Icons.Filled.SkipNext, "Last move", modifier = Modifier.size(28.dp))
                         }
