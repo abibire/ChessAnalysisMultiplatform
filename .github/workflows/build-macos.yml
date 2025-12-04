@@ -58,29 +58,66 @@ jobs:
           # Verify certificate is available
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
-      - name: Build and Sign macOS DMG
-        env:
-          MACOS_SIGNING_IDENTITY: "Developer ID Application"
+      - name: Build macOS App (unsigned)
         run: |
-          # Find the certificate identity hash
-          CERT_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | awk '{print $2}')
-          echo "Using certificate identity: $CERT_IDENTITY"
+          # Build the app without signing (Gradle has keychain issues in CI)
+          ./gradlew createDistributable
 
-          # Gradle will sign the app during packageDmg
-          ./gradlew packageDmg \
-            -Pcompose.desktop.mac.sign=true \
-            -Pcompose.desktop.mac.signing.identity="$CERT_IDENTITY"
-
-          # Verify the app bundle is signed
+      - name: Sign macOS App Bundle
+        run: |
           cd composeApp/build/compose/binaries/main/app
           APP_BUNDLE=$(ls -d *.app)
+          echo "Signing app bundle: $APP_BUNDLE"
+
+          # Sign all binaries, frameworks, and dylibs inside the app
+          find "$APP_BUNDLE" -type f \( -name "*.dylib" -o -name "stockfish" -o -perm +111 \) | while read file; do
+            echo "Signing: $file"
+            codesign --force --timestamp --options runtime \
+              --sign "Developer ID Application" \
+              --entitlements <(echo '<?xml version="1.0" encoding="UTF-8"?>
+              <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+              <plist version="1.0">
+              <dict>
+                <key>com.apple.security.cs.allow-jit</key>
+                <true/>
+                <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+                <true/>
+                <key>com.apple.security.cs.disable-library-validation</key>
+                <true/>
+              </dict>
+              </plist>') \
+              "$file" || true
+          done
+
+          # Sign the app bundle itself
+          codesign --force --timestamp --options runtime \
+            --sign "Developer ID Application" \
+            --entitlements <(echo '<?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+              <key>com.apple.security.cs.allow-jit</key>
+              <true/>
+              <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+              <true/>
+              <key>com.apple.security.cs.disable-library-validation</key>
+              <true/>
+            </dict>
+            </plist>') \
+            "$APP_BUNDLE"
+
+          # Verify signature
           echo "Verifying app bundle signature..."
           codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
 
-          # Verify the DMG exists
-          cd ../dmg
+      - name: Create DMG
+        run: |
+          # Now create the DMG from the signed app
+          ./gradlew packageDmg
+
+          cd composeApp/build/compose/binaries/main/dmg
           DMG_FILE=$(ls *.dmg)
-          echo "Found DMG: $DMG_FILE"
+          echo "Created DMG: $DMG_FILE"
 
       - name: Notarize DMG
         env:

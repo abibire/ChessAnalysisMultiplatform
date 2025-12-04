@@ -152,17 +152,8 @@ compose.desktop {
             macOS {
                 iconFile.set(project.file("src/jvmMain/resources/app-icon.icns"))
                 bundleID = "com.andrewbibire.chessanalysis"
-                // Signing configuration for notarization
-                signing {
-                    val shouldSign = project.findProperty("compose.desktop.mac.sign")?.toString()?.toBoolean() ?: false
-                    sign.set(shouldSign)
-                    if (shouldSign) {
-                        val signingIdentity = project.findProperty("compose.desktop.mac.signing.identity")?.toString()
-                            ?: System.getenv("MACOS_SIGNING_IDENTITY")
-                            ?: "Developer ID Application"
-                        identity.set(signingIdentity)
-                    }
-                }
+                // Signing will be done manually in GitHub Actions
+                // Don't sign during build to avoid keychain issues
             }
             windows {
                 iconFile.set(project.file("src/jvmMain/resources/app-icon.ico"))
