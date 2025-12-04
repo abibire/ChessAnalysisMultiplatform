@@ -62,8 +62,14 @@ jobs:
         env:
           MACOS_SIGNING_IDENTITY: "Developer ID Application"
         run: |
+          # Find the certificate identity hash
+          CERT_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | awk '{print $2}')
+          echo "Using certificate identity: $CERT_IDENTITY"
+
           # Gradle will sign the app during packageDmg
-          ./gradlew packageDmg
+          ./gradlew packageDmg \
+            -Pcompose.desktop.mac.sign=true \
+            -Pcompose.desktop.mac.signing.identity="$CERT_IDENTITY"
 
           # Verify the app bundle is signed
           cd composeApp/build/compose/binaries/main/app

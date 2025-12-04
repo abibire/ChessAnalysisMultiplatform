@@ -154,8 +154,14 @@ compose.desktop {
                 bundleID = "com.andrewbibire.chessanalysis"
                 // Signing configuration for notarization
                 signing {
-                    sign.set(true)
-                    identity.set(System.getenv("MACOS_SIGNING_IDENTITY") ?: "Developer ID Application")
+                    val shouldSign = project.findProperty("compose.desktop.mac.sign")?.toString()?.toBoolean() ?: false
+                    sign.set(shouldSign)
+                    if (shouldSign) {
+                        val signingIdentity = project.findProperty("compose.desktop.mac.signing.identity")?.toString()
+                            ?: System.getenv("MACOS_SIGNING_IDENTITY")
+                            ?: "Developer ID Application"
+                        identity.set(signingIdentity)
+                    }
                 }
             }
             windows {
