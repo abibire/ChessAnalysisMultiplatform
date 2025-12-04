@@ -45,10 +45,18 @@ jobs:
 
           # Import certificate to keychain
           security import $CERTIFICATE_PATH -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
 
-          # Allow codesign to access keychain
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          # Add to search list (append to existing keychains)
+          security list-keychain -d user -s $KEYCHAIN_PATH $(security list-keychain -d user | sed 's/\"//g')
+
+          # Set as default keychain
+          security default-keychain -s $KEYCHAIN_PATH
+
+          # Allow codesign to access keychain without prompting
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Verify certificate is available
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
 
       - name: Build and Sign macOS DMG
         env:
