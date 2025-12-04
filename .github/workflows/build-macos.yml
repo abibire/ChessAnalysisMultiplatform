@@ -85,54 +85,93 @@ jobs:
           APP_BUNDLE=$(ls -d *.app)
           echo "Signing app bundle: $APP_BUNDLE"
 
-          # Sign all dylibs and executables (must be done from inside out)
-          echo "Signing dylibs and binaries..."
-          find "$APP_BUNDLE/Contents" -type f \( -name "*.dylib" -o -name "*.so" \) -print0 | while IFS= read -r -d '' file; do
-            echo "Signing library: $file"
-            codesign --force --timestamp --options runtime \
-              --sign "Developer ID Application" \
-              --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
-              "$file" 2>&1 || echo "Warning: Failed to sign $file"
+          # Extract, sign, and repackage binaries in JARs
+          echo "Processing JAR files for native binaries..."
+          find "$APP_BUNDLE/Contents/app" -name "*.jar" | while read jar; do
+            echo "Checking JAR: $jar"
+            # Create temp dir for this JAR
+            TEMP_DIR=$(mktemp -d)
+            cd "$TEMP_DIR"
+
+            # Extract JAR
+            jar xf "$jar"
+
+            # Find and sign any Mach-O binaries
+            SIGNED_ANY=false
+            find . -type f | while read file; do
+              if file "$file" | grep -q "Mach-O"; then
+                echo "Signing binary in JAR: $file"
+                codesign --force --timestamp --options runtime \
+                  --sign "Developer ID Application" \
+                  --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
+                  "$file"
+                SIGNED_ANY=true
+              fi
+            done
+
+            # Repackage if we signed anything
+            if [ "$SIGNED_ANY" = true ]; then
+              echo "Repackaging JAR: $jar"
+              jar cf "$jar" .
+            fi
+
+            # Clean up
+            cd -
+            rm -rf "$TEMP_DIR"
           done
 
-          # Sign executables (including stockfish and JVM binaries)
-          echo "Signing executables..."
-          find "$APP_BUNDLE/Contents" -type f -perm +111 ! -name "*.dylib" ! -name "*.so" -print0 | while IFS= read -r -d '' file; do
-            # Skip if it's already a signed Mach-O binary or if file doesn't exist
+          # Sign all runtime dylibs (JVM libraries)
+          echo "Signing runtime libraries..."
+          find "$APP_BUNDLE/Contents/runtime" -type f -name "*.dylib" | while read file; do
+            echo "Signing: $file"
+            codesign --force --timestamp --options runtime \
+              --sign "Developer ID Application" \
+              "$file"
+          done
+
+          # Sign JVM executables
+          echo "Signing runtime executables..."
+          find "$APP_BUNDLE/Contents/runtime" -type f -perm +111 ! -name "*.dylib" | while read file; do
             if file "$file" | grep -q "Mach-O"; then
-              echo "Signing executable: $file"
+              echo "Signing: $file"
               codesign --force --timestamp --options runtime \
                 --sign "Developer ID Application" \
-                --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
-                "$file" 2>&1 || echo "Warning: Failed to sign $file"
+                "$file"
             fi
           done
 
-          # Sign any frameworks
-          echo "Signing frameworks..."
-          find "$APP_BUNDLE/Contents" -name "*.framework" -type d | while read framework; do
-            echo "Signing framework: $framework"
+          # Sign app-level dylibs
+          echo "Signing app libraries..."
+          find "$APP_BUNDLE/Contents/app" -type f -name "*.dylib" | while read file; do
+            echo "Signing: $file"
             codesign --force --timestamp --options runtime \
               --sign "Developer ID Application" \
-              --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
-              "$framework" 2>&1 || echo "Warning: Failed to sign $framework"
+              "$file"
           done
 
-          # Finally, sign the app bundle itself
+          # Sign main executable
+          echo "Signing main executable..."
+          codesign --force --timestamp --options runtime \
+            --sign "Developer ID Application" \
+            --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
+            "$APP_BUNDLE/Contents/MacOS/"*
+
+          # Sign the app bundle itself (NO --deep!)
           echo "Signing app bundle..."
           codesign --force --timestamp --options runtime \
             --sign "Developer ID Application" \
             --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
-            --deep \
             "$APP_BUNDLE"
 
           # Verify signature
           echo "Verifying app bundle signature..."
-          codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
+          codesign --verify --verbose=4 "$APP_BUNDLE"
 
-          # List all signatures for debugging
-          echo "All signatures:"
-          codesign -dvvv "$APP_BUNDLE"
+          # Check specific files that failed before
+          echo "Checking specific signatures..."
+          codesign --verify --verbose "$APP_BUNDLE/Contents/MacOS/"*
+          codesign --verify --verbose "$APP_BUNDLE/Contents/runtime/Contents/Home/lib/libjli.dylib" || true
+          codesign --verify --verbose "$APP_BUNDLE/Contents/app/libskiko-macos-arm64.dylib" || true
 
       - name: Create DMG
         run: |
