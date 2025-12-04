@@ -85,24 +85,54 @@ jobs:
           APP_BUNDLE=$(ls -d *.app)
           echo "Signing app bundle: $APP_BUNDLE"
 
-          # Sign all binaries, frameworks, and dylibs inside the app
-          find "$APP_BUNDLE" -type f \( -name "*.dylib" -o -name "stockfish" -o -perm +111 \) | while read file; do
-            echo "Signing: $file"
+          # Sign all dylibs and executables (must be done from inside out)
+          echo "Signing dylibs and binaries..."
+          find "$APP_BUNDLE/Contents" -type f \( -name "*.dylib" -o -name "*.so" \) -print0 | while IFS= read -r -d '' file; do
+            echo "Signing library: $file"
             codesign --force --timestamp --options runtime \
               --sign "Developer ID Application" \
               --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
-              "$file" || true
+              "$file" 2>&1 || echo "Warning: Failed to sign $file"
           done
 
-          # Sign the app bundle itself
+          # Sign executables (including stockfish and JVM binaries)
+          echo "Signing executables..."
+          find "$APP_BUNDLE/Contents" -type f -perm +111 ! -name "*.dylib" ! -name "*.so" -print0 | while IFS= read -r -d '' file; do
+            # Skip if it's already a signed Mach-O binary or if file doesn't exist
+            if file "$file" | grep -q "Mach-O"; then
+              echo "Signing executable: $file"
+              codesign --force --timestamp --options runtime \
+                --sign "Developer ID Application" \
+                --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
+                "$file" 2>&1 || echo "Warning: Failed to sign $file"
+            fi
+          done
+
+          # Sign any frameworks
+          echo "Signing frameworks..."
+          find "$APP_BUNDLE/Contents" -name "*.framework" -type d | while read framework; do
+            echo "Signing framework: $framework"
+            codesign --force --timestamp --options runtime \
+              --sign "Developer ID Application" \
+              --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
+              "$framework" 2>&1 || echo "Warning: Failed to sign $framework"
+          done
+
+          # Finally, sign the app bundle itself
+          echo "Signing app bundle..."
           codesign --force --timestamp --options runtime \
             --sign "Developer ID Application" \
             --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
+            --deep \
             "$APP_BUNDLE"
 
           # Verify signature
           echo "Verifying app bundle signature..."
           codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
+
+          # List all signatures for debugging
+          echo "All signatures:"
+          codesign -dvvv "$APP_BUNDLE"
 
       - name: Create DMG
         run: |
