@@ -50,15 +50,23 @@ jobs:
           # Allow codesign to access keychain
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-      - name: Build macOS DMG
-        run: ./gradlew packageDmg
-
-      - name: Sign DMG
+      - name: Build and Sign macOS DMG
+        env:
+          MACOS_SIGNING_IDENTITY: "Developer ID Application"
         run: |
-          cd composeApp/build/compose/binaries/main/dmg
+          # Gradle will sign the app during packageDmg
+          ./gradlew packageDmg
+
+          # Verify the app bundle is signed
+          cd composeApp/build/compose/binaries/main/app
+          APP_BUNDLE=$(ls -d *.app)
+          echo "Verifying app bundle signature..."
+          codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
+
+          # Verify the DMG exists
+          cd ../dmg
           DMG_FILE=$(ls *.dmg)
-          codesign --sign "Developer ID Application" --deep --force --verbose "$DMG_FILE"
-          codesign --verify --verbose "$DMG_FILE"
+          echo "Found DMG: $DMG_FILE"
 
       - name: Notarize DMG
         env:
@@ -76,11 +84,33 @@ jobs:
           DMG_FILE=$(ls *.dmg)
 
           echo "Submitting for notarization..."
-          xcrun notarytool submit "$DMG_FILE" \
+          SUBMISSION_ID=$(xcrun notarytool submit "$DMG_FILE" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
+            --wait \
+            --output-format json | jq -r '.id')
+
+          echo "Submission ID: $SUBMISSION_ID"
+
+          # Get the detailed log
+          echo "Fetching notarization log..."
+          xcrun notarytool log "$SUBMISSION_ID" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID"
+
+          # Check if notarization was successful
+          STATUS=$(xcrun notarytool info "$SUBMISSION_ID" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --output-format json | jq -r '.status')
+
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "Error: Notarization failed with status: $STATUS"
+            exit 1
+          fi
 
           echo "Stapling notarization ticket..."
           xcrun stapler staple "$DMG_FILE"

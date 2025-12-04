@@ -151,6 +151,18 @@ compose.desktop {
 
             macOS {
                 iconFile.set(project.file("src/jvmMain/resources/app-icon.icns"))
+                // Signing configuration for notarization
+                signing {
+                    sign.set(true)
+                    identity.set(System.getenv("MACOS_SIGNING_IDENTITY") ?: "Developer ID Application")
+                }
+                // Enable hardened runtime for notarization
+                infoPlist {
+                    extraKeysRawXml.set("""
+                        <key>CFBundleIdentifier</key>
+                        <string>com.andrewbibire.chessanalysis</string>
+                    """.trimIndent())
+                }
             }
             windows {
                 iconFile.set(project.file("src/jvmMain/resources/app-icon.ico"))
