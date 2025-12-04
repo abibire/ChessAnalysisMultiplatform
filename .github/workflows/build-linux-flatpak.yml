@@ -57,11 +57,11 @@ jobs:
           # Export to repo
           flatpak build-export export-repo flatpak_app
           # Create bundle from repo
-          flatpak build-bundle --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo export-repo ChessAnalysis-linux.flatpak com.andrewbibire.chessanalysis
-          ls -lh ChessAnalysis-linux.flatpak
+          flatpak build-bundle --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo export-repo GameReview-1.0.0-linux.flatpak com.andrewbibire.chessanalysis
+          ls -lh GameReview-1.0.0-linux.flatpak
 
       - name: Upload Flatpak
         uses: actions/upload-artifact@v4
         with:
           name: linux-flatpak
-          path: ChessAnalysis-linux.flatpak
+          path: GameReview-1.0.0-linux.flatpak

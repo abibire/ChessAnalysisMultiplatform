@@ -25,10 +25,10 @@ jobs:
       - name: Create Linux ZIP
         run: |
           cd composeApp/build/compose/binaries/main/app
-          zip -r ../ChessAnalysis-linux.zip .
+          zip -r ../GameReview-1.0.0-linux.zip .
 
       - name: Upload Linux App
         uses: actions/upload-artifact@v4
         with:
           name: linux-app
-          path: composeApp/build/compose/binaries/main/ChessAnalysis-linux.zip
+          path: composeApp/build/compose/binaries/main/GameReview-1.0.0-linux.zip
