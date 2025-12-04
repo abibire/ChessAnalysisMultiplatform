@@ -58,135 +58,39 @@ jobs:
           # Verify certificate is available
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
-      - name: Build macOS App (unsigned)
+      - name: Get Signing Identity
+        id: get-identity
         run: |
-          # Build the app without signing (Gradle has keychain issues in CI)
-          ./gradlew createDistributable
+          # Extract the exact certificate identity name
+          IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "Found signing identity: $IDENTITY"
+          echo "SIGNING_IDENTITY=$IDENTITY" >> $GITHUB_ENV
 
-      - name: Sign macOS App Bundle
+      - name: Build and Sign macOS DMG
+        env:
+          MACOS_SIGNING_IDENTITY: ${{ env.SIGNING_IDENTITY }}
         run: |
-          # Create entitlements file
-          cat > entitlements.plist <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>com.apple.security.cs.allow-jit</key>
-            <true/>
-            <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
-            <true/>
-            <key>com.apple.security.cs.disable-library-validation</key>
-            <true/>
-          </dict>
-          </plist>
-          EOF
-
-          cd composeApp/build/compose/binaries/main/app
-          APP_BUNDLE=$(ls -d *.app)
-          echo "Signing app bundle: $APP_BUNDLE"
-
-          # Extract, sign, and repackage binaries in JARs
-          echo "Processing JAR files for native binaries..."
-          find "$APP_BUNDLE/Contents/app" -name "*.jar" | while read jar; do
-            echo "Checking JAR: $(basename "$jar")"
-
-            # Convert to absolute path
-            JAR_PATH=$(cd "$(dirname "$jar")" && pwd)/$(basename "$jar")
-
-            # Create temp dir for this JAR
-            TEMP_DIR=$(mktemp -d)
-
-            # Extract JAR in temp dir
-            cd "$TEMP_DIR"
-            jar xf "$JAR_PATH"
-
-            # Find and sign any Mach-O binaries
-            SIGNED_ANY=false
-            find . -type f | while read file; do
-              if file "$file" | grep -q "Mach-O"; then
-                echo "Signing binary in JAR: $file"
-                codesign --force --timestamp --options runtime \
-                  --sign "Developer ID Application" \
-                  --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
-                  "$file"
-                SIGNED_ANY=true
-              fi
-            done
-
-            # Repackage if we signed anything
-            if [ "$SIGNED_ANY" = true ]; then
-              echo "Repackaging JAR: $(basename "$JAR_PATH")"
-              # Remove original JAR and create new one
-              rm "$JAR_PATH"
-              jar cf "$JAR_PATH" .
-            fi
-
-            # Clean up
-            cd - > /dev/null
-            rm -rf "$TEMP_DIR"
-          done
-
-          # Sign all runtime dylibs (JVM libraries)
-          echo "Signing runtime libraries..."
-          find "$APP_BUNDLE/Contents/runtime" -type f -name "*.dylib" | while read file; do
-            echo "Signing: $file"
-            codesign --force --timestamp --options runtime \
-              --sign "Developer ID Application" \
-              "$file"
-          done
-
-          # Sign JVM executables
-          echo "Signing runtime executables..."
-          find "$APP_BUNDLE/Contents/runtime" -type f -perm +111 ! -name "*.dylib" | while read file; do
-            if file "$file" | grep -q "Mach-O"; then
-              echo "Signing: $file"
-              codesign --force --timestamp --options runtime \
-                --sign "Developer ID Application" \
-                "$file"
-            fi
-          done
-
-          # Sign app-level dylibs
-          echo "Signing app libraries..."
-          find "$APP_BUNDLE/Contents/app" -type f -name "*.dylib" | while read file; do
-            echo "Signing: $file"
-            codesign --force --timestamp --options runtime \
-              --sign "Developer ID Application" \
-              "$file"
-          done
-
-          # Sign main executable
-          echo "Signing main executable..."
-          codesign --force --timestamp --options runtime \
-            --sign "Developer ID Application" \
-            --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
-            "$APP_BUNDLE/Contents/MacOS/"*
-
-          # Sign the app bundle itself (NO --deep!)
-          echo "Signing app bundle..."
-          codesign --force --timestamp --options runtime \
-            --sign "Developer ID Application" \
-            --entitlements "$GITHUB_WORKSPACE/entitlements.plist" \
-            "$APP_BUNDLE"
-
-          # Verify signature
-          echo "Verifying app bundle signature..."
-          codesign --verify --verbose=4 "$APP_BUNDLE"
-
-          # Check specific files that failed before
-          echo "Checking specific signatures..."
-          codesign --verify --verbose "$APP_BUNDLE/Contents/MacOS/"*
-          codesign --verify --verbose "$APP_BUNDLE/Contents/runtime/Contents/Home/lib/libjli.dylib" || true
-          codesign --verify --verbose "$APP_BUNDLE/Contents/app/libskiko-macos-arm64.dylib" || true
-
-      - name: Create DMG
-        run: |
-          # Now create the DMG from the signed app
+          # Let Gradle handle all signing with proper entitlements
+          # This will sign the app bundle AND create the DMG
           ./gradlew packageDmg
 
-          cd composeApp/build/compose/binaries/main/dmg
-          DMG_FILE=$(ls *.dmg)
-          echo "Created DMG: $DMG_FILE"
+      - name: Verify App Bundle Signature
+        run: |
+          cd composeApp/build/compose/binaries/main/app
+          APP_BUNDLE=$(ls -d *.app)
+
+          echo "Verifying app bundle signature..."
+          codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
+
+          echo "Displaying signature details..."
+          codesign -dv --verbose=4 "$APP_BUNDLE"
+
+          echo "Checking entitlements..."
+          codesign -d --entitlements - "$APP_BUNDLE"
+
+          echo "Verifying runtime libraries are signed..."
+          codesign --verify --verbose "$APP_BUNDLE/Contents/runtime/Contents/Home/lib/server/libjvm.dylib"
+          codesign --verify --verbose "$APP_BUNDLE/Contents/runtime/Contents/MacOS/libjli.dylib"
 
       - name: Notarize DMG
         env:

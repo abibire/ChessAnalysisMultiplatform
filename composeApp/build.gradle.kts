@@ -152,8 +152,17 @@ compose.desktop {
             macOS {
                 iconFile.set(project.file("src/jvmMain/resources/app-icon.icns"))
                 bundleID = "com.andrewbibire.chessanalysis"
-                // Signing will be done manually in GitHub Actions
-                // Don't sign during build to avoid keychain issues
+
+                // Configure entitlements for notarization
+                entitlementsFile.set(project.file("entitlements.plist"))
+                runtimeEntitlementsFile.set(project.file("runtime-entitlements.plist"))
+
+                // Enable signing - Gradle will handle all components properly
+                signing {
+                    sign.set(true)
+                    // Use the Developer ID Application certificate
+                    identity.set(System.getenv("MACOS_SIGNING_IDENTITY") ?: "Developer ID Application")
+                }
             }
             windows {
                 iconFile.set(project.file("src/jvmMain/resources/app-icon.ico"))
