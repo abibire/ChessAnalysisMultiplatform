@@ -19,8 +19,65 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
 
+      - name: Import Code Signing Certificate
+        if: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' }}
+        env:
+          MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          # Import certificate from secrets
+          echo "$MACOS_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Allow codesign to access keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
       - name: Build macOS DMG
         run: ./gradlew packageDmg
+
+      - name: Sign DMG
+        if: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' }}
+        run: |
+          cd composeApp/build/compose/binaries/main/dmg
+          DMG_FILE=$(ls *.dmg)
+          codesign --sign "Developer ID Application" --deep --force --verbose "$DMG_FILE"
+          codesign --verify --verbose "$DMG_FILE"
+
+      - name: Notarize DMG
+        if: ${{ secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' }}
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cd composeApp/build/compose/binaries/main/dmg
+          DMG_FILE=$(ls *.dmg)
+
+          echo "Submitting for notarization..."
+          xcrun notarytool submit "$DMG_FILE" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          echo "Stapling notarization ticket..."
+          xcrun stapler staple "$DMG_FILE"
+
+          echo "Verifying notarization..."
+          xcrun stapler validate "$DMG_FILE"
 
       - name: Rename macOS DMG
         run: |
