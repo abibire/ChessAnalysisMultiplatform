@@ -66,6 +66,27 @@ jobs:
           echo "Found signing identity: $IDENTITY"
           echo "SIGNING_IDENTITY=$IDENTITY" >> $GITHUB_ENV
 
+      - name: Sign Stockfish Binaries
+        run: |
+          echo "Signing Stockfish binaries before packaging..."
+
+          # Sign macOS Stockfish binaries with hardened runtime and timestamp
+          # These will be embedded in the JAR, so they must be signed BEFORE building
+
+          find composeApp/src/jvmMain/resources/stockfish/macos-* -type f -name "stockfish" | while read binary; do
+            echo "Signing: $binary"
+            codesign --force --sign "${{ env.SIGNING_IDENTITY }}" \
+              --timestamp \
+              --options runtime \
+              --entitlements composeApp/entitlements.plist \
+              "$binary"
+
+            # Verify the signature
+            codesign --verify --verbose "$binary"
+          done
+
+          echo "All Stockfish binaries signed successfully"
+
       - name: Build and Sign macOS DMG
         env:
           MACOS_SIGNING_IDENTITY: ${{ env.SIGNING_IDENTITY }}
