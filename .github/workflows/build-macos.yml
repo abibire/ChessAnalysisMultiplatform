@@ -20,11 +20,16 @@ jobs:
         uses: gradle/gradle-build-action@v2
 
       - name: Import Code Signing Certificate
-        if: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' }}
         env:
           MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
         run: |
+          # Fail if secrets are missing
+          if [ -z "$MACOS_CERTIFICATE_BASE64" ] || [ -z "$MACOS_CERTIFICATE_PASSWORD" ]; then
+            echo "Error: MACOS_CERTIFICATE_BASE64 and MACOS_CERTIFICATE_PASSWORD secrets are required"
+            exit 1
+          fi
+
           # Create variables
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
@@ -49,7 +54,6 @@ jobs:
         run: ./gradlew packageDmg
 
       - name: Sign DMG
-        if: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' }}
         run: |
           cd composeApp/build/compose/binaries/main/dmg
           DMG_FILE=$(ls *.dmg)
@@ -57,12 +61,17 @@ jobs:
           codesign --verify --verbose "$DMG_FILE"
 
       - name: Notarize DMG
-        if: ${{ secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' }}
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          # Fail if secrets are missing
+          if [ -z "$APPLE_ID" ] || [ -z "$APPLE_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
+            echo "Error: APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, and APPLE_TEAM_ID secrets are required"
+            exit 1
+          fi
+
           cd composeApp/build/compose/binaries/main/dmg
           DMG_FILE=$(ls *.dmg)
 
