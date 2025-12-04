@@ -1035,7 +1035,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
                         .verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        text = "Chess Analysis",
+                        text = "Game Review",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
