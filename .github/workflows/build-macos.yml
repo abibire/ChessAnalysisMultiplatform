@@ -88,13 +88,17 @@ jobs:
           # Extract, sign, and repackage binaries in JARs
           echo "Processing JAR files for native binaries..."
           find "$APP_BUNDLE/Contents/app" -name "*.jar" | while read jar; do
-            echo "Checking JAR: $jar"
+            echo "Checking JAR: $(basename "$jar")"
+
+            # Convert to absolute path
+            JAR_PATH=$(cd "$(dirname "$jar")" && pwd)/$(basename "$jar")
+
             # Create temp dir for this JAR
             TEMP_DIR=$(mktemp -d)
-            cd "$TEMP_DIR"
 
-            # Extract JAR
-            jar xf "$jar"
+            # Extract JAR in temp dir
+            cd "$TEMP_DIR"
+            jar xf "$JAR_PATH"
 
             # Find and sign any Mach-O binaries
             SIGNED_ANY=false
@@ -111,12 +115,14 @@ jobs:
 
             # Repackage if we signed anything
             if [ "$SIGNED_ANY" = true ]; then
-              echo "Repackaging JAR: $jar"
-              jar cf "$jar" .
+              echo "Repackaging JAR: $(basename "$JAR_PATH")"
+              # Remove original JAR and create new one
+              rm "$JAR_PATH"
+              jar cf "$JAR_PATH" .
             fi
 
             # Clean up
-            cd -
+            cd - > /dev/null
             rm -rf "$TEMP_DIR"
           done
 
