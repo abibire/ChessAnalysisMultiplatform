@@ -2164,7 +2164,7 @@ fun DesktopChessAnalysisApp(context: Any?) {
                                     }
                                 }
                             },
-                            enabled = !isLoadingAlternatives && currentPosition != null,
+                            enabled = !isLoadingAlternatives && !isEvaluating && currentPosition != null,
                             modifier = Modifier.fillMaxWidth().height(40.dp)
                         ) {
                             if (isLoadingAlternatives) {

@@ -1756,7 +1756,7 @@ fun ChessAnalysisApp(context: Any?) {
                                             }
                                         }
                                     },
-                                    enabled = !isLoadingAlternatives && currentPosition != null,
+                                    enabled = !isLoadingAlternatives && !isEvaluating && currentPosition != null,
                                     modifier = Modifier
                                         .height(32.dp)
                                         .width(64.dp)
