@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
 import android.graphics.Color
-import android.util.Log
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +53,6 @@ class MainActivity : ComponentActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         // If configuration somehow changes, force back to portrait and lock
-        Log.d("MainActivity", "Configuration changed - forcing portrait lock. Orientation: ${newConfig.orientation}")
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         window.decorView.post {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
