@@ -35,6 +35,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.andrewbibire.chessanalysis.audio.ChessSoundManager
+import com.andrewbibire.chessanalysis.domain.GameAnalyzer
 import com.andrewbibire.chessanalysis.online.UserPreferences
 import com.andrewbibire.chessanalysis.online.getCountryCode
 import com.github.bhlangonijr.chesslib.Board
@@ -728,6 +729,10 @@ fun DesktopChessAnalysisApp(context: Any?) {
         createStockfishEngine(context)
     }
 
+    val gameAnalyzer = remember(stockfishEngine) {
+        GameAnalyzer(stockfishEngine)
+    }
+
     LaunchedEffect(context) {
         OpeningBook.init()
     }
@@ -747,19 +752,15 @@ fun DesktopChessAnalysisApp(context: Any?) {
             alternatePathCache.clear()
             delay(500)
             try {
-                withContext(Dispatchers.Default) {
-                    for ((index, position) in positions.withIndex()) {
-                        if (!isActive) break
-
-                        val result = stockfishEngine.evaluatePosition(position.fenString, depth = analysisDepth)
-                        position.score = result.score
-                        position.bestMove = result.bestMove
-                        analysisProgress = index + 1
+                val success = gameAnalyzer.analyzeGame(
+                    positions = positions,
+                    depth = analysisDepth,
+                    onProgress = { current, _ ->
+                        analysisProgress = current
                     }
-                }
+                )
 
-                if (isActive) {
-                    classifyPositions(positions)
+                if (success) {
                     originalPositions = positions.toList()
                     analysisCompleted++
                 }

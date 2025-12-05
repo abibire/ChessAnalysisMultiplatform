@@ -66,6 +66,7 @@ import com.andrewbibire.chessanalysis.online.getCountryCode
 import dev.carlsen.flagkit.FlagKit
 import com.andrewbibire.chessanalysis.audio.ChessSoundManager
 import com.andrewbibire.chessanalysis.audio.MoveAnalyzer
+import com.andrewbibire.chessanalysis.domain.GameAnalyzer
 import com.github.bhlangonijr.chesslib.Board
 import com.github.bhlangonijr.chesslib.Square
 import com.github.bhlangonijr.chesslib.Piece
@@ -834,6 +835,10 @@ fun ChessAnalysisApp(context: Any?) {
         createStockfishEngine(context)
     }
 
+    val gameAnalyzer = remember(stockfishEngine) {
+        GameAnalyzer(stockfishEngine)
+    }
+
     LaunchedEffect(context) {
         OpeningBook.init()
     }
@@ -855,21 +860,15 @@ fun ChessAnalysisApp(context: Any?) {
             alternatePathCache.clear()
             delay(500)
             try {
-                withContext(Dispatchers.Default) {
-                    for ((index, position) in positions.withIndex()) {
-                        // Check if coroutine is still active (allows cancellation)
-                        if (!isActive) break
-
-                        val result = stockfishEngine.evaluatePosition(position.fenString, depth = analysisDepth)
-                        position.score = result.score
-                        position.bestMove = result.bestMove
-                        analysisProgress = index + 1
+                val success = gameAnalyzer.analyzeGame(
+                    positions = positions,
+                    depth = analysisDepth,
+                    onProgress = { current, _ ->
+                        analysisProgress = current
                     }
-                }
+                )
 
-                // Only classify if we completed the full analysis (nÏot cancelled)
-                if (isActive) {
-                    classifyPositions(positions)
+                if (success) {
                     // Save the original analyzed positions
                     originalPositions = positions.toList()
                     analysisCompleted++ // Trigger stats recalculation
