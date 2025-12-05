@@ -151,7 +151,7 @@ compose.desktop {
 
             macOS {
                 iconFile.set(project.file("src/jvmMain/resources/app-icon.icns"))
-                bundleID = "com.andrewbibire.chessanalysis"
+                bundleID = "com.andrewbibire.chessanalysismac"
 
                 // Configure entitlements for notarization
                 entitlementsFile.set(project.file("entitlements.plist"))
