@@ -19,3 +19,6 @@ captures
 node_modules/
 release.keystore
 *.keystore
+*.provisionprofile
+*.cer
+*.p12

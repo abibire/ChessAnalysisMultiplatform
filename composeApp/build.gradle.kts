@@ -140,12 +140,16 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
+// Check if building for App Store
+val isAppStoreBuild = project.findProperty("macOsAppStore") == "true"
+
 compose.desktop {
     application {
         mainClass = "com.andrewbibire.chessanalysis.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            // Add Pkg format for App Store, keep existing formats for regular distribution
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Pkg)
             packageName = "Game Review"
             packageVersion = "1.0.0"
 
@@ -153,15 +157,31 @@ compose.desktop {
                 iconFile.set(project.file("src/jvmMain/resources/app-icon.icns"))
                 bundleID = "com.andrewbibire.chessanalysismac"
 
-                // Configure entitlements for notarization
-                entitlementsFile.set(project.file("entitlements.plist"))
-                runtimeEntitlementsFile.set(project.file("runtime-entitlements.plist"))
+                // Use different entitlements based on build type
+                if (isAppStoreBuild) {
+                    // App Store build - use sandboxed entitlements
+                    entitlementsFile.set(project.file("entitlements-appstore.plist"))
+                    runtimeEntitlementsFile.set(project.file("entitlements-appstore.plist"))
 
-                // Enable signing - Gradle will handle all components properly
+                    // Set provisioning profiles for App Store
+                    provisioningProfile.set(project.file("Game_Review_Mac_Appstore.provisionprofile"))
+                    runtimeProvisioningProfile.set(project.file("Chess_Analysis_Mac_JVM_Runtime.provisionprofile"))
+                } else {
+                    // Regular DMG build - use current entitlements
+                    entitlementsFile.set(project.file("entitlements.plist"))
+                    runtimeEntitlementsFile.set(project.file("runtime-entitlements.plist"))
+                }
+
+                // Configure signing
                 signing {
                     sign.set(true)
-                    // Use the Developer ID Application certificate
-                    identity.set(System.getenv("MACOS_SIGNING_IDENTITY") ?: "Developer ID Application")
+                    if (isAppStoreBuild) {
+                        // Use Mac App Distribution for App Store
+                        identity.set("3rd Party Mac Developer Application")
+                    } else {
+                        // Use Developer ID Application for DMG
+                        identity.set(System.getenv("MACOS_SIGNING_IDENTITY") ?: "Developer ID Application")
+                    }
                 }
             }
             windows {
