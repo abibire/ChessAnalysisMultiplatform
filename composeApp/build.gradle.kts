@@ -180,15 +180,20 @@ compose.desktop {
                     // Provisioning profiles - disabled for manual signing
                     // provisioningProfile.set(file("/Users/a/Downloads/game-review/appstorecerts/Game_Review_Mac_Appstore.provisionprofile"))
                     // runtimeProvisioningProfile.set(file("/Users/a/Downloads/game-review/appstorecerts/Chess_Analysis_Mac_JVM_Runtime.provisionprofile"))
+
+                    // Disable automatic signing for App Store - we'll sign manually
+                    signing {
+                        sign.set(false)
+                    }
                 } else {
                     // Regular DMG build - use current entitlements
                     entitlementsFile.set(project.file("entitlements.plist"))
                     runtimeEntitlementsFile.set(project.file("runtime-entitlements.plist"))
-                }
 
-                // Disable automatic signing - we'll sign manually
-                signing {
-                    sign.set(false)
+                    // Enable automatic signing for DMG builds
+                    signing {
+                        sign.set(true)
+                    }
                 }
             }
             windows {
