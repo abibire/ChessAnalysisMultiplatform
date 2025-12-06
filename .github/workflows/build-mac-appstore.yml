@@ -73,7 +73,7 @@ jobs:
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # Import certificates
+          # Import certificates (must import to both keychain and allow access)
           security import $APP_CERT_PATH -P "$MAC_APP_CERT_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security import $INSTALLER_CERT_PATH -P "$MAC_INSTALLER_CERT_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
 
@@ -81,12 +81,25 @@ jobs:
           security list-keychain -d user -s $KEYCHAIN_PATH $(security list-keychain -d user | sed 's/\"//g')
           security default-keychain -s $KEYCHAIN_PATH
 
-          # Allow codesign to access without prompting
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          # Allow codesign to access without prompting (critical for signing to work)
+          security set-key-partition-list -S apple-tool:,apple:,codesign:,productbuild: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # Verify certificates
+          # Verify certificates are available
           echo "Verifying certificates..."
-          security find-identity -v -p basic $KEYCHAIN_PATH
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
+
+          # Verify specific certificate can be found by name
+          echo "Checking for app signing certificate..."
+          security find-identity -v -p codesigning $KEYCHAIN_PATH | grep "3rd Party Mac Developer Application" || {
+            echo "Error: App signing certificate not found!"
+            exit 1
+          }
+
+          echo "Checking for installer signing certificate..."
+          security find-identity -v -p codesigning $KEYCHAIN_PATH | grep "3rd Party Mac Developer Installer" || {
+            echo "Error: Installer signing certificate not found!"
+            exit 1
+          }
 
       - name: Import Provisioning Profiles
         env:
