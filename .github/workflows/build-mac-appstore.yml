@@ -96,7 +96,7 @@ jobs:
           }
 
           echo "Checking for installer signing certificate..."
-          security find-identity -v -p codesigning $KEYCHAIN_PATH | grep "3rd Party Mac Developer Installer" || {
+          security find-identity -v -p basic $KEYCHAIN_PATH | grep "3rd Party Mac Developer Installer" || {
             echo "Error: Installer signing certificate not found!"
             exit 1
           }
