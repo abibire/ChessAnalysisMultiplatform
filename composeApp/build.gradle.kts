@@ -141,7 +141,7 @@ dependencies {
 }
 
 // Check if building for App Store
-val isAppStoreBuild = project.findProperty("macOsAppStore") == "true"
+val isAppStoreBuild = true
 
 compose.desktop {
     application {
@@ -156,32 +156,39 @@ compose.desktop {
             macOS {
                 iconFile.set(project.file("src/jvmMain/resources/app-icon.icns"))
                 bundleID = "com.andrewbibire.chessanalysismac"
+                appCategory = "public.app-category.board-games"
+
+                // Minimum system version - 12.0 required for arm64-only builds per Apple
+
+
+                // Package versions
+
+                dmgPackageVersion = "1.0.0"
+                packageBuildVersion = "1.0.0"
 
                 // Use different entitlements based on build type
                 if (isAppStoreBuild) {
+                    packageVersion = "1.0.1"
+                    minimumSystemVersion = "12.0"
+                    buildTypes.release.proguard {
+                        isEnabled.set(false)
+                    }
                     // App Store build - use sandboxed entitlements
                     entitlementsFile.set(project.file("entitlements-appstore.plist"))
                     runtimeEntitlementsFile.set(project.file("entitlements-appstore.plist"))
 
-                    // Set provisioning profiles for App Store
-                    provisioningProfile.set(project.file("Game_Review_Mac_Appstore.provisionprofile"))
-                    runtimeProvisioningProfile.set(project.file("Chess_Analysis_Mac_JVM_Runtime.provisionprofile"))
+                    // Provisioning profiles - disabled for manual signing
+                    // provisioningProfile.set(file("/Users/a/Downloads/game-review/appstorecerts/Game_Review_Mac_Appstore.provisionprofile"))
+                    // runtimeProvisioningProfile.set(file("/Users/a/Downloads/game-review/appstorecerts/Chess_Analysis_Mac_JVM_Runtime.provisionprofile"))
                 } else {
                     // Regular DMG build - use current entitlements
                     entitlementsFile.set(project.file("entitlements.plist"))
                     runtimeEntitlementsFile.set(project.file("runtime-entitlements.plist"))
                 }
 
-                // Configure signing
+                // Disable automatic signing - we'll sign manually
                 signing {
-                    sign.set(true)
-                    if (isAppStoreBuild) {
-                        // Use Mac App Distribution for App Store
-                        identity.set("3rd Party Mac Developer Application")
-                    } else {
-                        // Use Developer ID Application for DMG
-                        identity.set(System.getenv("MACOS_SIGNING_IDENTITY") ?: "Developer ID Application")
-                    }
+                    sign.set(false)
                 }
             }
             windows {
