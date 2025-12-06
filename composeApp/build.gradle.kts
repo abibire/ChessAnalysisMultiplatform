@@ -181,7 +181,7 @@ compose.desktop {
                     // provisioningProfile.set(file("/Users/a/Downloads/game-review/appstorecerts/Game_Review_Mac_Appstore.provisionprofile"))
                     // runtimeProvisioningProfile.set(file("/Users/a/Downloads/game-review/appstorecerts/Chess_Analysis_Mac_JVM_Runtime.provisionprofile"))
 
-                    // Disable automatic signing for App Store - we'll sign manually
+                    // Disable automatic signing for App Store - we sign manually in workflow
                     signing {
                         sign.set(false)
                     }
@@ -193,6 +193,8 @@ compose.desktop {
                     // Enable automatic signing for DMG builds
                     signing {
                         sign.set(true)
+                        // Use the Developer ID Application certificate from environment
+                        identity.set(System.getenv("MACOS_SIGNING_IDENTITY") ?: "Developer ID Application")
                     }
                 }
             }
