@@ -1,0 +1,61 @@
+Categories:
+  - Games
+License: GPL-3.0-only
+AuthorName: Andrew Bibire
+AuthorEmail: andrewbibire@protonmail.com
+SourceCode: https://github.com/abibire/ChessAnalysisMultiplatform
+IssueTracker: https://github.com/abibire/ChessAnalysisMultiplatform/issues
+
+AutoName: Chess Game Review
+
+RepoType: git
+Repo: https://github.com/abibire/ChessAnalysisMultiplatform.git
+
+Description: |-
+  Professional Chess Analysis, Completely Free!
+
+  Chess Game Review brings powerful engine analysis to your devices. Import your games
+  and get instant, detailed feedback with professional move classifications—no
+  subscription required.
+
+  Key Features:
+
+  * Move Classifications - Every move rated as Best, Excellent, Good, Inaccuracy, Mistake, or Blunder
+  * Accuracy Ratings - See your overall performance with percentage scores for each game
+  * Stockfish Engine - Industry-leading chess engine analyzing positions at depth
+  * Best Move Analysis - Learn what you should have played at critical moments
+  * Opening Book - Identify the openings played in your games
+  * Evaluation Bar - Visual representation of position advantage throughout the game
+  * Game Reports - Comprehensive summaries showing move breakdowns and key moments
+  * PGN Import - Import games from any chess platform or app
+  * Clean Interface - Beautiful, intuitive design focused on learning and improvement
+  * Offline Analysis - Works completely offline—no internet connection required
+
+  Whether you're a beginner looking to understand your mistakes or an experienced
+  player analyzing tournament games, Chess Game Review provides the insights you need
+  to improve.
+
+Builds:
+  - versionName: '1.0'
+    versionCode: 1
+    commit: v1.0.0
+    subdir: ChessAnalysis/composeApp
+    sudo:
+      - apt-get update
+      - apt-get install -y openjdk-21-jdk-headless
+      - update-java-alternatives --set java-1.21.0-openjdk-amd64
+    gradle:
+      - yes
+    prebuild:
+      - sed -i -e '/signingConfig/d' build.gradle.kts
+    scanignore:
+      - ChessAnalysis/composeApp/src/androidMain/jniLibs/arm64-v8a/libstockfish.so
+      - ChessAnalysis/composeApp/src/androidMain/jniLibs/armeabi-v7a/libstockfish.so
+      - ChessAnalysis/composeApp/src/androidMain/jniLibs/x86/libstockfish.so
+      - ChessAnalysis/composeApp/src/androidMain/jniLibs/x86_64/libstockfish.so
+    ndk: r26d
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: '1.0'
+CurrentVersionCode: 1
