@@ -1,0 +1,335 @@
+name: Build Mac App Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'App version (e.g., 1.0.3)'
+        required: true
+        default: '1.0.3'
+      upload_to_appstore:
+        description: 'Upload to App Store Connect after build'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build-mac-appstore:
+    runs-on: macos-latest
+    env:
+      APP_VERSION: ${{ github.event.inputs.version }}
+      APP_NAME: "Game Review"
+      BUNDLE_ID: "com.andrewbibire.chessanalysismac"
+      RUNTIME_BUNDLE_ID: "com.oracle.java.com.andrewbibire.chessanalysismac"
+      APP_CERT_NAME: "3rd Party Mac Developer Application: Andrew Bibire (DD62BBNG77)"
+      INSTALLER_CERT_NAME: "3rd Party Mac Developer Installer: Andrew Bibire (DD62BBNG77)"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Verify Java Version
+        run: |
+          echo "JAVA_HOME: $JAVA_HOME"
+          java -version
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Import Signing Certificates
+        env:
+          MAC_APP_CERT_BASE64: ${{ secrets.MAC_APP_CERT_BASE64 }}
+          MAC_APP_CERT_PASSWORD: ${{ secrets.MAC_APP_CERT_PASSWORD }}
+          MAC_INSTALLER_CERT_BASE64: ${{ secrets.MAC_INSTALLER_CERT_BASE64 }}
+          MAC_INSTALLER_CERT_PASSWORD: ${{ secrets.MAC_INSTALLER_CERT_PASSWORD }}
+        run: |
+          # Validate secrets
+          if [ -z "$MAC_APP_CERT_BASE64" ] || [ -z "$MAC_APP_CERT_PASSWORD" ]; then
+            echo "Error: MAC_APP_CERT_BASE64 and MAC_APP_CERT_PASSWORD are required"
+            exit 1
+          fi
+          if [ -z "$MAC_INSTALLER_CERT_BASE64" ] || [ -z "$MAC_INSTALLER_CERT_PASSWORD" ]; then
+            echo "Error: MAC_INSTALLER_CERT_BASE64 and MAC_INSTALLER_CERT_PASSWORD are required"
+            exit 1
+          fi
+
+          # Create certificate paths
+          APP_CERT_PATH=$RUNNER_TEMP/app_certificate.p12
+          INSTALLER_CERT_PATH=$RUNNER_TEMP/installer_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          # Decode certificates
+          echo "$MAC_APP_CERT_BASE64" | base64 --decode -o $APP_CERT_PATH
+          echo "$MAC_INSTALLER_CERT_BASE64" | base64 --decode -o $INSTALLER_CERT_PATH
+
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificates
+          security import $APP_CERT_PATH -P "$MAC_APP_CERT_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security import $INSTALLER_CERT_PATH -P "$MAC_INSTALLER_CERT_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+
+          # Add to search list and set as default
+          security list-keychain -d user -s $KEYCHAIN_PATH $(security list-keychain -d user | sed 's/\"//g')
+          security default-keychain -s $KEYCHAIN_PATH
+
+          # Allow codesign to access without prompting
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Verify certificates
+          echo "Verifying certificates..."
+          security find-identity -v -p basic $KEYCHAIN_PATH
+
+      - name: Import Provisioning Profiles
+        env:
+          APP_PROVISIONING_PROFILE_BASE64: ${{ secrets.MAC_APP_PROVISIONING_PROFILE_BASE64 }}
+          RUNTIME_PROVISIONING_PROFILE_BASE64: ${{ secrets.MAC_RUNTIME_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          # Validate secrets
+          if [ -z "$APP_PROVISIONING_PROFILE_BASE64" ] || [ -z "$RUNTIME_PROVISIONING_PROFILE_BASE64" ]; then
+            echo "Error: Provisioning profile secrets are required"
+            exit 1
+          fi
+
+          # Create provisioning profile directory
+          mkdir -p "$RUNNER_TEMP/provisioning-profiles"
+
+          # Decode provisioning profiles
+          echo "$APP_PROVISIONING_PROFILE_BASE64" | base64 --decode -o "$RUNNER_TEMP/provisioning-profiles/app.provisionprofile"
+          echo "$RUNTIME_PROVISIONING_PROFILE_BASE64" | base64 --decode -o "$RUNNER_TEMP/provisioning-profiles/runtime.provisionprofile"
+
+          echo "Provisioning profiles imported successfully"
+
+      - name: Update Version in build.gradle.kts
+        run: |
+          # Update the packageVersion for App Store builds
+          sed -i '' "s/packageVersion = \"1.0.1\"/packageVersion = \"$APP_VERSION\"/" composeApp/build.gradle.kts
+
+          # Verify the change
+          grep "packageVersion" composeApp/build.gradle.kts
+
+      - name: Build Package
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
+          MAC_APPSTORE_BUILD: true
+        run: |
+          echo "Building with JAVA_HOME: $JAVA_HOME"
+          echo "Building for Mac App Store: $MAC_APPSTORE_BUILD"
+          ./gradlew clean packageReleasePkg --no-daemon --info
+
+      - name: Locate App Bundle
+        id: locate-app
+        run: |
+          APP_PATH="composeApp/build/compose/binaries/main-release/app/$APP_NAME.app"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Error: App bundle not found at $APP_PATH"
+            exit 1
+          fi
+
+          echo "APP_PATH=$APP_PATH" >> $GITHUB_ENV
+          echo "Found app bundle at: $APP_PATH"
+
+      - name: Add Export Compliance to Info.plist
+        run: |
+          # Add ITSAppUsesNonExemptEncryption key
+          plutil -insert ITSAppUsesNonExemptEncryption -bool false "$APP_PATH/Contents/Info.plist"
+
+          # Verify it was added
+          echo "Verifying export compliance was added:"
+          plutil -p "$APP_PATH/Contents/Info.plist" | grep ITSAppUsesNonExemptEncryption
+
+      - name: Sign All .dylib Files
+        run: |
+          echo "Signing all .dylib files in the app bundle..."
+
+          find "$APP_PATH" -type f -name "*.dylib" | while read dylib; do
+            echo "Signing: $dylib"
+            codesign --force \
+              --sign "$APP_CERT_NAME" \
+              --timestamp \
+              --entitlements composeApp/entitlements-appstore.plist \
+              "$dylib"
+          done
+
+          echo "All .dylib files signed successfully"
+
+      - name: Sign All Runtime Executables
+        run: |
+          echo "Signing all executables in runtime..."
+
+          find "$APP_PATH/Contents/runtime" -type f -perm +111 | while read executable; do
+            echo "Signing: $executable"
+            codesign --force \
+              --sign "$APP_CERT_NAME" \
+              --timestamp \
+              --entitlements composeApp/entitlements-appstore.plist \
+              "$executable"
+          done
+
+          echo "All runtime executables signed successfully"
+
+      - name: Embed Provisioning Profiles
+        run: |
+          echo "Embedding provisioning profiles..."
+
+          # Embed app provisioning profile
+          cp "$RUNNER_TEMP/provisioning-profiles/app.provisionprofile" \
+             "$APP_PATH/Contents/embedded.provisionprofile"
+
+          # Embed runtime provisioning profile
+          cp "$RUNNER_TEMP/provisioning-profiles/runtime.provisionprofile" \
+             "$APP_PATH/Contents/runtime/Contents/embedded.provisionprofile"
+
+          # Verify profiles were embedded
+          if [ ! -f "$APP_PATH/Contents/embedded.provisionprofile" ]; then
+            echo "Error: App provisioning profile was not embedded"
+            exit 1
+          fi
+
+          if [ ! -f "$APP_PATH/Contents/runtime/Contents/embedded.provisionprofile" ]; then
+            echo "Error: Runtime provisioning profile was not embedded"
+            exit 1
+          fi
+
+          echo "Provisioning profiles embedded successfully"
+
+      - name: Remove Quarantine Attributes
+        run: |
+          echo "Removing quarantine attributes..."
+          xattr -cr "$APP_PATH"
+          echo "Quarantine attributes removed"
+
+      - name: Sign JVM Runtime Bundle
+        run: |
+          echo "Signing JVM runtime bundle..."
+
+          codesign --force \
+            --sign "$APP_CERT_NAME" \
+            --timestamp \
+            --identifier "$RUNTIME_BUNDLE_ID" \
+            --entitlements composeApp/entitlements-appstore.plist \
+            "$APP_PATH/Contents/runtime"
+
+          # Verify runtime signature
+          codesign --verify --verbose "$APP_PATH/Contents/runtime"
+          echo "JVM runtime bundle signed successfully"
+
+      - name: Sign Main App Bundle
+        run: |
+          echo "Signing main app bundle..."
+
+          codesign --force \
+            --sign "$APP_CERT_NAME" \
+            --timestamp \
+            --identifier "$BUNDLE_ID" \
+            --entitlements composeApp/entitlements-appstore.plist \
+            "$APP_PATH"
+
+          # Verify app signature
+          codesign --verify --verbose "$APP_PATH"
+          echo "Main app bundle signed successfully"
+
+      - name: Verify Complete Signature
+        run: |
+          echo "Verifying complete app signature..."
+
+          # Deep verification
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+
+          # Display signature details
+          echo -e "\n=== Main App Signature ==="
+          codesign -dv --verbose=4 "$APP_PATH"
+
+          echo -e "\n=== Runtime Signature ==="
+          codesign -dv --verbose=4 "$APP_PATH/Contents/runtime"
+
+          # Check entitlements
+          echo -e "\n=== Main App Entitlements ==="
+          codesign -d --entitlements - "$APP_PATH"
+
+          echo -e "\n=== Runtime Entitlements ==="
+          codesign -d --entitlements - "$APP_PATH/Contents/runtime"
+
+          # Verify provisioning profiles
+          echo -e "\n=== Verifying Provisioning Profiles ==="
+          ls -lh "$APP_PATH/Contents/embedded.provisionprofile"
+          ls -lh "$APP_PATH/Contents/runtime/Contents/embedded.provisionprofile"
+
+          echo "Signature verification complete!"
+
+      - name: Create PKG Installer
+        run: |
+          PKG_NAME="GameReview-$APP_VERSION.pkg"
+
+          echo "Creating PKG installer: $PKG_NAME"
+
+          cd composeApp/build/compose/binaries/main-release/app
+
+          productbuild \
+            --component "$APP_NAME.app" /Applications \
+            --sign "$INSTALLER_CERT_NAME" \
+            "$PKG_NAME"
+
+          # Verify PKG signature
+          pkgutil --check-signature "$PKG_NAME"
+
+          # Save PKG path for upload
+          echo "PKG_PATH=$PWD/$PKG_NAME" >> $GITHUB_ENV
+          echo "PKG_NAME=$PKG_NAME" >> $GITHUB_ENV
+
+          echo "PKG created successfully: $PKG_NAME"
+
+      - name: Upload PKG as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-appstore-pkg
+          path: ${{ env.PKG_PATH }}
+          retention-days: 30
+
+      - name: Upload to App Store Connect
+        if: ${{ github.event.inputs.upload_to_appstore == 'true' }}
+        env:
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          APPSTORE_API_KEY_BASE64: ${{ secrets.APPSTORE_API_KEY_BASE64 }}
+        run: |
+          # Validate App Store Connect API secrets
+          if [ -z "$APPSTORE_API_KEY_ID" ] || [ -z "$APPSTORE_API_ISSUER_ID" ] || [ -z "$APPSTORE_API_KEY_BASE64" ]; then
+            echo "Error: App Store Connect API credentials are required for upload"
+            echo "Please set APPSTORE_API_KEY_ID, APPSTORE_API_ISSUER_ID, and APPSTORE_API_KEY_BASE64 secrets"
+            exit 1
+          fi
+
+          # Create API key file
+          API_KEY_PATH=$RUNNER_TEMP/AuthKey.p8
+          echo "$APPSTORE_API_KEY_BASE64" | base64 --decode -o $API_KEY_PATH
+
+          # Upload to App Store Connect using xcrun altool
+          echo "Uploading to App Store Connect..."
+          xcrun altool --upload-package "$PKG_PATH" \
+            --type macos \
+            --apiKey "$APPSTORE_API_KEY_ID" \
+            --apiIssuer "$APPSTORE_API_ISSUER_ID" \
+            --file $API_KEY_PATH
+
+          echo "Upload to App Store Connect completed!"
+
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "=== Build Summary ==="
+          echo "App Name: $APP_NAME"
+          echo "Version: $APP_VERSION"
+          echo "Bundle ID: $BUNDLE_ID"
+          echo "Runtime Bundle ID: $RUNTIME_BUNDLE_ID"
+          echo "PKG: $PKG_NAME"
+          echo "Upload to App Store: ${{ github.event.inputs.upload_to_appstore }}"

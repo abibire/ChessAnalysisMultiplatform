@@ -140,8 +140,8 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
-// Check if building for App Store
-val isAppStoreBuild = true
+// Check if building for App Store (controlled via environment variable)
+val isAppStoreBuild = System.getenv("MAC_APPSTORE_BUILD")?.toBoolean() ?: false
 
 compose.desktop {
     application {
