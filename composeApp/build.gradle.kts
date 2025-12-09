@@ -271,8 +271,11 @@ tasks.register("bundleStockfishIntoApp") {
 }
 
 // Make packageReleasePkg depend on bundleStockfishIntoApp for App Store builds
-if (isAppStoreBuild) {
-    tasks.named("packageReleasePkg") {
-        finalizedBy("bundleStockfishIntoApp")
+// Use afterEvaluate because Compose Desktop creates tasks dynamically
+afterEvaluate {
+    if (isAppStoreBuild) {
+        tasks.findByName("packageReleasePkg")?.let { pkgTask ->
+            pkgTask.finalizedBy("bundleStockfishIntoApp")
+        }
     }
 }
