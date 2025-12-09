@@ -68,6 +68,8 @@ class GameAnalyzer(private val stockfishEngine: StockfishEngine) {
         return try {
             stockfishEngine.evaluatePosition(fen, depth)
         } catch (e: Exception) {
+            println("ERROR: Failed to analyze position: ${e.message}")
+            e.printStackTrace()
             null
         }
     }

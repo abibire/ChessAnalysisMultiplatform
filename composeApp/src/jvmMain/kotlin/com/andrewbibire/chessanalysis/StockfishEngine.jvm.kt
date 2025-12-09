@@ -106,18 +106,22 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 stockfishBinary.setExecutable(true)
             }
 
+            println("INFO: Starting stockfish process from: ${stockfishBinary.absolutePath}")
             process = ProcessBuilder(stockfishBinary.absolutePath)
                 .redirectErrorStream(true)
                 .start()
             writer = BufferedWriter(OutputStreamWriter(process!!.outputStream, Charsets.UTF_8))
             reader = BufferedReader(InputStreamReader(process!!.inputStream, Charsets.UTF_8))
 
+            println("INFO: Sending 'uci' command to stockfish")
             writer?.write("uci\n")
             writer?.flush()
 
             while (true) {
                 val line = reader?.readLine()?.trim() ?: break
+                println("STOCKFISH: $line")
                 if (line.contains("uciok")) {
+                    println("INFO: Stockfish initialized successfully")
                     break
                 }
             }
@@ -130,14 +134,18 @@ actual class StockfishEngine actual constructor(context: Any?) {
         if (osName.contains("mac") || osName.contains("darwin")) {
             val bundledBinary = findStockfishInAppBundle()
             if (bundledBinary != null && bundledBinary.exists()) {
+                println("INFO: Using bundled stockfish binary at: ${bundledBinary.absolutePath}")
                 this.executableFile = bundledBinary
                 return bundledBinary
+            } else {
+                println("INFO: Bundled stockfish not found, falling back to JAR extraction")
             }
         }
 
         // Fallback: Extract from JAR resources to temp directory
         // (used by Windows, Linux, and macOS DMG builds)
         val (resourcePath, fileName) = getStockfishResourcePath()
+        println("INFO: Extracting stockfish from JAR resource: $resourcePath")
 
         val tempDir = File(System.getProperty("java.io.tmpdir"), "stockfish-jvm")
         tempDir.mkdirs()
