@@ -192,30 +192,30 @@ jobs:
 
       - name: Sign Stockfish Binaries
         run: |
-          echo "Signing stockfish binaries..."
+          echo "Signing stockfish binaries in Contents/MacOS/..."
 
           # Sign arm64 binary if it exists
-          if [ -f "$APP_PATH/Contents/Resources/stockfish-aarch64" ]; then
+          if [ -f "$APP_PATH/Contents/MacOS/stockfish-aarch64" ]; then
             echo "Signing stockfish-aarch64"
             codesign --force \
               --sign "$APP_CERT_NAME" \
               --timestamp \
               --entitlements composeApp/entitlements-appstore.plist \
-              "$APP_PATH/Contents/Resources/stockfish-aarch64"
+              "$APP_PATH/Contents/MacOS/stockfish-aarch64"
           else
-            echo "Warning: stockfish-aarch64 not found"
+            echo "Warning: stockfish-aarch64 not found in Contents/MacOS/"
           fi
 
           # Sign x86-64 binary if it exists
-          if [ -f "$APP_PATH/Contents/Resources/stockfish-x86-64" ]; then
+          if [ -f "$APP_PATH/Contents/MacOS/stockfish-x86-64" ]; then
             echo "Signing stockfish-x86-64"
             codesign --force \
               --sign "$APP_CERT_NAME" \
               --timestamp \
               --entitlements composeApp/entitlements-appstore.plist \
-              "$APP_PATH/Contents/Resources/stockfish-x86-64"
+              "$APP_PATH/Contents/MacOS/stockfish-x86-64"
           else
-            echo "Warning: stockfish-x86-64 not found"
+            echo "Warning: stockfish-x86-64 not found in Contents/MacOS/"
           fi
 
           echo "Stockfish binaries signed successfully"

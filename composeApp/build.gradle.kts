@@ -249,31 +249,32 @@ abstract class BundleStockfishTask : DefaultTask() {
             return
         }
 
-        val resourcesDir = File(appPath, "Contents/Resources")
-        if (!resourcesDir.exists()) {
-            resourcesDir.mkdirs()
+        // Use Contents/MacOS/ instead of Contents/Resources/ for executables in sandboxed apps
+        val macosDir = File(appPath, "Contents/MacOS")
+        if (!macosDir.exists()) {
+            macosDir.mkdirs()
         }
 
         val sourceDir = stockfishSourceDir.get().asFile
 
         // Copy arm64 binary
         val arm64Source = File(sourceDir, "macos-aarch64/stockfish")
-        val arm64Dest = File(resourcesDir, "stockfish-aarch64")
+        val arm64Dest = File(macosDir, "stockfish-aarch64")
         if (arm64Source.exists()) {
             arm64Source.copyTo(arm64Dest, overwrite = true)
             arm64Dest.setExecutable(true)
-            logger.lifecycle("Bundled stockfish arm64 binary into app bundle")
+            logger.lifecycle("Bundled stockfish arm64 binary into app bundle at Contents/MacOS/")
         } else {
             logger.warn("Stockfish arm64 binary not found at $arm64Source")
         }
 
         // Copy x86-64 binary
         val x64Source = File(sourceDir, "macos-x86-64/stockfish")
-        val x64Dest = File(resourcesDir, "stockfish-x86-64")
+        val x64Dest = File(macosDir, "stockfish-x86-64")
         if (x64Source.exists()) {
             x64Source.copyTo(x64Dest, overwrite = true)
             x64Dest.setExecutable(true)
-            logger.lifecycle("Bundled stockfish x86-64 binary into app bundle")
+            logger.lifecycle("Bundled stockfish x86-64 binary into app bundle at Contents/MacOS/")
         } else {
             logger.warn("Stockfish x86-64 binary not found at $x64Source")
         }

@@ -107,9 +107,16 @@ actual class StockfishEngine actual constructor(context: Any?) {
             }
 
             println("INFO: Starting stockfish process from: ${stockfishBinary.absolutePath}")
-            process = ProcessBuilder(stockfishBinary.absolutePath)
-                .redirectErrorStream(true)
-                .start()
+            try {
+                process = ProcessBuilder(stockfishBinary.absolutePath)
+                    .redirectErrorStream(true)
+                    .start()
+                println("INFO: Process started successfully")
+            } catch (e: Exception) {
+                println("ERROR: Failed to start stockfish process: ${e.javaClass.name}: ${e.message}")
+                e.printStackTrace()
+                throw IllegalStateException("Cannot start stockfish: ${e.message}", e)
+            }
             writer = BufferedWriter(OutputStreamWriter(process!!.outputStream, Charsets.UTF_8))
             reader = BufferedReader(InputStreamReader(process!!.inputStream, Charsets.UTF_8))
 
@@ -200,9 +207,9 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 else -> "stockfish-x86-64"
             }
 
-            // Look for stockfish in Contents/Resources/
-            val resourcesDir = File(contentsDir, "Resources")
-            val stockfishBinary = File(resourcesDir, binaryName)
+            // Look for stockfish in Contents/MacOS/ (required for sandboxed apps)
+            val macosDir = File(contentsDir, "MacOS")
+            val stockfishBinary = File(macosDir, binaryName)
 
             if (stockfishBinary.exists()) {
                 stockfishBinary
