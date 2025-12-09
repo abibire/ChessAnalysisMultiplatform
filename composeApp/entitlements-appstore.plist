@@ -21,5 +21,9 @@
     <!-- Required for loading JVM libraries -->
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
+
+    <!-- Allow launching stockfish subprocess -->
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
 </dict>
 </plist>

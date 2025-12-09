@@ -190,6 +190,36 @@ jobs:
 
           echo "All runtime executables signed successfully"
 
+      - name: Sign Stockfish Binaries
+        run: |
+          echo "Signing stockfish binaries..."
+
+          # Sign arm64 binary if it exists
+          if [ -f "$APP_PATH/Contents/Resources/stockfish-aarch64" ]; then
+            echo "Signing stockfish-aarch64"
+            codesign --force \
+              --sign "$APP_CERT_NAME" \
+              --timestamp \
+              --entitlements composeApp/entitlements-appstore.plist \
+              "$APP_PATH/Contents/Resources/stockfish-aarch64"
+          else
+            echo "Warning: stockfish-aarch64 not found"
+          fi
+
+          # Sign x86-64 binary if it exists
+          if [ -f "$APP_PATH/Contents/Resources/stockfish-x86-64" ]; then
+            echo "Signing stockfish-x86-64"
+            codesign --force \
+              --sign "$APP_CERT_NAME" \
+              --timestamp \
+              --entitlements composeApp/entitlements-appstore.plist \
+              "$APP_PATH/Contents/Resources/stockfish-x86-64"
+          else
+            echo "Warning: stockfish-x86-64 not found"
+          fi
+
+          echo "Stockfish binaries signed successfully"
+
       - name: Embed Provisioning Profiles
         run: |
           echo "Embedding provisioning profiles..."

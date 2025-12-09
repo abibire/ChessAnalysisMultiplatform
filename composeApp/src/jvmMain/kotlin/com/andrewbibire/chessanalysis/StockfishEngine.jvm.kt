@@ -125,6 +125,18 @@ actual class StockfishEngine actual constructor(context: Any?) {
     }
 
     private fun extractStockfishBinary(): File {
+        // On macOS, try to find stockfish in the app bundle first (for App Store builds)
+        val osName = System.getProperty("os.name").lowercase()
+        if (osName.contains("mac") || osName.contains("darwin")) {
+            val bundledBinary = findStockfishInAppBundle()
+            if (bundledBinary != null && bundledBinary.exists()) {
+                this.executableFile = bundledBinary
+                return bundledBinary
+            }
+        }
+
+        // Fallback: Extract from JAR resources to temp directory
+        // (used by Windows, Linux, and macOS DMG builds)
         val (resourcePath, fileName) = getStockfishResourcePath()
 
         val tempDir = File(System.getProperty("java.io.tmpdir"), "stockfish-jvm")
@@ -143,6 +155,55 @@ actual class StockfishEngine actual constructor(context: Any?) {
 
         this.executableFile = executableFile
         return executableFile
+    }
+
+    /**
+     * Attempts to find the stockfish binary in the macOS app bundle.
+     * This is used for App Store builds where the binary is bundled with the app.
+     * @return The stockfish binary file if found in the app bundle, null otherwise
+     */
+    private fun findStockfishInAppBundle(): File? {
+        return try {
+            // Get the path to the currently running JAR/class file
+            val jarPath = this::class.java.protectionDomain.codeSource.location.toURI().path
+            val jarFile = File(jarPath)
+
+            // Navigate up from the JAR to find the app bundle's Contents directory
+            // Typical structure: Game Review.app/Contents/app/ComposeApp.jar
+            var current: File? = jarFile.parentFile
+            var contentsDir: File? = null
+
+            // Search up the directory tree for the Contents directory (max 5 levels)
+            for (i in 0..5) {
+                if (current == null) break
+                if (current.name == "Contents" && current.parentFile?.name?.endsWith(".app") == true) {
+                    contentsDir = current
+                    break
+                }
+                current = current.parentFile
+            }
+
+            if (contentsDir == null) return null
+
+            // Determine which architecture binary to use
+            val osArch = System.getProperty("os.arch").lowercase()
+            val binaryName = when {
+                osArch.contains("aarch64") || osArch.contains("arm") -> "stockfish-aarch64"
+                else -> "stockfish-x86-64"
+            }
+
+            // Look for stockfish in Contents/Resources/
+            val resourcesDir = File(contentsDir, "Resources")
+            val stockfishBinary = File(resourcesDir, binaryName)
+
+            if (stockfishBinary.exists()) {
+                stockfishBinary
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun detectWindowsArchitecture(): String? {

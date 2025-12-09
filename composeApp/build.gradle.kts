@@ -223,3 +223,56 @@ tasks.named("jvmProcessResources", ProcessResources::class) {
         }
     }
 }
+
+// Task to bundle stockfish binaries into macOS app bundle for App Store builds
+tasks.register("bundleStockfishIntoApp") {
+    description = "Copies stockfish binaries into the macOS app bundle for App Store distribution"
+    group = "distribution"
+
+    doLast {
+        val appName = "Game Review"
+        val appPath = project.file("build/compose/binaries/main-release/app/$appName.app")
+
+        if (!appPath.exists()) {
+            logger.warn("App bundle not found at $appPath - skipping stockfish bundling")
+            return@doLast
+        }
+
+        val resourcesDir = File(appPath, "Contents/Resources")
+        if (!resourcesDir.exists()) {
+            resourcesDir.mkdirs()
+        }
+
+        // Copy both arm64 and x86-64 binaries for universal support
+        val stockfishSourceDir = project.file("src/jvmMain/resources/stockfish")
+
+        // Copy arm64 binary
+        val arm64Source = File(stockfishSourceDir, "macos-aarch64/stockfish")
+        val arm64Dest = File(resourcesDir, "stockfish-aarch64")
+        if (arm64Source.exists()) {
+            arm64Source.copyTo(arm64Dest, overwrite = true)
+            arm64Dest.setExecutable(true)
+            logger.lifecycle("Bundled stockfish arm64 binary into app bundle")
+        } else {
+            logger.warn("Stockfish arm64 binary not found at $arm64Source")
+        }
+
+        // Copy x86-64 binary
+        val x64Source = File(stockfishSourceDir, "macos-x86-64/stockfish")
+        val x64Dest = File(resourcesDir, "stockfish-x86-64")
+        if (x64Source.exists()) {
+            x64Source.copyTo(x64Dest, overwrite = true)
+            x64Dest.setExecutable(true)
+            logger.lifecycle("Bundled stockfish x86-64 binary into app bundle")
+        } else {
+            logger.warn("Stockfish x86-64 binary not found at $x64Source")
+        }
+    }
+}
+
+// Make packageReleasePkg depend on bundleStockfishIntoApp for App Store builds
+if (isAppStoreBuild) {
+    tasks.named("packageReleasePkg") {
+        finalizedBy("bundleStockfishIntoApp")
+    }
+}
