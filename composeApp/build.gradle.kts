@@ -1,6 +1,12 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.language.jvm.tasks.ProcessResources
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -225,17 +231,22 @@ tasks.named("jvmProcessResources", ProcessResources::class) {
 }
 
 // Task to bundle stockfish binaries into macOS app bundle for App Store builds
-tasks.register("bundleStockfishIntoApp") {
-    description = "Copies stockfish binaries into the macOS app bundle for App Store distribution"
-    group = "distribution"
+abstract class BundleStockfishTask : DefaultTask() {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val stockfishSourceDir: DirectoryProperty
 
-    doLast {
-        val appName = "Game Review"
-        val appPath = project.file("build/compose/binaries/main-release/app/$appName.app")
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val appBundleDir: DirectoryProperty
+
+    @TaskAction
+    fun bundleStockfish() {
+        val appPath = appBundleDir.get().asFile
 
         if (!appPath.exists()) {
             logger.warn("App bundle not found at $appPath - skipping stockfish bundling")
-            return@doLast
+            return
         }
 
         val resourcesDir = File(appPath, "Contents/Resources")
@@ -243,11 +254,10 @@ tasks.register("bundleStockfishIntoApp") {
             resourcesDir.mkdirs()
         }
 
-        // Copy both arm64 and x86-64 binaries for universal support
-        val stockfishSourceDir = project.file("src/jvmMain/resources/stockfish")
+        val sourceDir = stockfishSourceDir.get().asFile
 
         // Copy arm64 binary
-        val arm64Source = File(stockfishSourceDir, "macos-aarch64/stockfish")
+        val arm64Source = File(sourceDir, "macos-aarch64/stockfish")
         val arm64Dest = File(resourcesDir, "stockfish-aarch64")
         if (arm64Source.exists()) {
             arm64Source.copyTo(arm64Dest, overwrite = true)
@@ -258,7 +268,7 @@ tasks.register("bundleStockfishIntoApp") {
         }
 
         // Copy x86-64 binary
-        val x64Source = File(stockfishSourceDir, "macos-x86-64/stockfish")
+        val x64Source = File(sourceDir, "macos-x86-64/stockfish")
         val x64Dest = File(resourcesDir, "stockfish-x86-64")
         if (x64Source.exists()) {
             x64Source.copyTo(x64Dest, overwrite = true)
@@ -268,6 +278,14 @@ tasks.register("bundleStockfishIntoApp") {
             logger.warn("Stockfish x86-64 binary not found at $x64Source")
         }
     }
+}
+
+tasks.register<BundleStockfishTask>("bundleStockfishIntoApp") {
+    description = "Copies stockfish binaries into the macOS app bundle for App Store distribution"
+    group = "distribution"
+
+    stockfishSourceDir.set(layout.projectDirectory.dir("src/jvmMain/resources/stockfish"))
+    appBundleDir.set(layout.buildDirectory.dir("compose/binaries/main-release/app/Game Review.app"))
 }
 
 // Make packageReleasePkg depend on bundleStockfishIntoApp for App Store builds
