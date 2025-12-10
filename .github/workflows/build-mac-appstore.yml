@@ -180,12 +180,22 @@ jobs:
           echo "Signing all executables in runtime..."
 
           find "$APP_PATH/Contents/runtime" -type f -perm +111 | while read executable; do
-            echo "Signing: $executable"
-            codesign --force \
-              --sign "$APP_CERT_NAME" \
-              --timestamp \
-              --entitlements composeApp/entitlements-appstore.plist \
-              "$executable"
+            # Sign jspawnhelper with inherit entitlement (needed for ProcessBuilder)
+            if [[ "$executable" == *"jspawnhelper"* ]]; then
+              echo "Signing jspawnhelper with inherit entitlement: $executable"
+              codesign --force \
+                --sign "$APP_CERT_NAME" \
+                --timestamp \
+                --entitlements composeApp/entitlements-stockfish.plist \
+                "$executable"
+            else
+              echo "Signing: $executable"
+              codesign --force \
+                --sign "$APP_CERT_NAME" \
+                --timestamp \
+                --entitlements composeApp/entitlements-appstore.plist \
+                "$executable"
+            fi
           done
 
           echo "All runtime executables signed successfully"
