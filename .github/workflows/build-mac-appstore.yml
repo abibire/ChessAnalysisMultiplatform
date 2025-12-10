@@ -160,6 +160,18 @@ jobs:
           echo "Verifying export compliance was added:"
           plutil -p "$APP_PATH/Contents/Info.plist" | grep ITSAppUsesNonExemptEncryption
 
+      - name: Remove Non-Public API Libraries
+        run: |
+          echo "Removing libsplashscreen.dylib (uses private PNG APIs)..."
+
+          # Remove libsplashscreen.dylib - not used and contains non-public APIs
+          if [ -f "$APP_PATH/Contents/runtime/Contents/Home/lib/libsplashscreen.dylib" ]; then
+            rm "$APP_PATH/Contents/runtime/Contents/Home/lib/libsplashscreen.dylib"
+            echo "Removed libsplashscreen.dylib"
+          else
+            echo "libsplashscreen.dylib not found (already removed or not present)"
+          fi
+
       - name: Sign All .dylib Files
         run: |
           echo "Signing all .dylib files in the app bundle..."
