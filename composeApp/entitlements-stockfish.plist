@@ -9,5 +9,13 @@
     <!-- Inherit parent's sandbox - REQUIRED for child processes -->
     <key>com.apple.security.inherit</key>
     <true/>
+
+    <!-- Required for JVM spawn helper compatibility -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!-- Required for loading libraries from JVM spawn helper -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
 </dict>
 </plist>
