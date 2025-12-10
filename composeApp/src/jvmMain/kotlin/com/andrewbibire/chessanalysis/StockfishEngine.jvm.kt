@@ -349,6 +349,12 @@ actual class StockfishEngine actual constructor(context: Any?) {
         process?.destroy()
         process = null
 
-        executableFile?.delete()
+        // Only delete temp files, NOT bundled binaries from app bundle
+        executableFile?.let { file ->
+            val tempDir = System.getProperty("java.io.tmpdir")
+            if (file.absolutePath.startsWith(tempDir)) {
+                file.delete()
+            }
+        }
     }
 }
