@@ -20,6 +20,15 @@ import okio.Path.Companion.toOkioPath
 fun main() = application {
     // Configure Coil ImageLoader for desktop with SVG support
     setSingletonImageLoaderFactory { context ->
+        // Use user's cache directory for sandboxed apps (App Store)
+        val cacheDir = try {
+            val userHome = System.getProperty("user.home")
+            java.io.File(userHome, "Library/Caches/com.andrewbibire.chessanalysismac/coil_cache")
+        } catch (e: Exception) {
+            // Fallback to temp directory for non-sandboxed builds
+            java.io.File(System.getProperty("java.io.tmpdir"), "coil_cache")
+        }
+
         ImageLoader.Builder(context)
             .components {
                 add(SvgDecoder.Factory())
@@ -31,7 +40,7 @@ fun main() = application {
             }
             .diskCache {
                 DiskCache.Builder()
-                    .directory(java.io.File(System.getProperty("java.io.tmpdir"), "coil_cache").toOkioPath())
+                    .directory(cacheDir.toOkioPath())
                     .maxSizeBytes(512L * 1024 * 1024) // 512MB
                     .build()
             }
