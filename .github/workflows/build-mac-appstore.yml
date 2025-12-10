@@ -206,6 +206,8 @@ jobs:
 
           # Sign arm64 binary if it exists
           if [ -f "$APP_PATH/Contents/MacOS/stockfish-aarch64" ]; then
+            echo "Setting executable permission on stockfish-aarch64"
+            chmod +x "$APP_PATH/Contents/MacOS/stockfish-aarch64"
             echo "Signing stockfish-aarch64"
             codesign --force \
               --sign "$APP_CERT_NAME" \
@@ -218,6 +220,8 @@ jobs:
 
           # Sign x86-64 binary if it exists
           if [ -f "$APP_PATH/Contents/MacOS/stockfish-x86-64" ]; then
+            echo "Setting executable permission on stockfish-x86-64"
+            chmod +x "$APP_PATH/Contents/MacOS/stockfish-x86-64"
             echo "Signing stockfish-x86-64"
             codesign --force \
               --sign "$APP_CERT_NAME" \
