@@ -100,10 +100,19 @@ actual class StockfishEngine actual constructor(context: Any?) {
 
     private fun initializeIfNeeded() {
         if (process == null) {
+            println("DEBUG: initializeIfNeeded() called, extracting stockfish binary...")
             val stockfishBinary = extractStockfishBinary()
 
+            println("DEBUG: Binary extracted to: ${stockfishBinary.absolutePath}")
+            println("DEBUG: Binary exists: ${stockfishBinary.exists()}")
+            println("DEBUG: Binary is file: ${stockfishBinary.isFile}")
+            println("DEBUG: Binary size: ${if (stockfishBinary.exists()) stockfishBinary.length() else "N/A"} bytes")
+
             if (!System.getProperty("os.name").lowercase().contains("windows")) {
+                println("DEBUG: Setting executable permission on binary...")
+                val wasExecutable = stockfishBinary.canExecute()
                 stockfishBinary.setExecutable(true)
+                println("DEBUG: Executable permission - before: $wasExecutable, after: ${stockfishBinary.canExecute()}")
             }
 
             println("INFO: Starting stockfish process from: ${stockfishBinary.absolutePath}")
@@ -112,6 +121,7 @@ actual class StockfishEngine actual constructor(context: Any?) {
                     .redirectErrorStream(true)
                     .start()
                 println("INFO: Process started successfully")
+                println("DEBUG: Process is alive: ${process?.isAlive}")
             } catch (e: Exception) {
                 println("ERROR: Failed to start stockfish process: ${e.javaClass.name}: ${e.message}")
                 e.printStackTrace()
@@ -124,11 +134,19 @@ actual class StockfishEngine actual constructor(context: Any?) {
             writer?.write("uci\n")
             writer?.flush()
 
+            var lineCount = 0
             while (true) {
-                val line = reader?.readLine()?.trim() ?: break
+                val line = reader?.readLine()?.trim()
+                if (line == null) {
+                    println("ERROR: Stockfish process ended without sending 'uciok' (read $lineCount lines)")
+                    println("DEBUG: Process is alive: ${process?.isAlive}")
+                    println("DEBUG: Process exit value: ${if (process?.isAlive == false) process?.exitValue() else "still running"}")
+                    break
+                }
+                lineCount++
                 println("STOCKFISH: $line")
                 if (line.contains("uciok")) {
-                    println("INFO: Stockfish initialized successfully")
+                    println("INFO: Stockfish initialized successfully after reading $lineCount lines")
                     break
                 }
             }
@@ -182,6 +200,7 @@ actual class StockfishEngine actual constructor(context: Any?) {
             // Get the path to the currently running JAR/class file
             val jarPath = this::class.java.protectionDomain.codeSource.location.toURI().path
             val jarFile = File(jarPath)
+            println("DEBUG: Looking for bundled stockfish from JAR: $jarPath")
 
             // Navigate up from the JAR to find the app bundle's Contents directory
             // Typical structure: Game Review.app/Contents/app/ComposeApp.jar
@@ -191,14 +210,19 @@ actual class StockfishEngine actual constructor(context: Any?) {
             // Search up the directory tree for the Contents directory (max 5 levels)
             for (i in 0..5) {
                 if (current == null) break
+                println("DEBUG: Checking directory level $i: ${current.absolutePath}")
                 if (current.name == "Contents" && current.parentFile?.name?.endsWith(".app") == true) {
                     contentsDir = current
+                    println("DEBUG: Found Contents directory: ${contentsDir.absolutePath}")
                     break
                 }
                 current = current.parentFile
             }
 
-            if (contentsDir == null) return null
+            if (contentsDir == null) {
+                println("DEBUG: Contents directory not found, not in app bundle")
+                return null
+            }
 
             // Determine which architecture binary to use
             val osArch = System.getProperty("os.arch").lowercase()
@@ -206,17 +230,25 @@ actual class StockfishEngine actual constructor(context: Any?) {
                 osArch.contains("aarch64") || osArch.contains("arm") -> "stockfish-aarch64"
                 else -> "stockfish-x86-64"
             }
+            println("DEBUG: OS architecture: $osArch, looking for binary: $binaryName")
 
             // Look for stockfish in Contents/MacOS/ (required for sandboxed apps)
             val macosDir = File(contentsDir, "MacOS")
             val stockfishBinary = File(macosDir, binaryName)
+            println("DEBUG: Checking for stockfish at: ${stockfishBinary.absolutePath}")
+            println("DEBUG: Binary exists: ${stockfishBinary.exists()}")
+            println("DEBUG: Binary is file: ${stockfishBinary.isFile}")
+            println("DEBUG: Binary can execute: ${stockfishBinary.canExecute()}")
 
             if (stockfishBinary.exists()) {
                 stockfishBinary
             } else {
+                println("DEBUG: Stockfish binary not found in app bundle")
                 null
             }
         } catch (e: Exception) {
+            println("ERROR: Exception while finding stockfish in app bundle: ${e.javaClass.name}: ${e.message}")
+            e.printStackTrace()
             null
         }
     }

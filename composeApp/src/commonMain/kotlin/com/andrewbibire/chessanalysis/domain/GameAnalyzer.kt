@@ -28,23 +28,40 @@ class GameAnalyzer(private val stockfishEngine: StockfishEngine) {
         if (positions.isEmpty()) return false
 
         return try {
+            println("=== ANALYSIS START ===")
+            println("Total positions to analyze: ${positions.size}")
+            println("Analysis depth: $depth")
+
             withContext(Dispatchers.Default) {
                 for ((index, position) in positions.withIndex()) {
-                    if (!coroutineContext.isActive) return@withContext false
+                    if (!coroutineContext.isActive) {
+                        println("Analysis cancelled at position $index")
+                        return@withContext false
+                    }
+
+                    println("Analyzing position ${index + 1}/${positions.size}: ${position.fenString}")
 
                     // Analyze this position
-                    val result = stockfishEngine.evaluatePosition(
-                        position.fenString,
-                        depth = depth
-                    )
-                    position.score = result.score
-                    position.bestMove = result.bestMove
+                    try {
+                        val result = stockfishEngine.evaluatePosition(
+                            position.fenString,
+                            depth = depth
+                        )
+                        position.score = result.score
+                        position.bestMove = result.bestMove
+                        println("Position $index result: score=${result.score}, bestMove=${result.bestMove}")
+                    } catch (e: Exception) {
+                        println("ERROR analyzing position $index: ${e.javaClass.name}: ${e.message}")
+                        e.printStackTrace()
+                        throw e
+                    }
 
                     // Report progress
                     onProgress?.invoke(index + 1, positions.size)
                 }
 
                 if (coroutineContext.isActive) {
+                    println("Analysis completed successfully, classifying positions...")
                     // Classify all positions after analysis
                     classifyPositions(positions)
                     true
@@ -53,6 +70,9 @@ class GameAnalyzer(private val stockfishEngine: StockfishEngine) {
                 }
             }
         } catch (e: Exception) {
+            println("=== ANALYSIS FAILED ===")
+            println("Exception: ${e.javaClass.name}: ${e.message}")
+            e.printStackTrace()
             false
         }
     }
