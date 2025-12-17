@@ -1,1 +1,1 @@
-Master chess with powerful engine analysis. Get best move classifications and accuracy ratings free!
+Powerful chess engine analysis with move classifications and accuracy ratings

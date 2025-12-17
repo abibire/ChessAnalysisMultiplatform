@@ -107,6 +107,12 @@ android {
         }
     }
 
+    externalNativeBuild {
+        ndkBuild {
+            path = file("src/androidMain/jni/Android.mk")
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
